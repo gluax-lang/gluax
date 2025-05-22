@@ -1,0 +1,4 @@
+// This file is used to export symbols as public, to basically be public in every file. Just like builtin types.
+
+pub use globals::lua::print;
+pub use globals::lua::_VERSION;

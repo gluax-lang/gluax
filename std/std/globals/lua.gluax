@@ -1,0 +1,18 @@
+pub let _VERSION: string = "";
+
+pub func print(...) {}
+
+pub func rawequal(v1: any, v2: any) -> bool {}
+
+pub func rawget(t: table, k: any) -> any {}
+pub func rawset(t: table, k: any, v: any) {}
+
+pub func getmetatable(t: any) -> any {}
+pub func setmetatable(t: any, m: any) {}
+
+#[rename_to = "tonumber"]
+pub func tonumber(v: any, base: ?number) -> ?number {}
+
+pub func getfenv(v: any) -> map<any, any> {}
+
+pub func pcall(f: anyfunc, ...) -> (bool, ...) {}

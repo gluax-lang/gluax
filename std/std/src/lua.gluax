@@ -1,0 +1,15 @@
+pub use globals::lua;
+
+pub use lua::_VERSION;
+
+pub func getfenv_f(f: anyfunc) -> map<any, any> {
+    lua::getfenv(f)
+}
+
+pub func getfenv_l(level: number) ! -> map<any, any> {
+    let success, res = lua::pcall(lua::getfenv, level);
+    if !success {
+        throw (res unsafe_cast_as string);
+    }
+    res unsafe_cast_as map<any, any>
+}

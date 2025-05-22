@@ -1,0 +1,40 @@
+import "globals*";
+
+/* types */
+
+pub struct nil {}
+
+pub struct any {}
+
+pub struct bool {}
+
+pub struct number {
+    func to_base(s: Self, b: number) ! -> number {
+        if b < 2 || b > 36 {
+            throw "base out of range (2~36)";
+        }
+        // this should be safe, since we're just changing the base/radix
+        globals::lua::tonumber(s, b) unsafe_cast_as number
+    }
+}
+
+pub struct string {
+    func to_number(s: Self) -> ?number {
+        globals::lua::tonumber(s, 10)
+    }
+}
+
+// vector
+pub struct vec<T> {}
+
+// hashmap
+pub struct map<K, V> {}
+
+// option/nullable
+pub struct option<T> {}
+
+// anyfunc fits any function signature
+pub struct anyfunc {}
+
+// table fits: table | any vec | any map
+pub struct table {}
