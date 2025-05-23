@@ -31,6 +31,7 @@ const (
 	KwThrow
 	KwCatch
 	KwImpl
+	KwTrait
 	KwUnderscore
 	KwAnd // Lua-reserved below
 	KwLocal
@@ -71,6 +72,7 @@ var keywordTable = map[string]Keyword{
 	"throw":          KwThrow,
 	"catch":          KwCatch,
 	"impl":           KwImpl,
+	"trait":          KwTrait,
 	"_":              KwUnderscore,
 	// Lua reserved
 	"and":      KwAnd,
