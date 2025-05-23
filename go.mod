@@ -5,7 +5,7 @@ go 1.24.3
 require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/alecthomas/kong v1.11.0
-	github.com/gluax-lang/lsp v0.0.0-20250521154555-36fb8e9a482d
+	github.com/gluax-lang/lsp v0.0.0-20250523115223-f10aee21f4d5
 	github.com/go-playground/validator/v10 v10.26.0
 )
 

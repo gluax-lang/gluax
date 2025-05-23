@@ -12,6 +12,8 @@ github.com/gabriel-vasile/mimetype v1.4.9 h1:5k+WDwEsD9eTLL8Tz3L0VnmVh9QxGjRmjBv
 github.com/gabriel-vasile/mimetype v1.4.9/go.mod h1:WnSQhFKJuBlRyLiKohA/2DtIlPFAbguNaG7QCHcyGok=
 github.com/gluax-lang/lsp v0.0.0-20250521154555-36fb8e9a482d h1:+bHNCSJhfC6o6LYDYGM+72/SasVK/wynf5uFoNinWPY=
 github.com/gluax-lang/lsp v0.0.0-20250521154555-36fb8e9a482d/go.mod h1:0fc3h9JCzrPMhYmkfjOuLNEXVXe3RfnA4BHFy8IaA3E=
+github.com/gluax-lang/lsp v0.0.0-20250523115223-f10aee21f4d5 h1:yWMXRvDC2ddcqW7+baHpo1qKXdfGaZnLQwPVmPmvgak=
+github.com/gluax-lang/lsp v0.0.0-20250523115223-f10aee21f4d5/go.mod h1:0fc3h9JCzrPMhYmkfjOuLNEXVXe3RfnA4BHFy8IaA3E=
 github.com/go-playground/assert/v2 v2.2.0 h1:JvknZsQTYeFEAhQwI4qEt9cyV5ONwRHC+lYKSsYSR8s=
 github.com/go-playground/assert/v2 v2.2.0/go.mod h1:VDjEfimB/XKnb+ZQfWdccd7VUvScMdVu0Titje2rxJ4=
 github.com/go-playground/locales v0.14.1 h1:EWaQ/wswjilfKLTECiXz7Rh+3BjFhfDFKv/oXslEjJA=
