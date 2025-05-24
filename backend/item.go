@@ -13,11 +13,8 @@ func (cg *Codegen) genItem(item ast.Item) {
 	case *ast.Let:
 		cg.genLet(it)
 	case *ast.Function:
-		name := it.Name.Raw
-		if it.Public {
-			fun := it.Sem()
-			name = cg.decorateFuncName(fun)
-		}
+		fun := it.Sem()
+		name := cg.decorateFuncName(fun)
 		cg.ln("%s = %s;", name, cg.genFunction(it.Sem()))
 	}
 	cg.ln("")
