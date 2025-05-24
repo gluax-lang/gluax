@@ -535,13 +535,13 @@ func (t SemVararg) String() string {
 type SemUnreachable struct{}
 
 func (t SemUnreachable) Matches(other SemType) bool {
-	// Unreachable matches any type.
-	return true
+	// Unreachable matches unreachable type only
+	return other.IsUnreachable()
 }
 
 func (t SemUnreachable) StrictMatches(other SemType) bool {
-	// Unreachable matches any type.
-	return true
+	// Unreachable matches unreachable type only
+	return other.IsUnreachable()
 }
 
 func (t SemUnreachable) TypeKind() SemTypeKind { return SemUnreachableKind }

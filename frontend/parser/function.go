@@ -14,7 +14,7 @@ func (p *parser) parseFunctionSignature(paramFlags Flags) ast.FunctionSignature 
 
 	var returnType ast.Type
 	if p.tryConsume("->") {
-		returnType = p.parseTypeX(FlagTypeTuple | FlagTypeVarArg)
+		returnType = p.parseTypeX(FlagTypeTuple | FlagTypeVarArg | FlagFuncReturnUnreachable)
 	} else {
 		returnType = ast.NilType(SpanFrom(spanStart, p.prevSpan()))
 	}

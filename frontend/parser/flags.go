@@ -10,6 +10,7 @@ const (
 	FlagFuncParamSelf
 	FlagTypeTuple
 	FlagTypeVarArg
+	FlagFuncReturnUnreachable
 
 	FlagAllowUnderscore
 )

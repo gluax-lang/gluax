@@ -10,6 +10,7 @@ const CONTINUE_PREFIX = PREFIX + "_continue_"
 const BREAK_PREFIX = PREFIX + "_break_"
 const FUNC_PREFIX = PREFIX + "_func_"
 const STRUCT_PREFIX = PREFIX + "_struct_"
+const UNREACHABLE_PREFIX = PREFIX + "_unreachable_"
 const LOCAL_PREFIX = PREFIX + "_local_"
 
 const IMPORTS_TBL = PREFIX + "_imports"

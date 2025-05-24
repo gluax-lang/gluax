@@ -30,6 +30,8 @@ func (cg *Codegen) decorateStName_internal(st *ast.SemStruct) string {
 			case g.IsFunction():
 				f := g.Function()
 				sb.WriteString(cg.decorateFuncName(&f))
+			case g.IsUnreachable():
+				sb.WriteString(UNREACHABLE_PREFIX)
 			default:
 				panic("not yet implemented")
 			}

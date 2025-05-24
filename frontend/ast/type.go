@@ -83,3 +83,18 @@ func (g *GenericStruct) isType() {}
 func (g *GenericStruct) Span() common.Span {
 	return g.span
 }
+
+/* Unreachable */
+type Unreachable struct {
+	span common.Span
+}
+
+func NewUnreachable(span common.Span) *Unreachable {
+	return &Unreachable{span: span}
+}
+
+func (u *Unreachable) isType() {}
+
+func (u *Unreachable) Span() common.Span {
+	return u.span
+}

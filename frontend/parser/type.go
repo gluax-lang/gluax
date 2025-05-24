@@ -9,6 +9,10 @@ import (
 func (p *parser) parseTypeX(flags Flags) ast.Type {
 	spanStart := p.span()
 
+	if flags.Has(FlagFuncReturnUnreachable) && p.tryConsume("unreachable") {
+		return ast.NewUnreachable(spanStart)
+	}
+
 	if p.tryConsume("?") {
 		if p.Token.Is("?") {
 			common.PanicDiag("cannot have nested option types", p.span())

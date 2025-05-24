@@ -63,6 +63,8 @@ func (a *Analysis) resolveType(scope *Scope, ty ast.Type) Type {
 	case *ast.Function:
 		fun := a.handleFunctionSignature(scope, t)
 		return ast.NewSemType(fun, t.Span())
+	case *ast.Unreachable:
+		return ast.NewSemType(ast.SemUnreachable{}, t.Span())
 	default:
 		panic("TODO TYPE")
 	}

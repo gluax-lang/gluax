@@ -32,6 +32,14 @@ func (a *Analysis) handleFunctionImpl(scope *Scope, it *ast.Function, withBody b
 	returnType := a.resolveType(child, it.ReturnType)
 	child.FuncReturnType = &returnType
 
+	if returnType.IsTuple() {
+		for _, elem := range returnType.Tuple().Elems {
+			if elem.IsUnreachable() {
+				a.Panic("cannot have unreachable type inside a tuple return type", it.ReturnType.Span())
+			}
+		}
+	}
+
 	if withBody && it.Body != nil && !a.Project.processingGlobals {
 		_ = a.handleBlock(child, it.Body)
 		a.Matches(returnType, it.Body.Type(), it.Body.Span())
