@@ -27,6 +27,7 @@ func NewScope(parent *Scope) *Scope {
 	}
 	if parent == nil {
 		// This is the root scope
+		scope.Root = scope                               // Root scope points to itself
 		scope.AllScopes = make([]*Scope, 0, 4)           // Preallocate some space for children
 		scope.AllScopes = append(scope.AllScopes, scope) // Add root scope to its own list
 	} else {
