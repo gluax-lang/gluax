@@ -3,6 +3,8 @@ package common
 import (
 	"fmt"
 	"sync/atomic"
+
+	protocol "github.com/gluax-lang/lsp"
 )
 
 var globalSpanID uint64
@@ -64,5 +66,18 @@ func SpanFrom(start, end Span) Span {
 		ColumnStart: start.ColumnStart,
 		ColumnEnd:   end.ColumnEnd,
 		Source:      start.Source,
+	}
+}
+
+func SpanToRange(s Span) protocol.Range {
+	return protocol.Range{
+		Start: protocol.Position{
+			Line:      adjustN(s.LineStart),
+			Character: adjustN(s.ColumnStart),
+		},
+		End: protocol.Position{
+			Line:      adjustN(s.LineEnd),
+			Character: s.ColumnEnd,
+		},
 	}
 }

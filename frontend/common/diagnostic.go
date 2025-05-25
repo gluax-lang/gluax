@@ -17,24 +17,11 @@ func adjustN(n uint32) uint32 {
 	return n - 1
 }
 
-func spanToRange(s Span) protocol.Range {
-	return protocol.Range{
-		Start: protocol.Position{
-			Line:      adjustN(s.LineStart),
-			Character: adjustN(s.ColumnStart),
-		},
-		End: protocol.Position{
-			Line:      adjustN(s.LineEnd),
-			Character: s.ColumnEnd,
-		},
-	}
-}
-
 func NewDiagnostic(severity dSeverity, message string, span Span) *diagnostic {
 	return &protocol.Diagnostic{
 		Severity: &severity,
 		Message:  message,
-		Range:    spanToRange(span),
+		Range:    SpanToRange(span),
 	}
 }
 
