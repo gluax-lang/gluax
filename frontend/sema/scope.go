@@ -10,7 +10,7 @@ import (
 type Scope struct {
 	Parent         *Scope
 	Root           *Scope   // Direct reference to root scope
-	Children       []*Scope // Only used by root scope
+	AllScopes      []*Scope // stores all created scopes, root + child scopes
 	Symbols        map[string]Symbol
 	InFunc         bool
 	IsFuncErroable bool
@@ -27,11 +27,12 @@ func NewScope(parent *Scope) *Scope {
 	}
 	if parent == nil {
 		// This is the root scope
-		scope.Children = make([]*Scope, 0, 4) // Preallocate some space for children
+		scope.AllScopes = make([]*Scope, 0, 4)           // Preallocate some space for children
+		scope.AllScopes = append(scope.AllScopes, scope) // Add root scope to its own list
 	} else {
 		// This is a child scope
 		scope.Root = parent.Root
-		scope.Root.Children = append(scope.Root.Children, scope)
+		scope.Root.AllScopes = append(scope.Root.AllScopes, scope)
 	}
 	return scope
 }
@@ -40,11 +41,11 @@ func (s *Scope) GetRoot() *Scope {
 	return s.Root
 }
 
-func (s *Scope) GetAllChildren() []*Scope {
+func (s *Scope) GetAllScopes() []*Scope {
 	if s.Root == nil {
-		return s.Children
+		return s.AllScopes
 	}
-	return s.Root.Children
+	return s.Root.AllScopes
 }
 
 func (s *Scope) Child(copyState bool) *Scope {
