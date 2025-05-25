@@ -497,8 +497,11 @@ func (a *Analysis) handleDotAccess(expr *ast.DotAccess, toIndex *ast.Expr) Type 
 	field := expr.Name
 
 	flds := st.Fields
-	if fldTy, ok := flds[field.Raw]; ok {
-		return fldTy
+	if fld, ok := flds[field.Raw]; ok {
+		if !a.canAccessStructMember(st, fld.IsPublic()) {
+			a.Error(fmt.Sprintf("field `%s` of struct `%s` is private", field.Raw, st.Def.Name.Raw), field.Span())
+		}
+		return fld.Ty
 	}
 
 	a.Panic(

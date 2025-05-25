@@ -87,12 +87,14 @@ func (p *parser) parseStruct() ast.Item {
 }
 
 func (p *parser) parseStructField() ast.StructField {
+	public := p.tryConsume("pub")
 	name := p.expectIdent()
 	p.expect(":")
 	ty := p.parseType()
 	return ast.StructField{
-		Name: name,
-		Type: ty,
+		Name:   name,
+		Type:   ty,
+		Public: public,
 	}
 }
 

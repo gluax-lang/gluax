@@ -257,17 +257,33 @@ func (t SemType) IsLogical() bool {
 
 /* StructType */
 
+type SemStructField struct {
+	Ty  SemType
+	Def StructField
+}
+
+func NewSemStructField(def StructField, ty SemType) SemStructField {
+	return SemStructField{
+		Ty:  ty,
+		Def: def,
+	}
+}
+
+func (f SemStructField) IsPublic() bool {
+	return f.Def.Public
+}
+
 type SemStruct struct {
 	Def      *Struct
 	Generics SemGenerics
-	Fields   map[string]SemType
+	Fields   map[string]SemStructField
 	Methods  map[string]SemFunction
 	Scope    any
 }
 
 func NewSemStruct(def *Struct) *SemStruct {
 	generics := SemGenerics{}
-	fields := map[string]SemType{}
+	fields := map[string]SemStructField{}
 	methods := map[string]SemFunction{}
 	return &SemStruct{
 		Def:      def,

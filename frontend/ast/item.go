@@ -47,8 +47,9 @@ type StructInstantiation struct {
 type StructsStack []StructInstantiation
 
 type StructField struct {
-	Name lexer.TokIdent
-	Type Type
+	Name   lexer.TokIdent
+	Type   Type
+	Public bool
 }
 
 type Struct struct {

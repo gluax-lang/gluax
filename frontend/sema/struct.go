@@ -41,7 +41,7 @@ func (a *Analysis) collectStructFields(st *SemStruct) {
 		}
 		stScope := st.Scope.(*Scope)
 		ty := a.resolveType(stScope, field.Type)
-		st.Fields[field.Name.Raw] = ty
+		st.Fields[field.Name.Raw] = ast.NewSemStructField(field, ty)
 	}
 }
 
@@ -213,4 +213,16 @@ func (a *Analysis) unify(
 	}
 	// If we get here, base == actual. Return base.
 	return base
+}
+
+func (a *Analysis) canAccessStructMember(st *SemStruct, memberPublic bool) bool {
+	if memberPublic {
+		return true
+	}
+	source := st.Def.Span().Source
+	if source == nil {
+		return true // TODO: should we panic here?
+	}
+	// Private members are only accessible from the same source file
+	return a.Src == *source
 }

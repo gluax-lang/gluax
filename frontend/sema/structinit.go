@@ -77,7 +77,7 @@ func (a *Analysis) handleStructInit(scope *Scope, si *ast.ExprStructInit) Type {
 	for _, f := range si.Fields {
 		providedFields[f.Name.Raw] = struct{}{}
 	}
-	for name, _ := range newStruct.Fields {
+	for name := range newStruct.Fields {
 		// if _, ok := providedFields[name]; !ok && ty.Kind() != ast.SemOptionalKind {
 		if _, ok := providedFields[name]; !ok {
 			a.Panic(
@@ -91,7 +91,7 @@ func (a *Analysis) handleStructInit(scope *Scope, si *ast.ExprStructInit) Type {
 	// type-check each provided field
 	for i := range si.Fields {
 		f := &si.Fields[i]
-		fieldTy, ok := newStruct.Fields[f.Name.Raw]
+		field, ok := newStruct.Fields[f.Name.Raw]
 		if !ok {
 			a.Panic(
 				fmt.Sprintf("struct `%s` has no field named `%s`",
@@ -99,9 +99,12 @@ func (a *Analysis) handleStructInit(scope *Scope, si *ast.ExprStructInit) Type {
 				f.Name.Span(),
 			)
 		}
+		if !a.canAccessStructMember(newStruct, field.IsPublic()) {
+			a.Error(fmt.Sprintf("field `%s` of struct `%s` is private", f.Name.Raw, newStruct.Def.Name.Raw), f.Name.Span())
+		}
 		a.handleExpr(scope, &f.Value)
 		exprTy := f.Value.Type()
-		a.Matches(fieldTy, exprTy, f.Value.Span())
+		a.Matches(field.Ty, exprTy, f.Value.Span())
 	}
 
 	return ast.NewSemType(newStruct, si.Span())
@@ -116,14 +119,14 @@ func (a *Analysis) inferStructGenericsForInit(
 	placeholders := make(map[string]Type, expected)
 	// unify declared field types with actual expression types
 	for _, f := range fields {
-		declTy, ok := baseStruct.Fields[f.Name.Raw]
+		field, ok := baseStruct.Fields[f.Name.Raw]
 		if !ok {
 			// unknown field -> let handleStructInit panic
 			continue
 		}
 		a.handleExpr(scope, &f.Value)
 		exprTy := f.Value.Type()
-		a.unify(declTy, exprTy, placeholders, f.Value.Span())
+		a.unify(field.Ty, exprTy, placeholders, f.Value.Span())
 	}
 
 	results := make([]Type, expected)
