@@ -9,6 +9,8 @@ import (
 
 type Scope struct {
 	Parent         *Scope
+	Root           *Scope   // Direct reference to root scope
+	Children       []*Scope // Only used by root scope
 	Symbols        map[string]Symbol
 	InFunc         bool
 	IsFuncErroable bool
@@ -18,11 +20,31 @@ type Scope struct {
 }
 
 func NewScope(parent *Scope) *Scope {
-	return &Scope{
+	scope := &Scope{
 		Parent:  parent,
 		Symbols: make(map[string]Symbol),
 		Labels:  make(map[string]struct{}),
 	}
+	if parent == nil {
+		// This is the root scope
+		scope.Children = make([]*Scope, 0, 4) // Preallocate some space for children
+	} else {
+		// This is a child scope
+		scope.Root = parent.Root
+		scope.Root.Children = append(scope.Root.Children, scope)
+	}
+	return scope
+}
+
+func (s *Scope) GetRoot() *Scope {
+	return s.Root
+}
+
+func (s *Scope) GetAllChildren() []*Scope {
+	if s.Root == nil {
+		return s.Children
+	}
+	return s.Root.Children
 }
 
 func (s *Scope) Child(copyState bool) *Scope {
