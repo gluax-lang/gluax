@@ -41,7 +41,7 @@ func (a *Analysis) handleUse(scope *Scope, it *ast.Use) {
 	sym.SetPublic(it.Public)
 	sym.SetIsUse(true)
 
-	if err := scope.AddSymbol(asName, sym, it.Span()); err != nil {
+	if err := scope.AddSymbol(asName, sym); err != nil {
 		a.Error(err.Error(), it.Span())
 	}
 }

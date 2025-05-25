@@ -76,7 +76,7 @@ func (s *Scope) LabelExists(name string) bool {
 	return false
 }
 
-func (s *Scope) AddSymbol(name string, sym Symbol, span Span) error {
+func (s *Scope) AddSymbol(name string, sym Symbol) error {
 	if s.GetSymbol(name) != nil {
 		return fmt.Errorf("duplicate definition of %s", name)
 	}
@@ -128,7 +128,7 @@ func (s *Scope) AddType(name string, ty Type) error {
 func (s *Scope) AddTypeVisibility(name string, ty Type, public bool) error {
 	span := ty.Span()
 	symbol := ast.NewSymbol(name, &ty, span, public)
-	return s.AddSymbol(name, symbol, span)
+	return s.AddSymbol(name, symbol)
 }
 
 func (s *Scope) ForceAddType(name string, ty Type) {
@@ -148,7 +148,7 @@ func (s *Scope) GetType(name string) *Type {
 
 func (s *Scope) AddImport(name string, imp ast.SemImport, span Span, public bool) error {
 	symbol := ast.NewSymbol(name, &imp, span, public)
-	return s.AddSymbol(name, symbol, span)
+	return s.AddSymbol(name, symbol)
 }
 
 func (s *Scope) GetImport(name string) *ast.SemImport {
