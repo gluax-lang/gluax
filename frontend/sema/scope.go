@@ -42,10 +42,7 @@ func (s *Scope) GetRoot() *Scope {
 	return s.Root
 }
 
-func (s *Scope) GetAllScopes() []*Scope {
-	if s.Root == nil {
-		return s.AllScopes
-	}
+func (s Scope) GetAllScopes() []*Scope {
 	return s.Root.AllScopes
 }
 
