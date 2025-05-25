@@ -53,7 +53,7 @@ func newLexer(src, code string) *lexer {
 
 func (lx *lexer) currentSpan() common.Span {
 	span := common.SpanNew(lx.savedLine, lx.line, lx.savedColumn, lx.column-1)
-	span.Source = &lx.src
+	span.Source = lx.src
 	return span
 }
 
@@ -76,7 +76,7 @@ func (lx *lexer) peek() *rune {
 
 func (lx *lexer) error(msg string) *diagnostic {
 	span := common.SpanNew(lx.savedLine, lx.line, lx.savedColumn, common.MaxUint32(lx.column-1, 1))
-	span.Source = &lx.src
+	span.Source = lx.src
 	return common.ErrorDiag(msg, span)
 }
 
@@ -102,7 +102,7 @@ func (lx *lexer) nextToken() (Token, *diagnostic) {
 	// EOF
 	if c == nil {
 		span := common.SpanNew(lastLine, lastLine, lastColumn, lastColumn)
-		span.Source = &lx.src
+		span.Source = lx.src
 		return TokEOF{span: span}, nil
 	}
 

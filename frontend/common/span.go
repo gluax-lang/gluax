@@ -16,14 +16,11 @@ type Span struct {
 	ID                     uint64
 	LineStart, LineEnd     uint32
 	ColumnStart, ColumnEnd uint32
-	Source                 *string // nil == unknown
+	Source                 string // nil == unknown
 }
 
 func (s Span) String() string {
-	if s.Source == nil {
-		return fmt.Sprintf("%d:%d-%d:%d", s.LineStart, s.ColumnStart, s.LineEnd, s.ColumnEnd)
-	}
-	return fmt.Sprintf("%d:%d-%d:%d (%s)", s.LineStart, s.ColumnStart, s.LineEnd, s.ColumnEnd, *s.Source)
+	return fmt.Sprintf("%d:%d-%d:%d (%s)", s.LineStart, s.ColumnStart, s.LineEnd, s.ColumnEnd, s.Source)
 }
 
 // NewDefault Default span (1:1).
@@ -54,7 +51,7 @@ func SpanSrc(src string) Span {
 		LineEnd:     1,
 		ColumnStart: 1,
 		ColumnEnd:   1,
-		Source:      &src,
+		Source:      src,
 	}
 }
 

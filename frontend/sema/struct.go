@@ -220,9 +220,6 @@ func (a *Analysis) canAccessStructMember(st *SemStruct, memberPublic bool) bool 
 		return true
 	}
 	source := st.Def.Span().Source
-	if source == nil {
-		return true // TODO: should we panic here?
-	}
 	// Private members are only accessible from the same source file
-	return a.Src == *source
+	return a.Src == source
 }
