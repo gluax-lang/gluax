@@ -586,6 +586,7 @@ func (a *Analysis) handlePathCall(scope *Scope, call *ast.ExprPathCall) Type {
 			funcTy := funVal.Type()
 			ret, _ := a.handleCall(scope, &call.Call, funcTy, call.Span())
 			call.SetImportedFunc(funVal.Type())
+			a.AddSpanSymbol(call.MethodName.Span(), *analysis.Scope.GetSymbol(call.MethodName.Raw))
 			return ret
 		}
 	}

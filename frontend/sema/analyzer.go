@@ -18,15 +18,26 @@ func (pa *ProjectAnalysis) StripWorkspace(path string) string {
 }
 
 type Analysis struct {
-	Src        string // source file name
-	Workspace  string // workspace root
-	Scope      *Scope // root scope
-	Diags      []Diagnostic
-	InlayHints []InlayHint
-	TempIdx    *int
-	Project    *ProjectAnalysis
-	Ast        *ast.Ast
+	Src         string // source file name
+	Workspace   string // workspace root
+	Scope       *Scope // root scope
+	Diags       []Diagnostic
+	InlayHints  []InlayHint
+	TempIdx     *int
+	Project     *ProjectAnalysis
+	Ast         *ast.Ast
+	SpanSymbols map[Span]ast.Symbol // map of spans to symbols for hover and diagnostics
 	// UseAliases map[string][]string
+}
+
+func (a *Analysis) AddSpanSymbol(span Span, sym ast.Symbol) {
+	if a.SpanSymbols == nil {
+		a.SpanSymbols = make(map[Span]ast.Symbol)
+	}
+	// if _, ok := a.SpanSymbols[span]; ok {
+	// return
+	// }
+	a.SpanSymbols[span] = sym
 }
 
 func (a *Analysis) IsStdTypes() bool {

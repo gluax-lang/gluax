@@ -63,6 +63,7 @@ func (h *Handler) Initialize(p *protocol.InitializeParams) (*protocol.Initialize
 				WorkDoneProgress: false,
 			},
 		}),
+		DefinitionProvider: true,
 	}}, nil
 }
 
@@ -71,12 +72,65 @@ func (h *Handler) Initialized() error {
 	return nil
 }
 
+func SymToCode(sym *sema.Symbol) string {
+	if sym == nil {
+		return ""
+	}
+	if sym.IsType() {
+		ty := sym.Type()
+		if ty.IsStruct() {
+			st := ty.Struct()
+			var sb strings.Builder
+			sb.WriteString("struct ")
+			sb.WriteString(st.String())
+			sb.WriteString(" {\n")
+			for _, field := range st.Fields {
+				sb.WriteString(fmt.Sprintf("  %s: %s,\n", field.Def.Name.Raw, field.Ty.String()))
+			}
+			sb.WriteString("}")
+			return sb.String()
+		}
+	} else if sym.IsValue() {
+		val := sym.Value()
+		if val.IsVariable() {
+			variable := val.Variable()
+			def := variable.Def
+			var sb strings.Builder
+			if def.Public {
+				sb.WriteString("pub ")
+			}
+			sb.WriteString("let ")
+			sb.WriteString(def.Names[variable.N].Raw)
+			sb.WriteString(": ")
+			sb.WriteString(variable.Type.String())
+			return sb.String()
+		}
+	}
+	return ""
+}
+
 func (h *Handler) Hover(p *protocol.HoverParams) (*protocol.Hover, error) {
-	return nil, nil
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	uri := p.TextDocument.URI
+	position := p.Position
+
+	sym := h.findSymAtPos(uri, h.fileCache[uri], position)
+	if sym == nil {
+		return nil, nil
+	}
+
+	code := SymToCode(sym)
+	if code == "" {
+		return nil, nil
+	}
+	content := fmt.Sprintf("```gluax\n%s\n```\n", code)
+
 	return &protocol.Hover{
 		Contents: protocol.MarkupContent{
 			Kind:  "markdown",
-			Value: "Hello from **your-lsp**!  Cached files: ",
+			Value: content,
 		},
 	}, nil
 }
@@ -168,12 +222,76 @@ func (h *Handler) getFileAnalysis(uri, code string) *sema.Analysis {
 	return analysis
 }
 
+func (h *Handler) getServerFileAnalysis(uri, code string) *sema.Analysis {
+	relPath, pAnalysis := h.compileProject(uri, code)
+	if relPath == nil || pAnalysis == nil {
+		return nil
+	}
+	analysis := pAnalysis.ServerFiles()[pAnalysis.StripWorkspace(*relPath)]
+	return analysis
+}
+
+func (h *Handler) getClientFileAnalysis(uri, code string) *sema.Analysis {
+	relPath, pAnalysis := h.compileProject(uri, code)
+	if relPath == nil || pAnalysis == nil {
+		return nil
+	}
+	analysis := pAnalysis.ClientFiles()[pAnalysis.StripWorkspace(*relPath)]
+	return analysis
+}
+
 func (h *Handler) handleDiagnostics(uri, code string) {
 	analysis := h.getFileAnalysis(uri, code)
 	if analysis == nil {
 		return
 	}
 	h.PublishDiagnostics(uri, analysis.Diags)
+}
+
+func (h *Handler) Definition(p *protocol.DefinitionParams) ([]protocol.Location, error) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	uri := p.TextDocument.URI
+	position := p.Position
+
+	// Get the file analysis
+	analysis := h.getServerFileAnalysis(uri, h.fileCache[uri])
+	if analysis == nil {
+		return nil, nil
+	}
+
+	// Find symbol at position using scopes
+	symbol := h.findSymAtPos(uri, h.fileCache[uri], position)
+	if symbol == nil {
+		return nil, nil
+	}
+	// Convert symbol span to location
+	return []protocol.Location{symbol.Span.ToLocation()}, nil
+}
+
+func (h *Handler) findSymAtPos(uri, code string, pos protocol.Position) *sema.Symbol {
+	find := func(analysis *sema.Analysis) *sema.Symbol {
+		for span, sym := range analysis.SpanSymbols {
+			rng := span.ToRange()
+			rng.End.Character++ // just to make sure it works if clicking on the last character
+			if rng.Contains(pos) {
+				return &sym
+			}
+		}
+		return nil
+	}
+	if serverAnalysis := h.getServerFileAnalysis(uri, code); serverAnalysis != nil {
+		if symbol := find(serverAnalysis); symbol != nil {
+			return symbol
+		}
+	}
+	if clientAnalysis := h.getClientFileAnalysis(uri, code); clientAnalysis != nil {
+		if symbol := find(clientAnalysis); symbol != nil {
+			return symbol
+		}
+	}
+	return nil
 }
 
 // uriToFilePath converts a file:// URI into an **absolute** filesystem path.

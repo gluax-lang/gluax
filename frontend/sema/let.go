@@ -31,7 +31,9 @@ func (a *Analysis) handleLet(scope *Scope, it *ast.Let) {
 
 		// Add the new variable to the current scope
 		variable := ast.NewVariable(*it, i, ty)
-		a.AddValueVisibility(scope, ident.Raw, ast.NewValue(variable), ident.Span(), it.Public)
+		value := ast.NewValue(variable)
+		a.AddValueVisibility(scope, ident.Raw, value, ident.Span(), it.Public)
+		a.AddSpanSymbol(ident.Span(), *scope.GetSymbol(ident.Raw))
 	}
 }
 

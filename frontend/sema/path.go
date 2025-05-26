@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gluax-lang/gluax/frontend/ast"
+	"github.com/gluax-lang/gluax/frontend/common"
 )
 
 func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafResolver func(*Scope, string) *T) *T {
@@ -11,17 +12,6 @@ func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafRe
 	if len(idents) == 0 {
 		return nil
 	}
-
-	// aliasFirst := idents[0].Raw
-	// if expansion, ok := a.UseAliases[aliasFirst]; ok {
-	// 	newIdents := make([]ast.Ident, 0, len(expansion)+(len(idents)-1))
-	// 	for _, seg := range expansion {
-	// 		newIdents = append(newIdents, lexer.NewTokIdent(seg, path.Span()))
-	// 	}
-	// 	newIdents = append(newIdents, idents[1:]...)
-	// 	path.Idents = newIdents
-	// 	idents = path.Idents
-	// }
 
 	current := scope
 	syms := make([]Symbol, 0, len(idents))
@@ -38,13 +28,20 @@ func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafRe
 			return nil
 		}
 
-		syms = append(syms, *current.GetSymbol(name))
+		sym := current.GetSymbol(name)
+		{ // span symbol
+			customSym := *sym
+			customSym.Span = common.SpanSrc(imp.Analysis.(*Analysis).Src)
+			a.AddSpanSymbol(ident.Span(), customSym)
+		}
+		syms = append(syms, *sym)
 
 		// drill into the imported package's scope
 		current = imp.Analysis.(*Analysis).Scope
 	}
 
-	leafName := idents[len(idents)-1].Raw
+	leaf := idents[len(idents)-1]
+	leafName := leaf.Raw
 
 	if len(idents) > 1 {
 		if sym := current.GetSymbol(leafName); sym != nil && !sym.IsPublic() {
@@ -53,6 +50,7 @@ func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafRe
 	}
 
 	if sym := current.GetSymbol(leafName); sym != nil {
+		a.AddSpanSymbol(leaf.Span(), *sym)
 		syms = append(syms, *sym)
 	}
 	path.Symbols = syms
