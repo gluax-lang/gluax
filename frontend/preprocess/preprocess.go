@@ -14,29 +14,44 @@ import (
 type Span = common.Span
 type diagnostic = protocol.Diagnostic
 
-func Preprocess(input string, defaultMacros map[string]string) (string, *diagnostic) {
-	defineRe := regexp.MustCompile(`^#define\s+(\w+)(?:\s+(.*))?$`)
-	ifdefRe := regexp.MustCompile(`^#ifdef\s+(\w+)$`)
-	elseRe := regexp.MustCompile(`^#else$`)
-	endifRe := regexp.MustCompile(`^#endif$`)
-	macroRe := regexp.MustCompile(`\b(\w+)\b`)
-	stringRe := regexp.MustCompile(`"[^"]*"`)
+var (
+	definePattern = regexp.MustCompile(`^#define\s+(\w+)(?:\s+(.*))?$`)
+	ifdefPattern  = regexp.MustCompile(`^#ifdef\s+(\w+)$`)
+	ifndefPattern = regexp.MustCompile(`^#ifndef\s+(\w+)$`)
+	elsePattern   = regexp.MustCompile(`^#else$`)
+	elifPattern   = regexp.MustCompile(`^#elif\s+(\w+)$`)
+	endifPattern  = regexp.MustCompile(`^#endif$`)
+	macroPattern  = regexp.MustCompile(`\b(\w+)\b`)
+	stringPattern = regexp.MustCompile(`"[^"]*"`)
+)
 
+// Preprocess processes input text with C-style preprocessor directives
+func Preprocess(input string, defaultMacros map[string]string) (string, *diagnostic) {
 	macros := make(map[string]string, len(defaultMacros))
 	maps.Copy(macros, defaultMacros)
 
-	type condState struct {
-		active bool
-		span   Span
-	}
-	var condStack []condState
-	var outputLines []string
-
-	throwErr := func(msg string, lineNum uint32, line string) (string, *diagnostic) {
-		span := common.SpanNew(lineNum, lineNum, 0, uint32(len(line)))
-		return "", common.ErrorDiag(msg, span)
+	processor := &preprocessor{
+		macros:      macros,
+		condStack:   make([]condState, 0),
+		outputLines: make([]string, 0),
 	}
 
+	return processor.process(input)
+}
+
+type condState struct {
+	active      bool
+	hasBeenTrue bool // Track if any branch has been active
+	span        Span
+}
+
+type preprocessor struct {
+	macros      map[string]string
+	condStack   []condState
+	outputLines []string
+}
+
+func (p *preprocessor) process(input string) (string, *diagnostic) {
 	scanner := bufio.NewScanner(strings.NewReader(input))
 	lineNum := uint32(0)
 
@@ -45,121 +60,196 @@ func Preprocess(input string, defaultMacros map[string]string) (string, *diagnos
 		line := scanner.Text()
 		trimmed := strings.TrimLeft(line, " \t")
 
-		// Determine which, if any, directive this is
-		isDefine := defineRe.MatchString(trimmed)
-		isIfdef := ifdefRe.MatchString(trimmed)
-		isElse := elseRe.MatchString(trimmed)
-		isEndif := endifRe.MatchString(trimmed)
-
-		if strings.HasPrefix(trimmed, "#") && (isDefine || isIfdef || isElse || isEndif) {
-			switch {
-			case isDefine:
-				// #define
-				allActive := true
-				for _, cs := range condStack {
-					if !cs.active {
-						allActive = false
-						break
-					}
-				}
-				if allActive {
-					caps := defineRe.FindStringSubmatch(trimmed)
-					name := caps[1]
-					value := ""
-					if len(caps) > 2 {
-						value = strings.TrimSpace(caps[2])
-					}
-					macros[name] = value
-				}
-				outputLines = append(outputLines, "")
-
-			case isIfdef:
-				// #ifdef
-				caps := ifdefRe.FindStringSubmatch(trimmed)
-				name := caps[1]
-				parentActive := true
-				for _, cs := range condStack {
-					if !cs.active {
-						parentActive = false
-						break
-					}
-				}
-				_, macroExists := macros[name]
-				isActive := parentActive && macroExists
-				span := common.SpanNew(lineNum, lineNum, 0, uint32(len(line)))
-				condStack = append(condStack, condState{isActive, span})
-				outputLines = append(outputLines, "")
-
-			case isElse:
-				// #else
-				if len(condStack) == 0 {
-					return throwErr("#else without matching #ifdef", lineNum, line)
-				}
-				parentActive := true
-				if len(condStack) > 1 {
-					for _, cs := range condStack[:len(condStack)-1] {
-						if !cs.active {
-							parentActive = false
-							break
-						}
-					}
-				}
-				top := &condStack[len(condStack)-1]
-				top.active = parentActive && !top.active
-				outputLines = append(outputLines, "")
-
-			case isEndif:
-				// #endif
-				if len(condStack) == 0 {
-					return throwErr("#endif without matching #ifdef", lineNum, line)
-				}
-				condStack = condStack[:len(condStack)-1]
-				outputLines = append(outputLines, "")
-			}
-		} else {
-			// Non-directive or unknown directive: process normally
-			allActive := true
-			for _, cs := range condStack {
-				if !cs.active {
-					allActive = false
-					break
-				}
-			}
-			if allActive {
-				var result strings.Builder
-				lastEnd := 0
-				for _, loc := range stringRe.FindAllStringIndex(line, -1) {
-					segment := line[lastEnd:loc[0]]
-					replaced := macroRe.ReplaceAllStringFunc(segment, func(word string) string {
-						if val, ok := macros[word]; ok && val != "" {
-							return val
-						}
-						return word
-					})
-					result.WriteString(replaced)
-					result.WriteString(line[loc[0]:loc[1]])
-					lastEnd = loc[1]
-				}
-				if lastEnd < len(line) {
-					segment := line[lastEnd:]
-					replaced := macroRe.ReplaceAllStringFunc(segment, func(word string) string {
-						if val, ok := macros[word]; ok && val != "" {
-							return val
-						}
-						return word
-					})
-					result.WriteString(replaced)
-				}
-				outputLines = append(outputLines, result.String())
-			} else {
-				// Inactive block
-				outputLines = append(outputLines, "")
-			}
+		if err := p.processLine(line, trimmed, lineNum); err != nil {
+			return "", err
 		}
 	}
 
-	if len(condStack) > 0 {
+	if len(p.condStack) > 0 {
 		return "", common.ErrorDiag("Unclosed #ifdef block", common.SpanDefault())
 	}
-	return strings.Join(outputLines, "\n"), nil
+
+	return strings.Join(p.outputLines, "\n"), nil
+}
+
+func (p *preprocessor) processLine(line, trimmed string, lineNum uint32) *diagnostic {
+	// Check if this is a preprocessor directive
+	if strings.HasPrefix(trimmed, "#") {
+		return p.processDirective(line, trimmed, lineNum)
+	}
+
+	// Process regular line with macro substitution
+	p.processRegularLine(line)
+	return nil
+}
+
+func (p *preprocessor) processDirective(line, trimmed string, lineNum uint32) *diagnostic {
+	switch {
+	case definePattern.MatchString(trimmed):
+		return p.handleDefine(trimmed)
+	case ifdefPattern.MatchString(trimmed):
+		return p.handleIfdef(trimmed, lineNum, line)
+	case ifndefPattern.MatchString(trimmed):
+		return p.handleIfndef(trimmed, lineNum, line)
+	case elifPattern.MatchString(trimmed):
+		return p.handleElif(trimmed, lineNum, line)
+	case elsePattern.MatchString(trimmed):
+		return p.handleElse(lineNum, line)
+	case endifPattern.MatchString(trimmed):
+		return p.handleEndif(lineNum, line)
+	default:
+		// Unknown directive, process as regular line
+		p.processRegularLine(line)
+		return nil
+	}
+}
+
+func (p *preprocessor) handleDefine(trimmed string) *diagnostic {
+	if p.isAllActive() {
+		caps := definePattern.FindStringSubmatch(trimmed)
+		name := caps[1]
+		value := ""
+		if len(caps) > 2 {
+			value = strings.TrimSpace(caps[2])
+		}
+		p.macros[name] = value
+	}
+	p.outputLines = append(p.outputLines, "")
+	return nil
+}
+
+func (p *preprocessor) handleIfdef(trimmed string, lineNum uint32, line string) *diagnostic {
+	caps := ifdefPattern.FindStringSubmatch(trimmed)
+	name := caps[1]
+	parentActive := p.isAllActive()
+	_, macroExists := p.macros[name]
+	isActive := parentActive && macroExists
+	span := common.SpanNew(lineNum, lineNum, 0, uint32(len(line)))
+	p.condStack = append(p.condStack, condState{isActive, isActive, span})
+	p.outputLines = append(p.outputLines, "")
+	return nil
+}
+
+func (p *preprocessor) handleIfndef(trimmed string, lineNum uint32, line string) *diagnostic {
+	caps := ifndefPattern.FindStringSubmatch(trimmed)
+	name := caps[1]
+	parentActive := p.isAllActive()
+	_, macroExists := p.macros[name]
+	isActive := parentActive && !macroExists
+	span := common.SpanNew(lineNum, lineNum, 0, uint32(len(line)))
+	p.condStack = append(p.condStack, condState{isActive, isActive, span})
+	p.outputLines = append(p.outputLines, "")
+	return nil
+}
+
+func (p *preprocessor) handleElif(trimmed string, lineNum uint32, line string) *diagnostic {
+	if len(p.condStack) == 0 {
+		return p.throwErr("#elif without matching #ifdef", lineNum, line)
+	}
+
+	caps := elifPattern.FindStringSubmatch(trimmed)
+	name := caps[1]
+	parentActive := p.isParentActive()
+	top := &p.condStack[len(p.condStack)-1]
+	_, macroExists := p.macros[name]
+
+	// Only activate if parent is active, no previous branch was true, and macro exists
+	top.active = parentActive && !top.hasBeenTrue && macroExists
+	if top.active {
+		top.hasBeenTrue = true
+	}
+	p.outputLines = append(p.outputLines, "")
+	return nil
+}
+
+func (p *preprocessor) handleElse(lineNum uint32, line string) *diagnostic {
+	if len(p.condStack) == 0 {
+		return p.throwErr("#else without matching #ifdef", lineNum, line)
+	}
+
+	parentActive := p.isParentActive()
+	top := &p.condStack[len(p.condStack)-1]
+	top.active = parentActive && !top.hasBeenTrue
+	p.outputLines = append(p.outputLines, "")
+	return nil
+}
+
+func (p *preprocessor) handleEndif(lineNum uint32, line string) *diagnostic {
+	if len(p.condStack) == 0 {
+		return p.throwErr("#endif without matching #ifdef", lineNum, line)
+	}
+
+	p.condStack = p.condStack[:len(p.condStack)-1]
+	p.outputLines = append(p.outputLines, "")
+	return nil
+}
+
+func (p *preprocessor) processRegularLine(line string) {
+	if p.isAllActive() {
+		result := p.substituteMacros(line)
+		p.outputLines = append(p.outputLines, result)
+	} else {
+		// Inactive block
+		p.outputLines = append(p.outputLines, "")
+	}
+}
+
+func (p *preprocessor) substituteMacros(line string) string {
+	macroReplacer := func(word string) string {
+		if val, ok := p.macros[word]; ok && val != "" {
+			return val
+		}
+		return word
+	}
+
+	var result strings.Builder
+	lastEnd := 0
+
+	// Find all string literals to avoid substituting macros inside them
+	for _, loc := range stringPattern.FindAllStringIndex(line, -1) {
+		// Process segment before string literal
+		segment := line[lastEnd:loc[0]]
+		replaced := macroPattern.ReplaceAllStringFunc(segment, macroReplacer)
+		result.WriteString(replaced)
+
+		// Add string literal as-is
+		result.WriteString(line[loc[0]:loc[1]])
+		lastEnd = loc[1]
+	}
+
+	// Process remaining segment after last string literal
+	if lastEnd < len(line) {
+		segment := line[lastEnd:]
+		replaced := macroPattern.ReplaceAllStringFunc(segment, macroReplacer)
+		result.WriteString(replaced)
+	}
+
+	return result.String()
+}
+
+func (p *preprocessor) isAllActive() bool {
+	for _, cs := range p.condStack {
+		if !cs.active {
+			return false
+		}
+	}
+	return true
+}
+
+func (p *preprocessor) isParentActive() bool {
+	if len(p.condStack) <= 1 {
+		return true
+	}
+
+	for _, cs := range p.condStack[:len(p.condStack)-1] {
+		if !cs.active {
+			return false
+		}
+	}
+	return true
+}
+
+func (p *preprocessor) throwErr(msg string, lineNum uint32, line string) *diagnostic {
+	span := common.SpanNew(lineNum, lineNum, 0, uint32(len(line)))
+	return common.ErrorDiag(msg, span)
 }
