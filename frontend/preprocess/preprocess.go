@@ -87,6 +87,7 @@ func (p *preprocessor) processLine(line, trimmed string, lineNum uint32) *diagno
 func (p *preprocessor) processDirective(line, trimmed string, lineNum uint32) *diagnostic {
 	switch {
 	case definePattern.MatchString(trimmed):
+		return p.handleDefine(trimmed, lineNum, line)
 	case undefPattern.MatchString(trimmed):
 		return p.handleUndef(trimmed)
 	case ifdefPattern.MatchString(trimmed):
@@ -106,10 +107,13 @@ func (p *preprocessor) processDirective(line, trimmed string, lineNum uint32) *d
 	}
 }
 
-func (p *preprocessor) handleDefine(trimmed string) *diagnostic {
+func (p *preprocessor) handleDefine(trimmed string, lineNum uint32, line string) *diagnostic {
 	if p.isAllActive() {
 		caps := definePattern.FindStringSubmatch(trimmed)
 		name := caps[1]
+		if _, exists := p.macros[name]; exists {
+			return p.throwErr("Macro '"+name+"' is already defined", lineNum, line)
+		}
 		value := ""
 		if len(caps) > 2 {
 			value = strings.TrimSpace(caps[2])
