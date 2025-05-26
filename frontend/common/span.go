@@ -2,6 +2,8 @@ package common
 
 import (
 	"fmt"
+	"net/url"
+	"runtime"
 	"sync/atomic"
 
 	protocol "github.com/gluax-lang/lsp"
@@ -38,6 +40,21 @@ func (s Span) ToRange() protocol.Range {
 			Line:      adjustN(s.LineEnd),
 			Character: s.ColumnEnd,
 		},
+	}
+}
+
+func (s Span) ToLocation() protocol.Location {
+	uri := s.Source
+	if runtime.GOOS == "windows" {
+		// Windows file URIs need three slashes: file:///C:/path
+		uri = "file:///" + url.PathEscape(uri)
+	} else {
+		// Unix-like systems: file:///path
+		uri = "file://" + url.PathEscape(uri)
+	}
+	return protocol.Location{
+		URI:   uri,
+		Range: s.ToRange(),
 	}
 }
 
