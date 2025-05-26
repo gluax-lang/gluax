@@ -81,23 +81,17 @@ func (cg *Codegen) genExprX(e ast.Expr) string {
 	case ast.ExprKindLoop:
 		return cg.genLoopExpr(e.Loop())
 	case ast.ExprKindUnary:
-		dest := cg.temp()
-		cg.ln("local %s = %s;", dest, cg.genUnaryExpr(e.Unary()))
-		return dest
+		return cg.genUnaryExpr(e.Unary())
 	case ast.ExprKindBinary:
 		if e.Binary().IsShortCircuit() {
 			return cg.genShortCircuitExpr(e)
 		} else {
-			dest := cg.temp()
-			cg.ln("local %s = %s;", dest, cg.genBinaryExpr(e.Binary()))
-			return dest
+			return cg.genBinaryExpr(e.Binary())
 		}
 	case ast.ExprKindStructInit:
-		dest := cg.temp()
 		ty := e.Type()
 		st := ty.Struct()
-		cg.ln("local %s = %s;", dest, cg.genStructInit(e.StructInit(), st))
-		return dest
+		return cg.genStructInit(e.StructInit(), st)
 	case ast.ExprKindPathCall:
 		callCode := cg.genPathCall(e.PathCall())
 		return callCode
@@ -116,10 +110,7 @@ func (cg *Codegen) genPathExpr(path *ast.Path) string {
 		if len(path.Symbols) > 1 {
 			suffix = fmt.Sprintf(" --[[%s]]", path.String())
 		}
-		tmp := cg.temp()
-		// TODO: make sure to only write to a var if it's a global access, global access can trigger a __index metamethod
-		cg.ln("local %s = %s;", tmp, cg.decorateLetName(&v.Def, v.N)+suffix)
-		return tmp
+		return cg.decorateLetName(&v.Def, v.N) + suffix
 	case ast.ValParameter:
 		p := val.Parameter()
 		return p.Def.Name.Raw
@@ -137,8 +128,10 @@ func (cg *Codegen) genPathExpr(path *ast.Path) string {
 }
 
 func (cg *Codegen) genBinaryExpr(binE *ast.ExprBinary) string {
-	lhs := cg.genExprX(binE.Left)
-	rhs := cg.genExprX(binE.Right)
+	lhs := cg.temp()
+	cg.ln("local %s = %s", lhs, cg.genExprX(binE.Left))
+	rhs := cg.temp()
+	cg.ln("local %s = %s", rhs, cg.genExprX(binE.Right))
 	var op string
 	switch binE.Op {
 	case ast.BinaryOpInvalid:
@@ -188,7 +181,8 @@ func (cg *Codegen) genBinaryExpr(binE *ast.ExprBinary) string {
 }
 
 func (cg *Codegen) genUnaryExpr(unE *ast.ExprUnary) string {
-	value := cg.genExpr(unE.Value)
+	value := cg.temp()
+	cg.ln("local %s = %s", value, cg.genExprX(unE.Value))
 	switch unE.Op {
 	case ast.UnaryOpNot:
 		return fmt.Sprintf("(not %s)", value)
@@ -241,7 +235,7 @@ func (cg *Codegen) genPostfixExpr(p *ast.ExprPostfix) string {
 	temp := cg.temp()
 	switch op := p.Op.(type) {
 	case *ast.DotAccess:
-		value = cg.genDotAccess(op, value, primaryTy)
+		return cg.genDotAccess(op, value, primaryTy)
 	case *ast.Call:
 		if op.Method == nil {
 			return cg.genCall(op, value, primaryTy)
@@ -282,7 +276,14 @@ func (cg *Codegen) genTupleExpr(t *ast.ExprTuple) string {
 func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) string {
 	exprs := make([]string, len(call.Args))
 	for i, arg := range call.Args {
-		exprs[i] = cg.genExpr(arg)
+		// Generate temp variable for all args except the last one
+		if i < len(call.Args)-1 {
+			temp := cg.temp()
+			cg.ln("local %s = %s;", temp, cg.genExpr(arg))
+			exprs[i] = temp
+		} else {
+			exprs[i] = cg.genExpr(arg)
+		}
 	}
 	callExpr := fmt.Sprintf("%s(%s)", toCall, strings.Join(exprs, ", "))
 	fun := toCallTy.Function()
