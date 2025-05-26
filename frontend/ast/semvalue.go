@@ -1,5 +1,7 @@
 package ast
 
+import "strings"
+
 type ValueKind uint8
 
 const (
@@ -12,6 +14,7 @@ const (
 type valueData interface {
 	ValueKind() ValueKind
 	ValueType() SemType
+	AstString() string
 }
 
 func (v Variable) ValueKind() ValueKind { return ValVariable }
@@ -36,6 +39,13 @@ func NewValue[T valueData](data T) Value {
 
 func (v Value) Kind() ValueKind {
 	return v.data.ValueKind()
+}
+
+func (v Value) AstString() string {
+	if v.data == nil {
+		return "<nil>"
+	}
+	return v.data.AstString()
 }
 
 func (v Value) CanShadow(other Value) bool {
@@ -91,6 +101,18 @@ func NewVariable(def Let, n int, ty SemType) Variable {
 	return Variable{Def: def, N: n, Type: ty}
 }
 
+func (v Variable) AstString() string {
+	var sb strings.Builder
+	if v.Def.Public {
+		sb.WriteString("pub ")
+	}
+	sb.WriteString("let ")
+	sb.WriteString(v.Def.Names[v.N].Raw)
+	sb.WriteString(": ")
+	sb.WriteString(v.Type.String())
+	return sb.String()
+}
+
 type SemFunctionParam struct {
 	Def  FunctionParam
 	Type SemType
@@ -100,6 +122,10 @@ func NewSemFunctionParam(def FunctionParam, ty SemType) SemFunctionParam {
 	return SemFunctionParam{Def: def, Type: ty}
 }
 
+func (p SemFunctionParam) AstString() string {
+	return p.Def.Name.Raw + ": " + p.Type.String()
+}
+
 type SingleVariable struct {
 	Name string
 	Ty   SemType
@@ -107,4 +133,8 @@ type SingleVariable struct {
 
 func NewSingleVariable(name string, ty SemType) SingleVariable {
 	return SingleVariable{Name: name, Ty: ty}
+}
+
+func (v SingleVariable) AstString() string {
+	return v.Name + ": " + v.Ty.String()
 }

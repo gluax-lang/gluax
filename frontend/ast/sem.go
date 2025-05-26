@@ -47,6 +47,7 @@ type semTypeData interface {
 	Matches(SemType) bool
 	StrictMatches(SemType) bool
 	String() string
+	AstString() string
 }
 
 type SemType struct {
@@ -64,6 +65,13 @@ func (t SemType) Data() semTypeData {
 
 func (t SemType) Kind() SemTypeKind {
 	return t.data.TypeKind()
+}
+
+func (t SemType) AstString() string {
+	if t.data == nil {
+		return "<nil>"
+	}
+	return t.data.AstString()
 }
 
 func (t *SemType) SetSpan(span common.Span) {
@@ -221,6 +229,17 @@ func (f SemStructField) IsPublic() bool {
 	return f.Def.Public
 }
 
+func (f SemStructField) AstString() string {
+	var sb strings.Builder
+	if f.IsPublic() {
+		sb.WriteString("pub ")
+	}
+	sb.WriteString(f.Def.Name.Raw)
+	sb.WriteString(": ")
+	sb.WriteString(f.Ty.String())
+	return sb.String()
+}
+
 type SemStruct struct {
 	Def      *Struct
 	Generics SemGenerics
@@ -323,6 +342,22 @@ func (s SemStruct) String() string {
 		return "?" + s.OptionInnerType().String()
 	}
 	return s.Def.Name.Raw + s.Generics.String()
+}
+
+func (s SemStruct) AstString() string {
+	var sb strings.Builder
+	sb.WriteString("struct ")
+	sb.WriteString(s.Def.Name.Raw)
+	if len(s.Fields) == 0 {
+		sb.WriteString(" {}")
+	} else {
+		sb.WriteString(" {\n")
+		for _, field := range s.Fields {
+			sb.WriteString(fmt.Sprintf("\t%s: %s,\n", field.Def.Name.Raw, field.Ty.String()))
+		}
+		sb.WriteString("}")
+	}
+	return sb.String()
 }
 
 func (s SemStruct) GetMethod(name string) (SemFunction, bool) {
@@ -429,6 +464,10 @@ func (t SemFunction) ReturnCount() int {
 	return 1
 }
 
+func (f SemFunction) AstString() string {
+	return f.String()
+}
+
 /* Tuple */
 
 type SemTuple struct{ Elems []SemType }
@@ -473,6 +512,10 @@ func (t SemTuple) String() string {
 	return "(" + strings.Join(elems, ", ") + ")"
 }
 
+func (t SemTuple) AstString() string {
+	return t.String()
+}
+
 /* Vararg */
 
 type SemVararg struct{}
@@ -491,9 +534,8 @@ func (t SemVararg) StrictMatches(other SemType) bool {
 	return other.IsVararg()
 }
 
-func (t SemVararg) String() string {
-	return "..."
-}
+func (t SemVararg) String() string    { return "..." }
+func (t SemVararg) AstString() string { return "..." }
 
 /* SemUnreachable */
 type SemUnreachable struct{}
@@ -510,9 +552,8 @@ func (t SemUnreachable) StrictMatches(other SemType) bool {
 
 func (t SemUnreachable) TypeKind() SemTypeKind { return SemUnreachableKind }
 
-func (t SemUnreachable) String() string {
-	return "unreachable"
-}
+func (t SemUnreachable) String() string    { return "unreachable" }
+func (t SemUnreachable) AstString() string { return "unreachable" }
 
 func (t SemType) String() string {
 	return t.data.String()
@@ -521,6 +562,10 @@ func (t SemType) String() string {
 /* SemError */
 
 type SemError struct{}
+
+func NewErrorType(span common.Span) SemType {
+	return SemType{data: SemError{}, span: span}
+}
 
 func (t SemError) Matches(other SemType) bool {
 	return false
@@ -532,13 +577,8 @@ func (t SemError) StrictMatches(other SemType) bool {
 
 func (t SemError) TypeKind() SemTypeKind { return SemErrorKind }
 
-func (t SemError) String() string {
-	return "error"
-}
-
-func NewErrorType(span common.Span) SemType {
-	return SemType{data: SemError{}, span: span}
-}
+func (t SemError) String() string    { return "error" }
+func (t SemError) AstString() string { return t.String() }
 
 /* Generics */
 
@@ -566,9 +606,8 @@ func (t SemGenericType) StrictMatches(other SemType) bool {
 	return t.Ident.Raw == otherG.Ident.Raw
 }
 
-func (gt SemGenericType) String() string {
-	return gt.Ident.Raw
-}
+func (gt SemGenericType) String() string    { return gt.Ident.Raw }
+func (gt SemGenericType) AstString() string { return gt.String() }
 
 type SemGenerics struct {
 	Params []SemType

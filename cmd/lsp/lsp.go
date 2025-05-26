@@ -72,47 +72,6 @@ func (h *Handler) Initialized() error {
 	return nil
 }
 
-func SymToCode(sym *sema.Symbol) string {
-	if sym == nil {
-		return ""
-	}
-	if sym.IsType() {
-		ty := sym.Type()
-		if ty.IsStruct() {
-			st := ty.Struct()
-			var sb strings.Builder
-			sb.WriteString("struct ")
-			sb.WriteString(st.String())
-			if len(st.Fields) == 0 {
-				sb.WriteString(" {}")
-			} else {
-				sb.WriteString(" {\n")
-				for _, field := range st.Fields {
-					sb.WriteString(fmt.Sprintf("\t%s: %s,\n", field.Def.Name.Raw, field.Ty.String()))
-				}
-				sb.WriteString("}")
-			}
-			return sb.String()
-		}
-	} else if sym.IsValue() {
-		val := sym.Value()
-		if val.IsVariable() {
-			variable := val.Variable()
-			def := variable.Def
-			var sb strings.Builder
-			if def.Public {
-				sb.WriteString("pub ")
-			}
-			sb.WriteString("let ")
-			sb.WriteString(def.Names[variable.N].Raw)
-			sb.WriteString(": ")
-			sb.WriteString(variable.Type.String())
-			return sb.String()
-		}
-	}
-	return ""
-}
-
 func (h *Handler) Hover(p *protocol.HoverParams) (*protocol.Hover, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -125,11 +84,7 @@ func (h *Handler) Hover(p *protocol.HoverParams) (*protocol.Hover, error) {
 		return nil, nil
 	}
 
-	code := SymToCode(sym)
-	if code == "" {
-		return nil, nil
-	}
-	content := fmt.Sprintf("```gluax\n%s\n```\n", code)
+	content := fmt.Sprintf("```gluax\n%s\n```\n", sym.AstString())
 
 	return &protocol.Hover{
 		Contents: protocol.MarkupContent{

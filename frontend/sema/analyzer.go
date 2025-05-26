@@ -34,9 +34,9 @@ func (a *Analysis) AddSpanSymbol(span Span, sym ast.Symbol) {
 	if a.SpanSymbols == nil {
 		a.SpanSymbols = make(map[Span]ast.Symbol)
 	}
-	// if _, ok := a.SpanSymbols[span]; ok {
-	// return
-	// }
+	if _, ok := a.SpanSymbols[span]; ok {
+		return
+	}
 	a.SpanSymbols[span] = sym
 }
 

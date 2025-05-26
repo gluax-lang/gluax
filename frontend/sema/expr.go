@@ -501,6 +501,8 @@ func (a *Analysis) handleDotAccess(expr *ast.DotAccess, toIndex *ast.Expr) Type 
 		if !a.canAccessStructMember(st, fld.IsPublic()) {
 			a.Error(fmt.Sprintf("field `%s` of struct `%s` is private", field.Raw, st.Def.Name.Raw), field.Span())
 		}
+		fldSym := ast.NewSymbol(field.Raw, &fld, fld.Def.Name.Span(), true)
+		a.AddSpanSymbol(expr.Span(), fldSym)
 		return fld.Ty
 	}
 

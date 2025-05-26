@@ -1,6 +1,10 @@
 package ast
 
-import "github.com/gluax-lang/gluax/frontend/common"
+import (
+	"strings"
+
+	"github.com/gluax-lang/gluax/frontend/common"
+)
 
 type SymbolKind uint8
 
@@ -9,15 +13,19 @@ const (
 	SymType                    // struct / alias / type-def
 	SymImport
 	SymTrait
+
+	SymStructField
 )
 
 type symbolData interface {
 	SymbolKind() SymbolKind
+	AstString() string // for lsp
 }
 
-func (v *Value) SymbolKind() SymbolKind     { return SymValue }
-func (t *SemType) SymbolKind() SymbolKind   { return SymType }
-func (i *SemImport) SymbolKind() SymbolKind { return SymImport }
+func (v *Value) SymbolKind() SymbolKind          { return SymValue }
+func (t *SemType) SymbolKind() SymbolKind        { return SymType }
+func (i *SemImport) SymbolKind() SymbolKind      { return SymImport }
+func (f *SemStructField) SymbolKind() SymbolKind { return SymStructField }
 
 type Symbol struct {
 	Name   string
@@ -34,6 +42,13 @@ func NewSymbol[T symbolData](name string, data T, span common.Span, public bool)
 		data:   data,
 		public: public,
 	}
+}
+
+func (s *Symbol) AstString() string {
+	if s.data == nil {
+		return "<nil>"
+	}
+	return s.data.AstString()
 }
 
 func (s *Symbol) SetPublic(b bool) {
@@ -95,6 +110,10 @@ type SemImport struct {
 	Analysis any // basically sema.Analysis, but to avoid a circular dependency lol
 }
 
+func NewSemImport(def Import, path string, analysis any) SemImport {
+	return SemImport{Def: def, Analysis: analysis, Path: path}
+}
+
 func (t SemImport) Matches(other SemType) bool {
 	return false
 }
@@ -107,6 +126,12 @@ func (t SemImport) String() string {
 	return t.Path
 }
 
-func NewSemImport(def Import, path string, analysis any) SemImport {
-	return SemImport{Def: def, Analysis: analysis, Path: path}
+func (i SemImport) AstString() string {
+	var sb strings.Builder
+	sb.WriteString("import ")
+	sb.WriteString(i.Def.As.Raw)
+	sb.WriteString(" (\"")
+	sb.WriteString(i.Def.Path.Raw)
+	sb.WriteString("\")")
+	return sb.String()
 }
