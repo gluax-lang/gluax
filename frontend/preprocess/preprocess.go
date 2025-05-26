@@ -2,6 +2,7 @@ package preprocess
 
 import (
 	"bufio"
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -26,6 +27,15 @@ var (
 	stringPattern = regexp.MustCompile(`"[^"]*"`)
 )
 
+var disallowedMacros = map[string]struct{}{
+	"__LINE__": {},
+}
+
+func isDisallowedMacro(name string) bool {
+	_, disallowed := disallowedMacros[name]
+	return disallowed
+}
+
 // Preprocess processes input text with C-style preprocessor directives
 func Preprocess(input string, defaultMacros map[string]string) (string, *diagnostic) {
 	macros := make(map[string]string, len(defaultMacros))
@@ -47,9 +57,10 @@ type condState struct {
 }
 
 type preprocessor struct {
-	macros      map[string]string
-	condStack   []condState
-	outputLines []string
+	macros         map[string]string
+	condStack      []condState
+	outputLines    []string
+	currentLineNum uint32
 }
 
 func (p *preprocessor) process(input string) (string, *diagnostic) {
@@ -74,6 +85,8 @@ func (p *preprocessor) process(input string) (string, *diagnostic) {
 }
 
 func (p *preprocessor) processLine(line, trimmed string, lineNum uint32) *diagnostic {
+	p.currentLineNum = lineNum
+
 	// Check if this is a preprocessor directive
 	if strings.HasPrefix(trimmed, "#") {
 		return p.processDirective(line, trimmed, lineNum)
@@ -111,7 +124,7 @@ func (p *preprocessor) handleDefine(trimmed string, lineNum uint32, line string)
 	if p.isAllActive() {
 		caps := definePattern.FindStringSubmatch(trimmed)
 		name := caps[1]
-		if _, exists := p.macros[name]; exists {
+		if p.isMacroDefined(name) {
 			return p.throwErr("Macro '"+name+"' is already defined", lineNum, line)
 		}
 		value := ""
@@ -128,6 +141,9 @@ func (p *preprocessor) handleUndef(trimmed string) *diagnostic {
 	if p.isAllActive() {
 		caps := undefPattern.FindStringSubmatch(trimmed)
 		name := caps[1]
+		if isDisallowedMacro(name) {
+			return p.throwErr("Cannot undefine predefined macro '"+name+"'", p.currentLineNum, trimmed)
+		}
 		delete(p.macros, name)
 	}
 	p.outputLines = append(p.outputLines, "")
@@ -138,8 +154,7 @@ func (p *preprocessor) handleIfdef(trimmed string, lineNum uint32, line string) 
 	caps := ifdefPattern.FindStringSubmatch(trimmed)
 	name := caps[1]
 	parentActive := p.isAllActive()
-	_, macroExists := p.macros[name]
-	isActive := parentActive && macroExists
+	isActive := parentActive && p.isMacroDefined(name)
 	span := common.SpanNew(lineNum, lineNum, 0, uint32(len(line)))
 	p.condStack = append(p.condStack, condState{isActive, isActive, span})
 	p.outputLines = append(p.outputLines, "")
@@ -150,8 +165,7 @@ func (p *preprocessor) handleIfndef(trimmed string, lineNum uint32, line string)
 	caps := ifndefPattern.FindStringSubmatch(trimmed)
 	name := caps[1]
 	parentActive := p.isAllActive()
-	_, macroExists := p.macros[name]
-	isActive := parentActive && !macroExists
+	isActive := parentActive && !p.isMacroDefined(name)
 	span := common.SpanNew(lineNum, lineNum, 0, uint32(len(line)))
 	p.condStack = append(p.condStack, condState{isActive, isActive, span})
 	p.outputLines = append(p.outputLines, "")
@@ -167,10 +181,9 @@ func (p *preprocessor) handleElif(trimmed string, lineNum uint32, line string) *
 	name := caps[1]
 	parentActive := p.isParentActive()
 	top := &p.condStack[len(p.condStack)-1]
-	_, macroExists := p.macros[name]
 
 	// Only activate if parent is active, no previous branch was true, and macro exists
-	top.active = parentActive && !top.hasBeenTrue && macroExists
+	top.active = parentActive && !top.hasBeenTrue && p.isMacroDefined(name)
 	if top.active {
 		top.hasBeenTrue = true
 	}
@@ -212,6 +225,9 @@ func (p *preprocessor) processRegularLine(line string) {
 
 func (p *preprocessor) substituteMacros(line string) string {
 	macroReplacer := func(word string) string {
+		if word == "__LINE__" {
+			return fmt.Sprintf("%d", p.currentLineNum)
+		}
 		if val, ok := p.macros[word]; ok && val != "" {
 			return val
 		}
@@ -250,6 +266,14 @@ func (p *preprocessor) isAllActive() bool {
 		}
 	}
 	return true
+}
+
+func (p *preprocessor) isMacroDefined(name string) bool {
+	if isDisallowedMacro(name) {
+		return true
+	}
+	_, exists := p.macros[name]
+	return exists
 }
 
 func (p *preprocessor) isParentActive() bool {
