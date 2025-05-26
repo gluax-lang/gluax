@@ -51,7 +51,8 @@ func Parse(tkS []lexer.Token, processingGlobals bool) (astRet *ast.Ast, err *dia
 	}
 
 	astRet = &ast.Ast{
-		Items: items,
+		Items:       items,
+		TokenStream: p.TokenStream,
 	}
 
 	return
