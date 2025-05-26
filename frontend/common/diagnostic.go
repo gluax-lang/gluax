@@ -10,18 +10,11 @@ type (
 	diagnostic = protocol.Diagnostic
 )
 
-func adjustN(n uint32) uint32 {
-	if n <= 1 {
-		return 0
-	}
-	return n - 1
-}
-
 func NewDiagnostic(severity dSeverity, message string, span Span) *diagnostic {
 	return &protocol.Diagnostic{
 		Severity: &severity,
 		Message:  message,
-		Range:    SpanToRange(span),
+		Range:    span.ToRange(),
 	}
 }
 

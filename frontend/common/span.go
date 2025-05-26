@@ -21,6 +21,26 @@ type Span struct {
 	Source                 string // nil == unknown
 }
 
+func adjustN(n uint32) uint32 {
+	if n <= 1 {
+		return 0
+	}
+	return n - 1
+}
+
+func (s Span) ToRange() protocol.Range {
+	return protocol.Range{
+		Start: protocol.Position{
+			Line:      adjustN(s.LineStart),
+			Character: adjustN(s.ColumnStart),
+		},
+		End: protocol.Position{
+			Line:      adjustN(s.LineEnd),
+			Character: s.ColumnEnd,
+		},
+	}
+}
+
 func (s Span) String() string {
 	return fmt.Sprintf("%d:%d-%d:%d (%s)", s.LineStart, s.ColumnStart, s.LineEnd, s.ColumnEnd, s.Source)
 }
@@ -66,18 +86,5 @@ func SpanFrom(start, end Span) Span {
 		ColumnStart: start.ColumnStart,
 		ColumnEnd:   end.ColumnEnd,
 		Source:      start.Source,
-	}
-}
-
-func SpanToRange(s Span) protocol.Range {
-	return protocol.Range{
-		Start: protocol.Position{
-			Line:      adjustN(s.LineStart),
-			Character: adjustN(s.ColumnStart),
-		},
-		End: protocol.Position{
-			Line:      adjustN(s.LineEnd),
-			Character: s.ColumnEnd,
-		},
 	}
 }
