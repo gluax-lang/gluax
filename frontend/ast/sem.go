@@ -169,6 +169,14 @@ func (t SemType) Unreachable() SemUnreachable {
 	return t.data.(SemUnreachable)
 }
 
+func (t SemType) IsStruct() bool      { return t.Kind() == SemStructKind }
+func (t SemType) IsFunction() bool    { return t.Kind() == SemFunctionKind }
+func (t SemType) IsUnreachable() bool { return t.Kind() == SemUnreachableKind }
+func (t SemType) IsError() bool       { return t.Kind() == SemErrorKind }
+func (t SemType) IsGeneric() bool     { return t.Kind() == SemGenericKind }
+func (t SemType) IsTuple() bool       { return t.Kind() == SemTupleKind }
+func (t SemType) IsVararg() bool      { return t.Kind() == SemVarargKind }
+
 func (t SemType) asStructName() *string {
 	// has to be a struct
 	if t.Kind() != SemStructKind {
@@ -183,77 +191,17 @@ func (t SemType) isNamed(wanted string) bool {
 	return name != nil && *name == wanted
 }
 
-func (t SemType) IsStruct() bool {
-	return t.Kind() == SemStructKind
-}
-
-func (t SemType) IsNil() bool {
-	return t.isNamed("nil")
-}
-
-func (t SemType) IsOption() bool {
-	return t.isNamed("option")
-}
-
-func (t SemType) IsAny() bool {
-	return t.isNamed("any")
-}
-
-func (t SemType) IsAnyFunc() bool {
-	return t.isNamed("anyfunc")
-}
-
-func (t SemType) IsTable() bool {
-	return t.isNamed("table")
-}
-
-func (t SemType) IsVec() bool {
-	return t.isNamed("vec")
-}
-
-func (t SemType) IsMap() bool {
-	return t.isNamed("map")
-}
-
-func (t SemType) IsBool() bool {
-	return t.isNamed("bool")
-}
-
-func (t SemType) IsNumber() bool {
-	return t.isNamed("number")
-}
-
-func (t SemType) IsString() bool {
-	return t.isNamed("string")
-}
-
-func (t SemType) IsFunction() bool {
-	return t.Kind() == SemFunctionKind
-}
-
-func (t SemType) IsUnreachable() bool {
-	return t.Kind() == SemUnreachableKind
-}
-
-func (t SemType) IsError() bool {
-	return t.Kind() == SemErrorKind
-}
-
-func (t SemType) IsGeneric() bool {
-	return t.Kind() == SemGenericKind
-}
-
-func (t SemType) IsTuple() bool {
-	return t.Kind() == SemTupleKind
-}
-
-func (t SemType) IsVararg() bool {
-	return t.Kind() == SemVarargKind
-}
-
-func (t SemType) IsLogical() bool {
-	return t.IsBool() || t.IsOption()
-}
+func (t SemType) IsNil() bool     { return t.isNamed("nil") }
+func (t SemType) IsOption() bool  { return t.isNamed("option") }
+func (t SemType) IsAny() bool     { return t.isNamed("any") }
+func (t SemType) IsAnyFunc() bool { return t.isNamed("anyfunc") }
+func (t SemType) IsTable() bool   { return t.isNamed("table") }
+func (t SemType) IsVec() bool     { return t.isNamed("vec") }
+func (t SemType) IsMap() bool     { return t.isNamed("map") }
+func (t SemType) IsBool() bool    { return t.isNamed("bool") }
+func (t SemType) IsNumber() bool  { return t.isNamed("number") }
+func (t SemType) IsString() bool  { return t.isNamed("string") }
+func (t SemType) IsLogical() bool { return t.IsBool() || t.IsOption() }
 
 /* StructType */
 
