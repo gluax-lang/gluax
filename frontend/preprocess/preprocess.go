@@ -21,6 +21,7 @@ var (
 	elsePattern   = regexp.MustCompile(`^#else$`)
 	elifPattern   = regexp.MustCompile(`^#elif\s+(\w+)$`)
 	endifPattern  = regexp.MustCompile(`^#endif$`)
+	undefPattern  = regexp.MustCompile(`^#undef\s+(\w+)$`)
 	macroPattern  = regexp.MustCompile(`\b(\w+)\b`)
 	stringPattern = regexp.MustCompile(`"[^"]*"`)
 )
@@ -86,7 +87,8 @@ func (p *preprocessor) processLine(line, trimmed string, lineNum uint32) *diagno
 func (p *preprocessor) processDirective(line, trimmed string, lineNum uint32) *diagnostic {
 	switch {
 	case definePattern.MatchString(trimmed):
-		return p.handleDefine(trimmed)
+	case undefPattern.MatchString(trimmed):
+		return p.handleUndef(trimmed)
 	case ifdefPattern.MatchString(trimmed):
 		return p.handleIfdef(trimmed, lineNum, line)
 	case ifndefPattern.MatchString(trimmed):
@@ -113,6 +115,16 @@ func (p *preprocessor) handleDefine(trimmed string) *diagnostic {
 			value = strings.TrimSpace(caps[2])
 		}
 		p.macros[name] = value
+	}
+	p.outputLines = append(p.outputLines, "")
+	return nil
+}
+
+func (p *preprocessor) handleUndef(trimmed string) *diagnostic {
+	if p.isAllActive() {
+		caps := undefPattern.FindStringSubmatch(trimmed)
+		name := caps[1]
+		delete(p.macros, name)
 	}
 	p.outputLines = append(p.outputLines, "")
 	return nil
