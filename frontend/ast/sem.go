@@ -96,7 +96,7 @@ func checkOptionRules(ty SemType) bool {
 	}
 	tyS := ty.Struct()
 	inner := tyS.OptionInnerType()
-	return !inner.IsOption()
+	return !inner.IsOption() && !inner.IsNil()
 }
 
 func (t SemType) Matches(other SemType) bool {
