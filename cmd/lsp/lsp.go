@@ -83,11 +83,15 @@ func SymToCode(sym *sema.Symbol) string {
 			var sb strings.Builder
 			sb.WriteString("struct ")
 			sb.WriteString(st.String())
-			sb.WriteString(" {\n")
-			for _, field := range st.Fields {
-				sb.WriteString(fmt.Sprintf("  %s: %s,\n", field.Def.Name.Raw, field.Ty.String()))
+			if len(st.Fields) == 0 {
+				sb.WriteString(" {}")
+			} else {
+				sb.WriteString(" {\n")
+				for _, field := range st.Fields {
+					sb.WriteString(fmt.Sprintf("\t%s: %s,\n", field.Def.Name.Raw, field.Ty.String()))
+				}
+				sb.WriteString("}")
 			}
-			sb.WriteString("}")
 			return sb.String()
 		}
 	} else if sym.IsValue() {
