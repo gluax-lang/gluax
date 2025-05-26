@@ -27,7 +27,6 @@ type Analysis struct {
 	Project     *ProjectAnalysis
 	Ast         *ast.Ast
 	SpanSymbols map[Span]ast.Symbol // map of spans to symbols for hover and diagnostics
-	// UseAliases map[string][]string
 }
 
 func (a *Analysis) AddSpanSymbol(span Span, sym ast.Symbol) {
@@ -53,12 +52,6 @@ func (a *Analysis) handleAst(ast *ast.Ast) {
 }
 
 func (a *Analysis) addItems(items []ast.Item) {
-	// if a.Project.Config.Std {
-	// 	for name, ty := range ast.StdBuiltinTypes {
-	// 		a.Scope.ForceAddType(name, ty)
-	// 	}
-	// }
-
 	// imports first
 	if !a.IsStdTypes() {
 		for _, item := range items {
@@ -176,7 +169,6 @@ func (a *Analysis) AddLabel(scope *Scope, label *ast.Ident) {
 }
 
 func (a *Analysis) InlayHintType(label string, span Span) {
-	// label = ": " + label
 	kind := protocol.InlayHintKindType
 	a.InlayHints = append(a.InlayHints, protocol.InlayHint{
 		Position: protocol.Position{

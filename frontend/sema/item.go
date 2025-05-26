@@ -32,12 +32,6 @@ func (a *Analysis) handleUse(scope *Scope, it *ast.Use) {
 		asName = it.Path.Idents[len(it.Path.Idents)-1].Raw
 	}
 
-	// var pathSegments []string
-	// for _, id := range it.Path.Idents {
-	// 	pathSegments = append(pathSegments, id.Raw)
-	// }
-	// a.UseAliases[asName] = pathSegments
-
 	sym.SetPublic(it.Public)
 	sym.SetIsUse(true)
 

@@ -125,25 +125,6 @@ func (a *Analysis) unify(
 		return actual
 	}
 
-	// // If base is optional => unify inside
-	// if base.IsOptional() {
-	// 	baseOpt := base.Optional()
-	// 	// If actual is nil => unify is trivially okay. We keep "?" but do not further unify inside.
-	// 	if actual.IsNil() {
-	// 		// No deeper type to unify; "nil" fits an optional.
-	// 		return base
-	// 	}
-	// 	// If actual is optional => unify the inner.
-	// 	if actual.IsOptional() {
-	// 		// unify baseInner with actualInner
-	// 		newInner := a.unify(baseOpt.Type, actual.Optional().Type, placeholders, span)
-	// 		return ast.NewSemType(ast.NewSemOptional(newInner), base.Span())
-	// 	}
-	// 	// If actual is not optional, unify baseInner with actual
-	// 	newInner := a.unify(baseOpt.Type, actual, placeholders, span)
-	// 	return ast.NewSemType(ast.NewSemOptional(newInner), base.Span())
-	// }
-
 	// If base is a struct => unify generics param-by-param
 	if base.IsStruct() {
 		bs := base.Struct()

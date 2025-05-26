@@ -45,12 +45,6 @@ func (a *Analysis) resolveType(scope *Scope, ty ast.Type) Type {
 		}
 		conSt := a.instantiateStruct(st.Def, concrete, false)
 		return ast.NewSemType(conSt, t.Span())
-	// case *ast.Optional:
-	// 	resolved := a.resolveType(scope, t.Type)
-	// 	if resolved.IsAny() || resolved.IsNil() || resolved.IsGeneric() {
-	// 		a.Panic("optional type cannot be any, nil, or generic", t.Span())
-	// 	}
-	// 	return ast.NewSemType(ast.NewSemOptional(resolved), t.Span())
 	case *ast.Tuple:
 		elems := make([]Type, 0, len(t.Elems))
 		for _, elem := range t.Elems {

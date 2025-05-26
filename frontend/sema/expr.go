@@ -428,9 +428,6 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 
 			for i, paramTy := range funcTy.Params {
 				if ast.IsVararg(funcTy.Def.Params[i].Type) {
-					// for j := i; j < len(flatArgTys); j++ {
-					// 	a.unify(paramTy, flatArgTys[j], placeholders, flatArgSpans[j])
-					// }
 					break // done unifying
 				}
 
