@@ -21,11 +21,12 @@ func (cg *Codegen) genItem(item ast.Item) {
 }
 
 func (cg *Codegen) genImport(it *ast.Import) {
-	imp := cg.Analysis.Scope.GetImport(it.Path.Raw)
+	if it.Path.Raw == "globals*" {
+		return
+	}
+	imp := cg.Analysis.Scope.GetImport(it.As.Raw)
 	if imp == nil {
-		if it.Path.Raw != "globals*" {
-			log.Println("import not found", it.Path.Raw)
-		}
+		log.Println("import not found", it.Path.Raw)
 		return
 	}
 	cg.ln("%s(\"%s\");", RUN_IMPORT, toHexEscapedLiteral(imp.Path))
