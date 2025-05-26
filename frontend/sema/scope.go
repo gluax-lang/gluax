@@ -79,6 +79,18 @@ func (s *Scope) GetSymbol(name string) *Symbol {
 	return nil
 }
 
+func (s *Scope) GetSymbolInChildren(name string) *Symbol {
+	if sym, ok := s.Symbols[name]; ok {
+		return &sym
+	}
+	for _, child := range s.Children {
+		if sym := child.GetSymbolInChildren(name); sym != nil {
+			return sym
+		}
+	}
+	return nil
+}
+
 func (s *Scope) AddValue(name string, val Value, span Span) error {
 	return s.AddValueVisibility(name, val, span, true)
 }
