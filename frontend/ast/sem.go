@@ -348,12 +348,21 @@ func (s SemStruct) AstString() string {
 	var sb strings.Builder
 	sb.WriteString("struct ")
 	sb.WriteString(s.Def.Name.Raw)
-	if len(s.Fields) == 0 {
+	sb.WriteString(s.Generics.String())
+	fieldsLen := len(s.Fields)
+	if fieldsLen == 0 {
 		sb.WriteString(" {}")
 	} else {
 		sb.WriteString(" {\n")
+		i := 0
 		for _, field := range s.Fields {
-			sb.WriteString(fmt.Sprintf("\t%s: %s,\n", field.Def.Name.Raw, field.Ty.String()))
+			sb.WriteString(fmt.Sprintf("\t%s: %s", field.Def.Name.Raw, field.Ty.String()))
+			if i < fieldsLen-1 {
+				sb.WriteString(",\n")
+			} else {
+				sb.WriteString("\n")
+			}
+			i++
 		}
 		sb.WriteString("}")
 	}
