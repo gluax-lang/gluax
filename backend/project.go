@@ -1,10 +1,17 @@
 package codegen
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/gluax-lang/gluax/frontend/sema"
 )
+
+var redundantNewlinesRegex = regexp.MustCompile(`(\r?\n){3,}`)
+
+func removeRedundantBlankLines(s string) string {
+	return redundantNewlinesRegex.ReplaceAllString(s, "$1$1")
+}
 
 func GenerateProject(pA *sema.ProjectAnalysis) (string, string) {
 	serverCg := Codegen{
@@ -37,7 +44,7 @@ func GenerateProject(pA *sema.ProjectAnalysis) (string, string) {
 	clientCg.ln("%s(\"%s\");", RUN_IMPORT, toHexEscapedLiteral(pA.Main))
 	clientCode := clientCg.bufCtx.buf.String()
 
-	return serverCode, clientCode
+	return removeRedundantBlankLines(serverCode), removeRedundantBlankLines(clientCode)
 }
 
 func (cg *Codegen) handleFiles(files map[string]*sema.Analysis) {
