@@ -2,39 +2,55 @@ import "globals*";
 
 /* types */
 
-pub struct nil {}
+pub struct nil {
+    _priv: nil
+}
 
-pub struct any {}
+pub struct any {
+    _priv: nil
+}
 
-pub struct bool {}
+pub struct bool {
+    _priv: nil,
+}
 
 pub struct number {
-    func to_base(s: Self, b: number) ! -> number {
-        if b < 2 || b > 36 {
-            throw "base out of range (2~36)";
-        }
-        // this should be safe, since we're just changing the base/radix
-        globals::lua::tonumber(s, b) unsafe_cast_as number
+    _priv: nil,
+
+    func to_string(n: Self) -> string {
+        globals::lua::tostring(n)
     }
 }
 
 pub struct string {
+    _priv: nil,
+
     func to_number(s: Self) -> ?number {
-        globals::lua::tonumber(s, 10)
+        globals::lua::tonumber(s)
     }
 }
 
 // vector
-pub struct vec<T> {}
+pub struct vec<T> {
+    _priv: nil,
+}
 
 // hashmap
-pub struct map<K, V> {}
+pub struct map<K, V> {
+    _priv: nil,
+}
 
 // option/nullable
-pub struct option<T> {}
+pub struct option<T> {
+    _priv: nil,
+}
 
 // anyfunc fits any function signature
-pub struct anyfunc {}
+pub struct anyfunc {
+    _priv: nil,
+}
 
 // table fits: table | any vec | any map
-pub struct table {}
+pub struct table {
+    _priv: nil,
+}
