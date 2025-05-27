@@ -74,7 +74,7 @@ func getBinaryOperatorPrecedence(op string) (int, associativity, ast.BinaryOp, b
 }
 
 func (p *parser) parseBinaryExpr(ctx ExprCtx, minPrec int) ast.Expr {
-	left := p.parsePostfixExpr(ctx, p.parseUnaryExpr(ctx))
+	left := p.parseUnsafeCast(ctx)
 
 	for {
 		isShiftRight := p.Token.Is(">") && p.peek().Is(">")
@@ -113,4 +113,16 @@ func (p *parser) parseBinaryExpr(ctx ExprCtx, minPrec int) ast.Expr {
 	}
 
 	return left
+}
+
+func (p *parser) parseUnsafeCast(ctx ExprCtx) ast.Expr {
+	expr := p.parseUnaryExpr(ctx)
+	for p.Token.Is("unsafe_cast_as") {
+		spanStart := expr.Span()
+		p.advance() // consume 'unsafe_cast_as'
+		ty := p.parseType()
+		span := SpanFrom(spanStart, p.prevSpan())
+		expr = ast.NewUnsafeCast(expr, ty, span)
+	}
+	return expr
 }

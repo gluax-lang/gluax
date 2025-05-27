@@ -60,23 +60,6 @@ func (c *Call) Span() common.Span {
 	return c.span
 }
 
-/* UnsafeCast (unsafe_cast) */
-
-type UnsafeCast struct {
-	Type Type
-	span common.Span
-}
-
-func NewUnsafeCast(ty Type, span common.Span) *UnsafeCast {
-	return &UnsafeCast{Type: ty, span: span}
-}
-
-func (a *UnsafeCast) isPostfixOp() {}
-
-func (a *UnsafeCast) Span() common.Span {
-	return a.span
-}
-
 /* Else for options */
 
 type Else struct {

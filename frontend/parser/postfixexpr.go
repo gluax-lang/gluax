@@ -12,8 +12,6 @@ func (p *parser) parsePostfixExpr(ctx ExprCtx, left ast.Expr) ast.Expr {
 	switch {
 	case p.Token.Is("("):
 		op = p.parseCall(spanStart, nil)
-	case p.Token.Is("unsafe_cast_as"):
-		op = p.parseUnsafeCast()
 	case p.Token.Is("else"):
 		op = p.parseElse()
 	case p.Token.Is("?"):
@@ -69,14 +67,6 @@ func (p *parser) parseCall(spanStart common.Span, method *ast.Ident) ast.Postfix
 	spanStart = SpanFrom(spanStart, p.prevSpan())
 
 	return ast.NewCall(method, args, tryCall, catch, spanStart)
-}
-
-func (p *parser) parseUnsafeCast() ast.PostfixOp {
-	spanStart := p.span()
-	p.advance() // consume 'as'
-	ty := p.parseType()
-	span := SpanFrom(spanStart, p.prevSpan())
-	return ast.NewUnsafeCast(ty, span)
 }
 
 func (p *parser) parseElse() ast.PostfixOp {

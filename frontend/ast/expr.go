@@ -27,6 +27,7 @@ const (
 	ExprKindStructInit
 	ExprKindPathCall
 	ExprKindTuple
+	ExprKindUnsafeCast
 )
 
 func (k ExprKind) String() string {
@@ -200,6 +201,13 @@ func (e *Expr) PathCall() *ExprPathCall {
 		panic("not a struct static call")
 	}
 	return e.data.(*ExprPathCall)
+}
+
+func (e *Expr) UnsafeCast() *UnsafeCast {
+	if e.Kind() != ExprKindUnsafeCast {
+		panic("not an unsafe cast")
+	}
+	return e.data.(*UnsafeCast)
 }
 
 func (e *Expr) Bool() bool {
@@ -582,4 +590,22 @@ func (s *ExprPathCall) ImportedFunc() SemType {
 
 func (s *ExprPathCall) IsStructMethod() bool {
 	return s.st != nil
+}
+
+/* UnsafeCast (unsafe_cast) */
+
+type UnsafeCast struct {
+	Expr Expr
+	Type Type
+	span common.Span
+}
+
+func NewUnsafeCast(expr Expr, ty Type, span common.Span) Expr {
+	return NewExpr(&UnsafeCast{Expr: expr, Type: ty, span: span})
+}
+
+func (a *UnsafeCast) ExprKind() ExprKind { return ExprKindUnsafeCast }
+
+func (a *UnsafeCast) Span() common.Span {
+	return a.span
 }

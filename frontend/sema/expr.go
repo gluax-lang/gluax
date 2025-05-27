@@ -71,6 +71,8 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 		retTy = a.handleStructInit(scope, expr.StructInit())
 	case ast.ExprKindPathCall:
 		retTy = a.handlePathCall(scope, expr.PathCall())
+	case ast.ExprKindUnsafeCast:
+		retTy = a.handleUnsafeCast(scope, expr.UnsafeCast())
 	}
 	expr.SetType(retTy)
 	return flow
@@ -329,8 +331,6 @@ func (a *Analysis) handlePostfixExpr(scope *Scope, e *ast.ExprPostfix) Type {
 		}
 	case *ast.DotAccess:
 		ty = a.handleDotAccess(op, expr)
-	case *ast.UnsafeCast:
-		ty = a.handleUnsafeCast(scope, op, expr)
 	case *ast.Else:
 		ty = a.handleElse(scope, op, expr)
 	case *ast.UnwrapOption:
@@ -549,7 +549,8 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 	return ret
 }
 
-func (a *Analysis) handleUnsafeCast(scope *Scope, as *ast.UnsafeCast, _ *ast.Expr) Type {
+func (a *Analysis) handleUnsafeCast(scope *Scope, as *ast.UnsafeCast) Type {
+	a.handleExpr(scope, &as.Expr)
 	unsafeCastTy := a.resolveType(scope, as.Type)
 	return unsafeCastTy
 }

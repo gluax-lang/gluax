@@ -22,5 +22,5 @@ func (p *parser) parseUnaryExpr(ctx ExprCtx) ast.Expr {
 		operand := p.parseUnaryExpr(ctx)
 		return ast.NewUnaryExpr(ast.UnaryOpLength, operand, SpanFrom(spanStart, p.prevSpan()))
 	}
-	return p.parsePrimaryExpr(ctx)
+	return p.parsePostfixExpr(ctx, p.parsePrimaryExpr(ctx))
 }

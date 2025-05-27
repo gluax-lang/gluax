@@ -95,6 +95,8 @@ func (cg *Codegen) genExprX(e ast.Expr) string {
 	case ast.ExprKindPathCall:
 		callCode := cg.genPathCall(e.PathCall())
 		return callCode
+	case ast.ExprKindUnsafeCast:
+		return cg.genExprX(e.UnsafeCast().Expr)
 	default:
 		panic("unreachable; unhandled expression type")
 	}
@@ -242,8 +244,6 @@ func (cg *Codegen) genPostfixExpr(p *ast.ExprPostfix) string {
 		} else {
 			return cg.genMethodCall(op, value, primaryTy)
 		}
-	case *ast.UnsafeCast:
-		// for now at least ig?
 	case *ast.Else:
 		cg.ln("local %s = %s;", temp, value)
 		cg.ln("if %s == nil then", temp)
