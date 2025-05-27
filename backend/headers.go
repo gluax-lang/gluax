@@ -6,6 +6,7 @@ func fastLocalsHeaders(cg *Codegen) {
 	cg.ln("local type = type;")
 	cg.ln("local pairs = pairs;")
 	cg.ln("local tostring, tonumber = tostring, tonumber;")
+	cg.ln("local setmetatable, getmetatable = setmetatable, getmetatable;")
 	cg.ln("local SERVER, CLIENT = SERVER, CLIENT;")
 }
 

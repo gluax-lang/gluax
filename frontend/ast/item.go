@@ -47,6 +47,7 @@ type StructInstantiation struct {
 type StructsStack []StructInstantiation
 
 type StructField struct {
+	Id     int // the field id, in order of declaration
 	Name   lexer.TokIdent
 	Type   Type
 	Public bool

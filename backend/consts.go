@@ -17,7 +17,3 @@ const IMPORTS_TBL = PREFIX + "_imports"
 const PUBLIC_TBL = PREFIX + "_public"
 
 const RUN_IMPORT = PREFIX + "_run_import"
-
-const STRUCT_NEW = PREFIX + "_structnew"
-const STRUCT_OBJ_FIELDS = PREFIX + "_structobj_fields"
-const STRUCT_OBJ_INSTANCES = PREFIX + "_structobj_instances"

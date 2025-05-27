@@ -63,6 +63,8 @@ func (p *parser) parseStruct() ast.Item {
 		seenMethod bool
 	)
 
+	fieldId := 1 // Start field IDs at 1
+
 	for !p.Token.Is("}") {
 		if p.Token.Is("func") {
 			seenMethod = true
@@ -71,7 +73,9 @@ func (p *parser) parseStruct() ast.Item {
 			if seenMethod {
 				common.PanicDiag("cannot define fields after methods", p.span())
 			}
-			fields = append(fields, p.parseStructField())
+
+			fields = append(fields, p.parseStructField(fieldId))
+			fieldId++ // Increment field ID for the next field
 
 			// optional trailing comma
 			if !p.tryConsume(",") {
@@ -86,12 +90,13 @@ func (p *parser) parseStruct() ast.Item {
 	return ast.NewStruct(name, generics, fields, methods, span)
 }
 
-func (p *parser) parseStructField() ast.StructField {
+func (p *parser) parseStructField(id int) ast.StructField {
 	public := p.tryConsume("pub")
 	name := p.expectIdent()
 	p.expect(":")
 	ty := p.parseType()
 	return ast.StructField{
+		Id:     id,
 		Name:   name,
 		Type:   ty,
 		Public: public,

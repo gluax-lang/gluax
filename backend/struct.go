@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/gluax-lang/gluax/frontend/ast"
@@ -49,29 +50,8 @@ func (cg *Codegen) decorateStName(st *ast.SemStruct) string {
 	return baseName + fmt.Sprintf(" --[[struct: %s]]", st.String())
 }
 
-func structSetObjFieldCode(st *ast.SemStruct, obj, key, value string) string {
-	return fmt.Sprintf(`%s[%s][%s] = %s`, STRUCT_OBJ_FIELDS, obj, key, value)
-}
-
-func structGetObjFieldCode(st *ast.SemStruct, obj, key string) string {
-	return fmt.Sprintf(`%s[%s].%s`, STRUCT_OBJ_FIELDS, obj, key)
-}
-
-func structIsObjInstanceCode(obj, structName string) string {
-	return fmt.Sprintf(`%s[%s] == %s`, STRUCT_OBJ_INSTANCES, obj, structName)
-}
-
 func structHeaders(cg *Codegen) {
-	cg.ln("local %s = setmetatable({}, { __mode = \"k\" });", STRUCT_OBJ_INSTANCES)
-	cg.ln("local %s = setmetatable({}, { __mode = \"k\" });", STRUCT_OBJ_FIELDS)
-	cg.ln("local %s = function(struct, fields)", STRUCT_NEW)
-	cg.pushIndent()
-	cg.ln("local obj = {}")
-	cg.ln("%s[obj] = struct", STRUCT_OBJ_INSTANCES)
-	cg.ln("%s[obj] = fields", STRUCT_OBJ_FIELDS)
-	cg.ln("return obj")
-	cg.popIndent()
-	cg.ln("end;")
+
 }
 
 func (cg *Codegen) generateStruct(st *ast.SemStruct) {
@@ -94,27 +74,61 @@ func (cg *Codegen) generateStruct(st *ast.SemStruct) {
 func (cg *Codegen) genStructInit(si *ast.ExprStructInit, st *ast.SemStruct) string {
 	var sb strings.Builder
 
-	sb.WriteString("(")
-
-	rhs := make([]string, len(si.Fields))
+	// Step 1: Evaluate all field expressions in user order, assign to temps
+	type fieldEval struct {
+		Name string
+		Id   int
+		Temp string
+		Expr string
+	}
+	fieldEvals := make([]fieldEval, len(si.Fields))
 	for i, f := range si.Fields {
-		rhs[i] = cg.genExpr(f.Value)
+		// Find the field definition to get its Id
+		fieldId := 0
+		for _, def := range st.Def.Fields {
+			if def.Name.Raw == f.Name.Raw {
+				fieldId = def.Id
+				break
+			}
+		}
+		temp := cg.temp()
+		expr := cg.genExpr(f.Value)
+		fieldEvals[i] = fieldEval{
+			Name: f.Name.Raw,
+			Id:   fieldId,
+			Temp: temp,
+			Expr: expr,
+		}
 	}
 
-	toCall := cg.decorateStName(st)
+	// Emit a single local statement for all temps
+	var tempNames []string
+	var tempExprs []string
+	for _, fe := range fieldEvals {
+		tempNames = append(tempNames, fe.Temp)
+		tempExprs = append(tempExprs, fe.Expr)
+	}
+	cg.ln("local %s = %s", strings.Join(tempNames, ", "), strings.Join(tempExprs, ", "))
 
-	sb.WriteString(fmt.Sprintf("%s(%s, {", STRUCT_NEW, toCall))
+	toSetTo := cg.decorateStName(st)
 
-	for i, f := range si.Fields {
+	// Step 2: Sort by field Id for table initialization
+	sorted := make([]fieldEval, len(fieldEvals))
+	copy(sorted, fieldEvals)
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].Id < sorted[j].Id
+	})
+
+	// Step 3: Emit the struct init call with temps in field-id order
+	sb.WriteString("setmetatable({")
+	for i, fe := range sorted {
 		if i > 0 {
 			sb.WriteString(", ")
 		}
-		sb.WriteString(f.Name.Raw)
-		sb.WriteString(" = ")
-		sb.WriteString(rhs[i])
+		sb.WriteString(fe.Temp)
+		sb.WriteString(fmt.Sprintf("--[[%s]]", fe.Name))
 	}
-
-	sb.WriteString("}))")
+	sb.WriteString(fmt.Sprintf("}, %s)", toSetTo))
 
 	return sb.String()
 }
@@ -136,5 +150,14 @@ func (cg *Codegen) genPathCall(call *ast.ExprPathCall) string {
 }
 
 func (cg *Codegen) genDotAccess(expr *ast.DotAccess, toIndex string, toIndexTy ast.SemType) string {
-	return structGetObjFieldCode(toIndexTy.Struct(), toIndex, expr.Name.Raw)
+	st := toIndexTy.Struct()
+	fieldId := 0
+	for _, def := range st.Def.Fields {
+		if def.Name.Raw == expr.Name.Raw {
+			fieldId = def.Id
+			break
+		}
+	}
+	// Use numeric index for field access
+	return fmt.Sprintf("%s[%d--[[%s]]]", toIndex, fieldId, expr.Name.Raw)
 }
