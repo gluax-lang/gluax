@@ -12,12 +12,7 @@ func (p *parser) parseFunctionSignature(paramFlags Flags) ast.FunctionSignature 
 
 	errorable := p.tryConsume("!")
 
-	var returnType ast.Type
-	if p.tryConsume("->") {
-		returnType = p.parseTypeX(FlagTypeTuple | FlagTypeVarArg | FlagFuncReturnUnreachable)
-	} else {
-		returnType = ast.NilType(SpanFrom(spanStart, p.prevSpan()))
-	}
+	returnType := p.parseFunctionReturnType(FlagTypeTuple|FlagTypeVarArg|FlagFuncReturnUnreachable, SpanFrom(spanStart, p.prevSpan()))
 
 	return ast.FunctionSignature{
 		Params:     params,
@@ -56,4 +51,11 @@ func (p *parser) parseFunctionParams(flags Flags) []ast.FunctionParam {
 		params = append(params, p.parseFunctionParam(flags))
 	})
 	return params
+}
+
+func (p *parser) parseFunctionReturnType(flags Flags, span Span) ast.Type {
+	if p.tryConsume("->") {
+		return p.parseTypeX(flags)
+	}
+	return ast.NilType(span)
 }
