@@ -41,21 +41,22 @@ func (cg *Codegen) innermostLoop() loopLabel {
 	panic("no loop labels, should not happen")
 }
 
-func (cg *Codegen) genExprsToLocals(exprs []ast.Expr) ([]string, string) {
+func (cg *Codegen) genExprsToLocals(exprs []ast.Expr, directLast bool) ([]string, string) {
 	if len(exprs) == 0 {
-		panic("genExprsToLocals called with empty exprs slice")
+		return nil, ""
 	}
-	locals := make([]string, len(exprs))
-	exprStrs := make([]string, len(exprs))
-	for i := range exprs {
-		locals[i] = cg.temp()
-		exprStrs[i] = cg.genExpr(exprs[i])
+	var locals, resultParts []string
+	for i, expr := range exprs {
+		if directLast && i == len(exprs)-1 {
+			resultParts = append(resultParts, cg.genExpr(expr))
+		} else {
+			local := cg.temp()
+			locals = append(locals, local)
+			cg.ln("local %s = %s;", local, cg.genExpr(expr))
+			resultParts = append(resultParts, local)
+		}
 	}
-	assignment := fmt.Sprintf("local %s = %s;",
-		strings.Join(locals, ", "),
-		strings.Join(exprStrs, ", "))
-	cg.ln("%s", assignment)
-	return locals, strings.Join(locals, ", ")
+	return locals, strings.Join(resultParts, ", ")
 }
 
 func (cg *Codegen) genExpr(e ast.Expr) string {
@@ -293,18 +294,8 @@ func (cg *Codegen) genTupleExpr(t *ast.ExprTuple) string {
 }
 
 func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) string {
-	exprs := make([]string, len(call.Args))
-	for i, arg := range call.Args {
-		// Generate temp variable for all args except the last one
-		if i < len(call.Args)-1 {
-			temp := cg.temp()
-			cg.ln("local %s = %s;", temp, cg.genExpr(arg))
-			exprs[i] = temp
-		} else {
-			exprs[i] = cg.genExpr(arg)
-		}
-	}
-	callExpr := fmt.Sprintf("%s(%s)", toCall, strings.Join(exprs, ", "))
+	_, exprs := cg.genExprsToLocals(call.Args, true)
+	callExpr := fmt.Sprintf("%s(%s)", toCall, exprs)
 	fun := toCallTy.Function()
 	if fun.HasVarargReturn() {
 		return callExpr
@@ -352,7 +343,7 @@ func (cg *Codegen) genMethodCall(call *ast.Call, toCall string, toCallTy ast.Sem
 func (cg *Codegen) genRunLua(run *ast.ExprRunLua) string {
 	var tempVars []string
 	if len(run.Args) > 0 {
-		tempVars, _ = cg.genExprsToLocals(run.Args)
+		tempVars, _ = cg.genExprsToLocals(run.Args, false)
 	}
 
 	code := run.Code.Raw
