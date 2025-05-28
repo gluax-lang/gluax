@@ -41,6 +41,23 @@ func (cg *Codegen) innermostLoop() loopLabel {
 	panic("no loop labels, should not happen")
 }
 
+func (cg *Codegen) genExprsToLocals(exprs []ast.Expr) ([]string, string) {
+	if len(exprs) == 0 {
+		panic("genExprsToLocals called with empty exprs slice")
+	}
+	locals := make([]string, len(exprs))
+	exprStrs := make([]string, len(exprs))
+	for i := range exprs {
+		locals[i] = cg.temp()
+		exprStrs[i] = cg.genExpr(exprs[i])
+	}
+	assignment := fmt.Sprintf("local %s = %s;",
+		strings.Join(locals, ", "),
+		strings.Join(exprStrs, ", "))
+	cg.ln("%s", assignment)
+	return locals, strings.Join(locals, ", ")
+}
+
 func (cg *Codegen) genExpr(e ast.Expr) string {
 	return cg.genExprX(e)
 }
