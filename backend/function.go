@@ -90,11 +90,13 @@ func (cg *Codegen) genInlineCall(call *ast.Call, fun ast.SemFunction, toCall str
 	cg.ln("do -- inline %s", fun.Def.Name.Raw)
 	cg.pushIndent()
 
-	params := make([]string, len(fun.Def.Params))
-	for i, param := range fun.Def.Params {
-		params[i] = param.Name.Raw
+	if len(fun.Def.Params) > 0 {
+		params := make([]string, len(fun.Def.Params))
+		for i, param := range fun.Def.Params {
+			params[i] = param.Name.Raw
+		}
+		cg.ln("local %s = %s;", strings.Join(params, ", "), cg.getCallArgs(call, toCall))
 	}
-	cg.ln("local %s = %s;", strings.Join(params, ", "), cg.getCallArgs(call, toCall))
 
 	// Generate return locals
 	returnCount := fun.ReturnCount()
@@ -106,11 +108,7 @@ func (cg *Codegen) genInlineCall(call *ast.Call, fun ast.SemFunction, toCall str
 	bodyResult := cg.genBlockX(fun.Def.Body, BlockNone)
 
 	// Assign body result to return locals
-	if returnCount == 1 {
-		cg.ln("%s = %s;", returnLocals[0], bodyResult)
-	} else if returnCount > 1 {
-		cg.ln("%s = %s;", strings.Join(returnLocals, ", "), bodyResult)
-	}
+	cg.ln("%s = %s;", strings.Join(returnLocals, ", "), bodyResult)
 
 	cg.popIndent()
 	cg.ln("end")
