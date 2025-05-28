@@ -28,3 +28,10 @@ func (t TokIdent) AsString() string {
 func NewTokIdent(s string, span common.Span) TokIdent {
 	return TokIdent{Raw: s, span: span}
 }
+
+func IsIdentStr(t Token, s string) bool {
+	if ident, ok := t.(TokIdent); ok {
+		return ident.Raw == s
+	}
+	return false
+}
