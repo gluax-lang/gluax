@@ -252,7 +252,6 @@ func (cg *Codegen) genIfExpr(i *ast.ExprIf) string {
 func (cg *Codegen) genPostfixExpr(p *ast.ExprPostfix) string {
 	value := cg.genExpr(p.Left)
 	primaryTy := p.Left.Type()
-	temp := cg.getTempVar()
 	switch op := p.Op.(type) {
 	case *ast.DotAccess:
 		return cg.genDotAccess(op, value, primaryTy)
@@ -263,6 +262,7 @@ func (cg *Codegen) genPostfixExpr(p *ast.ExprPostfix) string {
 			return cg.genMethodCall(op, value, primaryTy)
 		}
 	case *ast.Else:
+		temp := cg.getTempVar()
 		cg.ln("%s = %s;", temp, value)
 		cg.ln("if %s == nil then", temp)
 		cg.pushIndent()
@@ -271,6 +271,7 @@ func (cg *Codegen) genPostfixExpr(p *ast.ExprPostfix) string {
 		cg.ln("end")
 		return temp
 	case *ast.UnwrapOption:
+		temp := cg.getTempVar()
 		cg.ln("%s = %s;", temp, value)
 		cg.ln("if %s == nil then", temp)
 		cg.pushIndent()
@@ -278,9 +279,9 @@ func (cg *Codegen) genPostfixExpr(p *ast.ExprPostfix) string {
 		cg.popIndent()
 		cg.ln("end")
 		return temp
+	default:
+		panic("unreachable; unhandled postfix operator")
 	}
-	cg.ln("%s = %s;", temp, value)
-	return temp
 }
 
 func (cg *Codegen) genTupleExpr(t *ast.ExprTuple) string {
