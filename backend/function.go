@@ -85,18 +85,16 @@ func (cg *Codegen) getCallArgs(call *ast.Call, toCall string) string {
 	}
 }
 
-func (cg *Codegen) genInlineCall(call *ast.Call, fun ast.SemFunction) string {
+func (cg *Codegen) genInlineCall(call *ast.Call, fun ast.SemFunction, toCall string) string {
 	// Inline the function body
 	cg.ln("do -- inline %s", fun.Def.Name.Raw)
 	cg.pushIndent()
-
-	_, args := cg.genExprsToLocals(call.Args, true)
 
 	params := make([]string, len(fun.Def.Params))
 	for i, param := range fun.Def.Params {
 		params[i] = param.Name.Raw
 	}
-	cg.ln("local %s = %s;", strings.Join(params, ", "), args)
+	cg.ln("local %s = %s;", strings.Join(params, ", "), cg.getCallArgs(call, toCall))
 
 	// Generate return locals
 	returnCount := fun.ReturnCount()
@@ -129,18 +127,10 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 		fun = toCallTy.Function()
 	}
 
-	if fun.HasVarargReturn() {
-		goto out
-	}
-	// Inline function calls if possible
-	{
-
-		// Check if function can be inlined
-		if fun.HasVarargParam() {
-			goto out
+	var canInline = func() bool {
+		if fun.HasVarargParam() || fun.HasVarargReturn() {
+			return false
 		}
-
-		// Check for #[inline] attribute
 		hasInlineAttr := false
 		for _, attr := range fun.Def.Attributes {
 			if attr.Key.Raw == "inline" {
@@ -148,14 +138,16 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 				break
 			}
 		}
-
 		if !hasInlineAttr {
-			goto out
+			return false
 		}
-
-		return cg.genInlineCall(call, fun)
+		return true
 	}
-out:
+
+	if canInline() {
+		return cg.genInlineCall(call, fun, toCall)
+	}
+
 	var callExpr string
 	args := cg.getCallArgs(call, toCall)
 	if call.Method != nil {
