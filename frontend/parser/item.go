@@ -66,9 +66,15 @@ func (p *parser) parseStruct() ast.Item {
 	fieldId := 1 // Start field IDs at 1
 
 	for !p.Token.Is("}") {
+		var attributes []ast.Attribute
+		for p.Token.Is("#") {
+			attributes = append(attributes, p.parseAttribute())
+		}
 		if p.Token.Is("func") {
 			seenMethod = true
-			methods = append(methods, p.parseStructMethod())
+			method := p.parseStructMethod()
+			method.Attributes = attributes
+			methods = append(methods, method)
 		} else {
 			if seenMethod {
 				common.PanicDiag("cannot define fields after methods", p.span())
