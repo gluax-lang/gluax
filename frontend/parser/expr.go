@@ -58,6 +58,10 @@ func (p *parser) parsePrimaryExpr(ctx ExprCtx) ast.Expr {
 		return ast.NewStringExpr(v)
 	}
 
+	if p.Token.Is("@") && lexer.IsIdentStr(p.peek(), "lua") {
+		return p.parseRunLuaExpr()
+	}
+
 	tok := p.Token
 	switch tok.AsString() {
 	case "_":
@@ -186,4 +190,30 @@ func (p *parser) parseParenthesizedExpr() ast.Expr {
 
 	// return ast.NewParenthesizedExpr(expr, SpanFrom(spanStart, p.prevSpan()))
 	return expr
+}
+
+func (p *parser) parseRunLuaExpr() ast.Expr {
+	spanStart := p.span()
+	p.advance() // consume "@"
+	p.advance() // consume "lua"
+	atLuaSpan := SpanFrom(spanStart, p.prevSpan())
+
+	p.expect("(")
+
+	code := p.expectString()
+
+	var args []ast.Expr
+	for {
+		if p.tryConsume(",") {
+			args = append(args, p.parseExpr(ExprCtxNormal))
+		} else {
+			break
+		}
+	}
+
+	returnType := p.parseFunctionReturnType(FlagTypeTuple|FlagTypeVarArg|FlagFuncReturnUnreachable, atLuaSpan)
+
+	p.expect(")")
+
+	return ast.NewRunLuaExpr(code, args, returnType, SpanFrom(spanStart, p.prevSpan()))
 }

@@ -114,6 +114,8 @@ func (cg *Codegen) genExprX(e ast.Expr) string {
 		return callCode
 	case ast.ExprKindUnsafeCast:
 		return cg.genExprX(e.UnsafeCast().Expr)
+	case ast.ExprKindRunLua:
+		return cg.genRunLua(e.RunLua())
 	default:
 		panic("unreachable; unhandled expression type")
 	}
@@ -345,6 +347,54 @@ func (cg *Codegen) genMethodCall(call *ast.Call, toCall string, toCallTy ast.Sem
 	st := toCallTy.Struct()
 	stName := cg.decorateStName(st)
 	return fmt.Sprintf("%s.%s(%s)", stName, call.Method.Raw, strings.Join(exprs, ", "))
+}
+
+func (cg *Codegen) genRunLua(run *ast.ExprRunLua) string {
+	var tempVars []string
+	if len(run.Args) > 0 {
+		tempVars, _ = cg.genExprsToLocals(run.Args)
+	}
+
+	code := run.Code.Raw
+
+	// Replace argument placeholders {@1@}
+	if len(tempVars) > 0 {
+		code = run.GetArgRegex().ReplaceAllStringFunc(code, func(match string) string {
+			submatch := run.GetArgRegex().FindStringSubmatch(match)
+			argIndex, _ := strconv.Atoi(submatch[1])
+			return tempVars[argIndex-1] // Convert 1-based to 0-based indexing
+		})
+	}
+
+	// Replace numbered temp placeholders {@TEMP1@}
+	numberedTemps := make(map[string]string)
+	code = run.GetTempRegex().ReplaceAllStringFunc(code, func(match string) string {
+		submatch := run.GetTempRegex().FindStringSubmatch(match)
+		if len(submatch) > 1 {
+			tempNum := submatch[1]
+			if existing, exists := numberedTemps[tempNum]; exists {
+				return existing
+			}
+			newTemp := cg.temp()
+			numberedTemps[tempNum] = newTemp
+			return newTemp
+		}
+		return cg.temp() // fallback
+	})
+
+	// Extract and store the return expression
+	returnExpr := "nil" // Default return value if not specified
+	code = run.GetReturnRegex().ReplaceAllStringFunc(code, func(match string) string {
+		submatch := run.GetReturnRegex().FindStringSubmatch(match)
+		if len(submatch) > 1 {
+			returnExpr = strings.TrimSpace(submatch[1])
+		}
+		return "" // Remove the {@RETURN ...@} placeholder from the code
+	})
+
+	cg.ln("%s", code)
+
+	return returnExpr
 }
 
 /* Loops */

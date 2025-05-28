@@ -2,6 +2,7 @@ package sema
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/gluax-lang/gluax/frontend/ast"
 	"github.com/gluax-lang/gluax/frontend/common"
@@ -73,6 +74,8 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 		retTy = a.handlePathCall(scope, expr.PathCall())
 	case ast.ExprKindUnsafeCast:
 		retTy = a.handleUnsafeCast(scope, expr.UnsafeCast())
+	case ast.ExprKindRunLua:
+		retTy = a.handleRunLua(scope, expr.RunLua())
 	}
 	expr.SetType(retTy)
 	return flow
@@ -626,4 +629,55 @@ func (a *Analysis) handlePathCall(scope *Scope, call *ast.ExprPathCall) Type {
 	}
 
 	return ret
+}
+
+func (a *Analysis) handleRunLua(scope *Scope, runLua *ast.ExprRunLua) Type {
+	code := runLua.Code.Raw
+	if code == "" {
+		a.Panic("runLua expression cannot be empty", runLua.Span())
+	}
+
+	matches := runLua.GetArgRegex().FindAllStringSubmatch(code, -1)
+	maxArgUsed := 0
+	usedArgs := make(map[int]bool)
+
+	for _, match := range matches {
+		argNum, err := strconv.Atoi(match[1])
+		if err != nil {
+			a.Panic(fmt.Sprintf("invalid argument number in placeholder: %s", match[0]), runLua.Span())
+		}
+		if argNum < 1 {
+			a.Panic("argument numbers must start from 1", runLua.Span())
+		}
+		usedArgs[argNum] = true
+		if argNum > maxArgUsed {
+			maxArgUsed = argNum
+		}
+	}
+
+	for i := 1; i <= maxArgUsed; i++ {
+		if !usedArgs[i] {
+			a.Panic(fmt.Sprintf("argument {@%d@} is missing - all arguments from 1 to %d must be used", i, maxArgUsed), runLua.Span())
+		}
+	}
+
+	actualArgs := len(runLua.Args)
+	if actualArgs != maxArgUsed {
+		if maxArgUsed == 0 {
+			a.Panic(fmt.Sprintf("no argument placeholders found in code, but %d arguments provided", actualArgs), runLua.Span())
+		} else {
+			a.Panic(fmt.Sprintf("expected %d arguments based on placeholders, but got %d", maxArgUsed, actualArgs), runLua.Span())
+		}
+	}
+
+	returnMatches := runLua.GetReturnRegex().FindAllStringSubmatch(code, -1)
+	if len(returnMatches) > 1 {
+		a.Panic("can't have more than one {@RETURN@} placeholder", runLua.Span())
+	}
+
+	for i := range runLua.Args {
+		a.handleExpr(scope, &runLua.Args[i])
+	}
+
+	return a.resolveType(scope, runLua.ReturnType)
 }

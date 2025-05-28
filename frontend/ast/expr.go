@@ -1,6 +1,8 @@
 package ast
 
 import (
+	"regexp"
+
 	"github.com/gluax-lang/gluax/frontend/common"
 	"github.com/gluax-lang/gluax/frontend/lexer"
 )
@@ -28,6 +30,7 @@ const (
 	ExprKindPathCall
 	ExprKindTuple
 	ExprKindUnsafeCast
+	ExprKindRunLua
 )
 
 func (k ExprKind) String() string {
@@ -68,6 +71,10 @@ func (k ExprKind) String() string {
 		return "postfix"
 	case ExprKindTuple:
 		return "tuple"
+	case ExprKindUnsafeCast:
+		return "unsafe cast"
+	case ExprKindRunLua:
+		return "run lua"
 	default:
 		panic("unreachable")
 	}
@@ -609,3 +616,37 @@ func (a *UnsafeCast) ExprKind() ExprKind { return ExprKindUnsafeCast }
 func (a *UnsafeCast) Span() common.Span {
 	return a.span
 }
+
+/* Run Lua (@lua) */
+
+type ExprRunLua struct {
+	Code       lexer.TokString
+	Args       []Expr
+	ReturnType Type
+	span       common.Span
+}
+
+func NewRunLuaExpr(code lexer.TokString, args []Expr, returnType Type, span common.Span) Expr {
+	return NewExpr(&ExprRunLua{Code: code, Args: args, ReturnType: returnType, span: span})
+}
+
+func (e *Expr) RunLua() *ExprRunLua {
+	if e.Kind() != ExprKindRunLua {
+		panic("not a run lua expression")
+	}
+	return e.data.(*ExprRunLua)
+}
+
+func (r *ExprRunLua) ExprKind() ExprKind { return ExprKindRunLua }
+
+func (r *ExprRunLua) Span() common.Span {
+	return r.span
+}
+
+var runLuaArgRegex = regexp.MustCompile(`\{@(\d+)@\}`)
+var runLuaTempRegex = regexp.MustCompile(`\{@TEMP(\d+)@\}`)
+var runLuaReturnRegex = regexp.MustCompile(`\{@RETURN\s+(.+?)@\}`)
+
+func (r *ExprRunLua) GetArgRegex() *regexp.Regexp    { return runLuaArgRegex }
+func (r *ExprRunLua) GetTempRegex() *regexp.Regexp   { return runLuaTempRegex }
+func (r *ExprRunLua) GetReturnRegex() *regexp.Regexp { return runLuaReturnRegex }
