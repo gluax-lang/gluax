@@ -29,10 +29,7 @@ func (cg *Codegen) decorateLetName(l *ast.Let, n int) string {
 }
 
 func (cg *Codegen) genLet(l *ast.Let) {
-	rhs := make([]string, len(l.Values))
-	for i, v := range l.Values {
-		rhs[i] = cg.genExpr(v)
-	}
+	_, rhs := cg.genExprsToLocals(l.Values, true)
 	lhs := make([]string, len(l.Names))
 	for i := range l.Names {
 		lhs[i] = cg.decorateLetName(l, i)
@@ -41,8 +38,8 @@ func (cg *Codegen) genLet(l *ast.Let) {
 		}
 	}
 	if l.Public {
-		cg.ln("%s = %s;", strings.Join(lhs, ", "), strings.Join(rhs, ", "))
+		cg.ln("%s = %s;", strings.Join(lhs, ", "), rhs)
 	} else {
-		cg.ln("local %s = %s;", strings.Join(lhs, ", "), strings.Join(rhs, ", "))
+		cg.ln("local %s = %s;", strings.Join(lhs, ", "), rhs)
 	}
 }
