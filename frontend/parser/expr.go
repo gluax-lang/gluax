@@ -211,9 +211,9 @@ func (p *parser) parseRunLuaExpr() ast.Expr {
 		}
 	}
 
-	returnType := p.parseFunctionReturnType(FlagTypeTuple|FlagTypeVarArg|FlagFuncReturnUnreachable, atLuaSpan)
-
 	p.expect(")")
+
+	returnType := p.parseFunctionReturnType(FlagTypeTuple|FlagTypeVarArg|FlagFuncReturnUnreachable, atLuaSpan)
 
 	return ast.NewRunLuaExpr(code, args, returnType, SpanFrom(spanStart, p.prevSpan()))
 }
