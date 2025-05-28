@@ -292,53 +292,6 @@ func (cg *Codegen) genTupleExpr(t *ast.ExprTuple) string {
 	return strings.Join(exprs, ", ")
 }
 
-func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) string {
-	_, exprs := cg.genExprsToLocals(call.Args, true)
-	callExpr := fmt.Sprintf("%s(%s)", toCall, exprs)
-	fun := toCallTy.Function()
-	if fun.HasVarargReturn() {
-		return callExpr
-	}
-	locals := make([]string, fun.ReturnCount())
-	for i := range locals {
-		locals[i] = cg.getTempVar()
-	}
-	if !call.IsTryCall && call.Catch == nil {
-		cg.ln("%s = %s;", strings.Join(locals, ", "), callExpr)
-		return strings.Join(locals, ", ")
-	}
-	errorTemp := cg.getTempVar()
-	cg.ln("do")
-	cg.pushIndent()
-	cg.ln("%s, %s = %s;", errorTemp, strings.Join(locals, ", "), callExpr)
-	cg.ln("if %s ~= nil then", errorTemp)
-	cg.pushIndent()
-	if call.IsTryCall {
-		cg.ln("return %s;", errorTemp)
-	} else {
-		catch := call.Catch
-		cg.ln("local %s = %s;", catch.Name.Raw, errorTemp)
-		blockExpr := ast.NewExpr(&catch.Block)
-		cg.ln("%s = %s;", strings.Join(locals, ", "), cg.genExprX(blockExpr))
-	}
-	cg.popIndent()
-	cg.ln("end")
-	cg.popIndent()
-	cg.ln("end")
-	return strings.Join(locals, ", ")
-}
-
-func (cg *Codegen) genMethodCall(call *ast.Call, toCall string, toCallTy ast.SemType) string {
-	exprs := make([]string, len(call.Args))
-	exprs = append(exprs, toCall)
-	for i, arg := range call.Args {
-		exprs[i] = cg.genExpr(arg)
-	}
-	st := toCallTy.Struct()
-	stName := cg.decorateStName(st)
-	return fmt.Sprintf("%s.%s(%s)", stName, call.Method.Raw, strings.Join(exprs, ", "))
-}
-
 func (cg *Codegen) genRunLua(run *ast.ExprRunLua) string {
 	var tempVars []string
 	if len(run.Args) > 0 {

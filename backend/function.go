@@ -71,3 +71,131 @@ func (cg *Codegen) genFunction(f *ast.SemFunction) string {
 	snippet := cg.restoreBuf(oldBuf)
 	return snippet
 }
+
+func (cg *Codegen) getCallArgs(call *ast.Call, toCall string) string {
+	_, args := cg.genExprsToLocals(call.Args, true)
+	if call.Method != nil {
+		if args == "" {
+			return toCall
+		} else {
+			return toCall + ", " + args
+		}
+	} else {
+		return args
+	}
+}
+
+func (cg *Codegen) genInlineCall(call *ast.Call, fun ast.SemFunction) string {
+	// Inline the function body
+	cg.ln("do -- inline %s", fun.Def.Name.Raw)
+	cg.pushIndent()
+
+	_, args := cg.genExprsToLocals(call.Args, true)
+
+	params := make([]string, len(fun.Def.Params))
+	for i, param := range fun.Def.Params {
+		params[i] = param.Name.Raw
+	}
+	cg.ln("local %s = %s;", strings.Join(params, ", "), args)
+
+	// Generate return locals
+	returnCount := fun.ReturnCount()
+	returnLocals := make([]string, returnCount)
+	for i := range returnLocals {
+		returnLocals[i] = cg.getTempVar()
+	}
+
+	bodyResult := cg.genBlockX(fun.Def.Body, BlockNone)
+
+	// Assign body result to return locals
+	if returnCount == 1 {
+		cg.ln("%s = %s;", returnLocals[0], bodyResult)
+	} else if returnCount > 1 {
+		cg.ln("%s = %s;", strings.Join(returnLocals, ", "), bodyResult)
+	}
+
+	cg.popIndent()
+	cg.ln("end")
+
+	return strings.Join(returnLocals, ", ")
+}
+
+func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) string {
+	var fun ast.SemFunction
+	if call.Method != nil {
+		st := toCallTy.Struct()
+		fun = st.Methods[call.Method.Raw]
+	} else {
+		fun = toCallTy.Function()
+	}
+
+	if fun.HasVarargReturn() {
+		goto out
+	}
+	// Inline function calls if possible
+	{
+
+		// Check if function can be inlined
+		if fun.HasVarargParam() {
+			goto out
+		}
+
+		// Check for #[inline] attribute
+		hasInlineAttr := false
+		for _, attr := range fun.Def.Attributes {
+			if attr.Key.Raw == "inline" {
+				hasInlineAttr = true
+				break
+			}
+		}
+
+		if !hasInlineAttr {
+			goto out
+		}
+
+		return cg.genInlineCall(call, fun)
+	}
+out:
+	var callExpr string
+	args := cg.getCallArgs(call, toCall)
+	if call.Method != nil {
+		st := toCallTy.Struct()
+		stName := cg.decorateStName(st)
+		callExpr = fmt.Sprintf("%s.%s(%s)", stName, call.Method.Raw, args)
+	} else {
+		callExpr = fmt.Sprintf("%s(%s)", toCall, args)
+	}
+	if fun.HasVarargReturn() {
+		return callExpr
+	}
+	if !call.IsTryCall && call.Catch == nil {
+		return callExpr
+	}
+	locals := make([]string, fun.ReturnCount())
+	for i := range locals {
+		locals[i] = cg.getTempVar()
+	}
+	errorTemp := cg.getTempVar()
+	cg.ln("do")
+	cg.pushIndent()
+	cg.ln("%s, %s = %s;", errorTemp, strings.Join(locals, ", "), callExpr)
+	cg.ln("if %s ~= nil then", errorTemp)
+	cg.pushIndent()
+	if call.IsTryCall {
+		cg.ln("return %s;", errorTemp)
+	} else {
+		catch := call.Catch
+		cg.ln("local %s = %s;", catch.Name.Raw, errorTemp)
+		blockExpr := ast.NewExpr(&catch.Block)
+		cg.ln("%s = %s;", strings.Join(locals, ", "), cg.genExprX(blockExpr))
+	}
+	cg.popIndent()
+	cg.ln("end")
+	cg.popIndent()
+	cg.ln("end")
+	return strings.Join(locals, ", ")
+}
+
+func (cg *Codegen) genMethodCall(call *ast.Call, toCall string, toCallTy ast.SemType) string {
+	return cg.genCall(call, toCall, toCallTy)
+}
