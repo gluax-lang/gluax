@@ -74,14 +74,15 @@ func (cg *Codegen) generateStruct(st *ast.SemStruct) {
 func (cg *Codegen) genStructInit(si *ast.ExprStructInit, st *ast.SemStruct) string {
 	var sb strings.Builder
 
-	// Step 1: Evaluate all field expressions in user order, assign to temps
 	type fieldEval struct {
 		Name string
 		Id   int
 		Temp string
-		Expr string
 	}
+
 	fieldEvals := make([]fieldEval, len(si.Fields))
+	exprs := make([]ast.Expr, len(si.Fields))
+
 	for i, f := range si.Fields {
 		// Find the field definition to get its Id
 		fieldId := 0
@@ -91,35 +92,28 @@ func (cg *Codegen) genStructInit(si *ast.ExprStructInit, st *ast.SemStruct) stri
 				break
 			}
 		}
-		temp := cg.temp()
-		expr := cg.genExpr(f.Value)
 		fieldEvals[i] = fieldEval{
 			Name: f.Name.Raw,
 			Id:   fieldId,
-			Temp: temp,
-			Expr: expr,
 		}
+		exprs[i] = f.Value
 	}
 
-	// Emit a single local statement for all temps
-	var tempNames []string
-	var tempExprs []string
-	for _, fe := range fieldEvals {
-		tempNames = append(tempNames, fe.Temp)
-		tempExprs = append(tempExprs, fe.Expr)
+	tempNames, _ := cg.genExprsToLocals(exprs, false)
+
+	for i := range fieldEvals {
+		fieldEvals[i].Temp = tempNames[i]
 	}
-	cg.ln("local %s = %s", strings.Join(tempNames, ", "), strings.Join(tempExprs, ", "))
 
 	toSetTo := cg.decorateStName(st)
 
-	// Step 2: Sort by field Id for table initialization
+	// Sort by field Id for table initialization
 	sorted := make([]fieldEval, len(fieldEvals))
 	copy(sorted, fieldEvals)
 	sort.Slice(sorted, func(i, j int) bool {
 		return sorted[i].Id < sorted[j].Id
 	})
 
-	// Step 3: Emit the struct init call with temps in field-id order
 	sb.WriteString("setmetatable({")
 	for i, fe := range sorted {
 		if i > 0 {
