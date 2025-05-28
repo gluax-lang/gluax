@@ -448,6 +448,14 @@ func (t SemFunction) String() string {
 	return sb.String()
 }
 
+func (t SemFunction) HasVarargParam() bool {
+	if len(t.Params) == 0 {
+		return false
+	}
+	lastParam := t.Params[len(t.Params)-1]
+	return lastParam.IsVararg()
+}
+
 func (t SemFunction) HasVarargReturn() bool {
 	ret := t.Return
 	if ret.IsVararg() {
