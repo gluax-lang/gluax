@@ -31,6 +31,8 @@ type Codegen struct {
 	publicMap   map[string]int // from symbol's "raw" name -> integer index
 
 	generatedStructs map[string]struct{} // from decorated struct name -> struct
+
+	tempVarStack [][]string
 }
 
 type loopLabel struct{ cont, brk string }
@@ -118,6 +120,36 @@ func (cg *Codegen) isPublic(symName string) bool {
 
 func (cg *Codegen) getSymbol(symName string) *sema.Symbol {
 	return cg.Analysis.Scope.GetSymbol(symName)
+}
+
+func (cg *Codegen) pushTempScope() {
+	cg.tempVarStack = append(cg.tempVarStack, []string{})
+}
+
+func (cg *Codegen) popTempScope() []string {
+	if len(cg.tempVarStack) == 0 {
+		panic("codegen: popTempScope underflow")
+	}
+	vars := cg.tempVarStack[len(cg.tempVarStack)-1]
+	cg.tempVarStack = cg.tempVarStack[:len(cg.tempVarStack)-1]
+	return vars
+}
+
+func (cg *Codegen) getTempVar() string {
+	name := cg.temp()
+	if len(cg.tempVarStack) == 0 {
+		panic("codegen: getTempVar called without a temp scope")
+	}
+	scopeIdx := len(cg.tempVarStack) - 1
+	cg.tempVarStack[scopeIdx] = append(cg.tempVarStack[scopeIdx], name)
+	return name
+}
+
+func (cg *Codegen) emitTempLocals() {
+	vars := cg.popTempScope()
+	if len(vars) > 0 {
+		cg.ln("local %s;", strings.Join(vars, ", "))
+	}
 }
 
 func (cg *Codegen) generate() {

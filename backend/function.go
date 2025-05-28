@@ -48,6 +48,8 @@ func (cg *Codegen) genFunction(f *ast.SemFunction) string {
 	cg.writeByte('\n')
 	cg.pushIndent()
 
+	cg.pushTempScope()
+
 	// make another buffer for the body, so we can use it for the return value
 	bodyBuf := cg.newBuf()
 	if f.HasVarargReturn() {
@@ -61,6 +63,7 @@ func (cg *Codegen) genFunction(f *ast.SemFunction) string {
 		}
 	}
 	bodySnippet := cg.restoreBuf(bodyBuf)
+	cg.emitTempLocals()
 	cg.writeString(bodySnippet)
 	cg.popIndent()
 	cg.writeIndent()

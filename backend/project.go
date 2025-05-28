@@ -90,7 +90,14 @@ func addImport(cg *Codegen, path string, analysis *sema.Analysis) {
 	cg.writeString("function()\n")
 	cg.pushIndent()
 	cg.setAnalysis(analysis)
-	cg.generate()
+	{
+		cg.pushTempScope()
+		oldBuf := cg.newBuf()
+		cg.generate()
+		generated := cg.restoreBuf(oldBuf)
+		cg.emitTempLocals()
+		cg.writeString(generated)
+	}
 	cg.popIndent()
 	cg.ln("end;\n")
 }

@@ -50,9 +50,9 @@ func (cg *Codegen) genExprsToLocals(exprs []ast.Expr, directLast bool) ([]string
 		if directLast && i == len(exprs)-1 {
 			resultParts = append(resultParts, cg.genExpr(expr))
 		} else {
-			local := cg.temp()
+			local := cg.getTempVar()
 			locals = append(locals, local)
-			cg.ln("local %s = %s;", local, cg.genExpr(expr))
+			cg.ln("%s = %s;", local, cg.genExpr(expr))
 			resultParts = append(resultParts, local)
 		}
 	}
@@ -150,10 +150,10 @@ func (cg *Codegen) genPathExpr(path *ast.Path) string {
 }
 
 func (cg *Codegen) genBinaryExpr(binE *ast.ExprBinary) string {
-	lhs := cg.temp()
-	cg.ln("local %s = %s", lhs, cg.genExprX(binE.Left))
-	rhs := cg.temp()
-	cg.ln("local %s = %s", rhs, cg.genExprX(binE.Right))
+	lhs := cg.getTempVar()
+	cg.ln("%s = %s;", lhs, cg.genExprX(binE.Left))
+	rhs := cg.getTempVar()
+	cg.ln("%s = %s;", rhs, cg.genExprX(binE.Right))
 	var op string
 	switch binE.Op {
 	case ast.BinaryOpInvalid:
@@ -203,8 +203,8 @@ func (cg *Codegen) genBinaryExpr(binE *ast.ExprBinary) string {
 }
 
 func (cg *Codegen) genUnaryExpr(unE *ast.ExprUnary) string {
-	value := cg.temp()
-	cg.ln("local %s = %s", value, cg.genExprX(unE.Value))
+	value := cg.getTempVar()
+	cg.ln("%s = %s;", value, cg.genExprX(unE.Value))
 	switch unE.Op {
 	case ast.UnaryOpNot:
 		return fmt.Sprintf("(not %s)", value)
@@ -219,9 +219,7 @@ func (cg *Codegen) genUnaryExpr(unE *ast.ExprUnary) string {
 }
 
 func (cg *Codegen) genIfExpr(i *ast.ExprIf) string {
-	toReturn := cg.temp()
-
-	cg.ln("local %s;", toReturn)
+	toReturn := cg.getTempVar()
 	var nested func(cond ast.Expr, thenBlk ast.Block, branches []ast.GuardedBlock, elseBlk *ast.Block)
 	nested = func(cond ast.Expr, thenBlk ast.Block, branches []ast.GuardedBlock, elseBlk *ast.Block) {
 		cg.ln("if %s then", cg.genExprX(cond))
@@ -254,7 +252,7 @@ func (cg *Codegen) genIfExpr(i *ast.ExprIf) string {
 func (cg *Codegen) genPostfixExpr(p *ast.ExprPostfix) string {
 	value := cg.genExpr(p.Left)
 	primaryTy := p.Left.Type()
-	temp := cg.temp()
+	temp := cg.getTempVar()
 	switch op := p.Op.(type) {
 	case *ast.DotAccess:
 		return cg.genDotAccess(op, value, primaryTy)
@@ -265,7 +263,7 @@ func (cg *Codegen) genPostfixExpr(p *ast.ExprPostfix) string {
 			return cg.genMethodCall(op, value, primaryTy)
 		}
 	case *ast.Else:
-		cg.ln("local %s = %s;", temp, value)
+		cg.ln("%s = %s;", temp, value)
 		cg.ln("if %s == nil then", temp)
 		cg.pushIndent()
 		cg.ln("%s = %s;", temp, cg.genExpr(op.Value))
@@ -273,7 +271,7 @@ func (cg *Codegen) genPostfixExpr(p *ast.ExprPostfix) string {
 		cg.ln("end")
 		return temp
 	case *ast.UnwrapOption:
-		cg.ln("local %s = %s;", temp, value)
+		cg.ln("%s = %s;", temp, value)
 		cg.ln("if %s == nil then", temp)
 		cg.pushIndent()
 		cg.ln("error(\"unwrapping nil value\");")
@@ -281,7 +279,7 @@ func (cg *Codegen) genPostfixExpr(p *ast.ExprPostfix) string {
 		cg.ln("end")
 		return temp
 	}
-	cg.ln("local %s = %s", temp, value)
+	cg.ln("%s = %s;", temp, value)
 	return temp
 }
 
@@ -302,16 +300,16 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 	}
 	locals := make([]string, fun.ReturnCount())
 	for i := range locals {
-		locals[i] = cg.temp()
+		locals[i] = cg.getTempVar()
 	}
 	if !call.IsTryCall && call.Catch == nil {
-		cg.ln("local %s = %s;", strings.Join(locals, ", "), callExpr)
+		cg.ln("%s = %s;", strings.Join(locals, ", "), callExpr)
 		return strings.Join(locals, ", ")
 	}
-	errorTemp := cg.temp()
-	cg.ln("local %s, %s = %s;", errorTemp, strings.Join(locals, ", "), callExpr)
+	errorTemp := cg.getTempVar()
 	cg.ln("do")
 	cg.pushIndent()
+	cg.ln("%s, %s = %s;", errorTemp, strings.Join(locals, ", "), callExpr)
 	cg.ln("if %s ~= nil then", errorTemp)
 	cg.pushIndent()
 	if call.IsTryCall {
@@ -366,11 +364,11 @@ func (cg *Codegen) genRunLua(run *ast.ExprRunLua) string {
 			if existing, exists := numberedTemps[tempNum]; exists {
 				return existing
 			}
-			newTemp := cg.temp()
+			newTemp := cg.getTempVar()
 			numberedTemps[tempNum] = newTemp
 			return newTemp
 		}
-		return cg.temp() // fallback
+		return cg.getTempVar() // fallback
 	})
 
 	// Extract and store the return expression

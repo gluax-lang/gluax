@@ -187,8 +187,7 @@ func nextLabel(ir []Instr, idx int) string {
 }
 
 func (cg *Codegen) genShortCircuitExpr(e ast.Expr) string {
-	dest := cg.temp()
-	cg.ln("local %s;", dest)
+	dest := cg.getTempVar()
 	cg.ln("do")
 	cg.pushIndent()
 	tLabel, fLabel := cg.temp()+"_true", cg.temp()+"_false"
