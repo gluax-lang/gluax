@@ -516,7 +516,7 @@ func (a *Analysis) handleDotAccess(expr *ast.DotAccess, toIndex *ast.Expr) Type 
 func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Expr) Type {
 	toCallTy := toCall.Type()
 	if !toCallTy.IsStruct() {
-		a.Panic(fmt.Sprintf("cannot call method on non-struct type `%s`", toCallTy.String()), toCallTy.Span())
+		a.Panic(fmt.Sprintf("cannot call method on non-struct type `%s`", toCallTy.String()), call.Span())
 	}
 
 	st := toCallTy.Struct()
