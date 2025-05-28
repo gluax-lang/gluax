@@ -30,7 +30,7 @@ const (
 	ExprKindPathCall
 	ExprKindTuple
 	ExprKindUnsafeCast
-	ExprKindRunLua
+	ExprKindRunRaw
 )
 
 func (k ExprKind) String() string {
@@ -73,7 +73,7 @@ func (k ExprKind) String() string {
 		return "tuple"
 	case ExprKindUnsafeCast:
 		return "unsafe cast"
-	case ExprKindRunLua:
+	case ExprKindRunRaw:
 		return "run lua"
 	default:
 		panic("unreachable")
@@ -619,34 +619,34 @@ func (a *UnsafeCast) Span() common.Span {
 
 /* Run Lua (@lua) */
 
-type ExprRunLua struct {
+type ExprRunRaw struct {
 	Code       lexer.TokString
 	Args       []Expr
 	ReturnType Type
 	span       common.Span
 }
 
-func NewRunLuaExpr(code lexer.TokString, args []Expr, returnType Type, span common.Span) Expr {
-	return NewExpr(&ExprRunLua{Code: code, Args: args, ReturnType: returnType, span: span})
+func NewRunRawExpr(code lexer.TokString, args []Expr, returnType Type, span common.Span) Expr {
+	return NewExpr(&ExprRunRaw{Code: code, Args: args, ReturnType: returnType, span: span})
 }
 
-func (e *Expr) RunLua() *ExprRunLua {
-	if e.Kind() != ExprKindRunLua {
+func (e *Expr) RunRaw() *ExprRunRaw {
+	if e.Kind() != ExprKindRunRaw {
 		panic("not a run lua expression")
 	}
-	return e.data.(*ExprRunLua)
+	return e.data.(*ExprRunRaw)
 }
 
-func (r *ExprRunLua) ExprKind() ExprKind { return ExprKindRunLua }
+func (r *ExprRunRaw) ExprKind() ExprKind { return ExprKindRunRaw }
 
-func (r *ExprRunLua) Span() common.Span {
+func (r *ExprRunRaw) Span() common.Span {
 	return r.span
 }
 
-var runLuaArgRegex = regexp.MustCompile(`\{@(\d+)@\}`)
-var runLuaTempRegex = regexp.MustCompile(`\{@TEMP(\d+)@\}`)
-var runLuaReturnRegex = regexp.MustCompile(`\{@RETURN\s+(.+?)@\}`)
+var runRawArgRegex = regexp.MustCompile(`\{@(\d+)@\}`)
+var runRawTempRegex = regexp.MustCompile(`\{@TEMP(\d+)@\}`)
+var runRawReturnRegex = regexp.MustCompile(`\{@RETURN\s+(.+?)@\}`)
 
-func (r *ExprRunLua) GetArgRegex() *regexp.Regexp    { return runLuaArgRegex }
-func (r *ExprRunLua) GetTempRegex() *regexp.Regexp   { return runLuaTempRegex }
-func (r *ExprRunLua) GetReturnRegex() *regexp.Regexp { return runLuaReturnRegex }
+func (r *ExprRunRaw) GetArgRegex() *regexp.Regexp    { return runRawArgRegex }
+func (r *ExprRunRaw) GetTempRegex() *regexp.Regexp   { return runRawTempRegex }
+func (r *ExprRunRaw) GetReturnRegex() *regexp.Regexp { return runRawReturnRegex }

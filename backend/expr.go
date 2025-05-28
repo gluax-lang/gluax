@@ -115,8 +115,8 @@ func (cg *Codegen) genExprX(e ast.Expr) string {
 		return callCode
 	case ast.ExprKindUnsafeCast:
 		return cg.genExprX(e.UnsafeCast().Expr)
-	case ast.ExprKindRunLua:
-		return cg.genRunLua(e.RunLua())
+	case ast.ExprKindRunRaw:
+		return cg.genRunRaw(e.RunRaw())
 	default:
 		panic("unreachable; unhandled expression type")
 	}
@@ -292,7 +292,7 @@ func (cg *Codegen) genTupleExpr(t *ast.ExprTuple) string {
 	return strings.Join(exprs, ", ")
 }
 
-func (cg *Codegen) genRunLua(run *ast.ExprRunLua) string {
+func (cg *Codegen) genRunRaw(run *ast.ExprRunRaw) string {
 	var tempVars []string
 	if len(run.Args) > 0 {
 		tempVars, _ = cg.genExprsToLocals(run.Args, false)

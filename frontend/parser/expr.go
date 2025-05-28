@@ -58,8 +58,8 @@ func (p *parser) parsePrimaryExpr(ctx ExprCtx) ast.Expr {
 		return ast.NewStringExpr(v)
 	}
 
-	if p.Token.Is("@") && lexer.IsIdentStr(p.peek(), "lua") {
-		return p.parseRunLuaExpr()
+	if p.Token.Is("@") && lexer.IsIdentStr(p.peek(), "raw") {
+		return p.parseRunRawExpr()
 	}
 
 	tok := p.Token
@@ -192,7 +192,7 @@ func (p *parser) parseParenthesizedExpr() ast.Expr {
 	return expr
 }
 
-func (p *parser) parseRunLuaExpr() ast.Expr {
+func (p *parser) parseRunRawExpr() ast.Expr {
 	spanStart := p.span()
 	p.advance() // consume "@"
 	p.advance() // consume "lua"
@@ -215,5 +215,5 @@ func (p *parser) parseRunLuaExpr() ast.Expr {
 
 	returnType := p.parseFunctionReturnType(FlagTypeTuple|FlagTypeVarArg|FlagFuncReturnUnreachable, atLuaSpan)
 
-	return ast.NewRunLuaExpr(code, args, returnType, SpanFrom(spanStart, p.prevSpan()))
+	return ast.NewRunRawExpr(code, args, returnType, SpanFrom(spanStart, p.prevSpan()))
 }

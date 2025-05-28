@@ -74,8 +74,8 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 		retTy = a.handlePathCall(scope, expr.PathCall())
 	case ast.ExprKindUnsafeCast:
 		retTy = a.handleUnsafeCast(scope, expr.UnsafeCast())
-	case ast.ExprKindRunLua:
-		retTy = a.handleRunLua(scope, expr.RunLua())
+	case ast.ExprKindRunRaw:
+		retTy = a.handleRunRaw(scope, expr.RunRaw())
 	}
 	expr.SetType(retTy)
 	return flow
@@ -631,23 +631,23 @@ func (a *Analysis) handlePathCall(scope *Scope, call *ast.ExprPathCall) Type {
 	return ret
 }
 
-func (a *Analysis) handleRunLua(scope *Scope, runLua *ast.ExprRunLua) Type {
-	code := runLua.Code.Raw
+func (a *Analysis) handleRunRaw(scope *Scope, runRaw *ast.ExprRunRaw) Type {
+	code := runRaw.Code.Raw
 	if code == "" {
-		a.Panic("runLua expression cannot be empty", runLua.Span())
+		a.Panic("run raw expression cannot be empty", runRaw.Span())
 	}
 
-	matches := runLua.GetArgRegex().FindAllStringSubmatch(code, -1)
+	matches := runRaw.GetArgRegex().FindAllStringSubmatch(code, -1)
 	maxArgUsed := 0
 	usedArgs := make(map[int]bool)
 
 	for _, match := range matches {
 		argNum, err := strconv.Atoi(match[1])
 		if err != nil {
-			a.Panic(fmt.Sprintf("invalid argument number in placeholder: %s", match[0]), runLua.Span())
+			a.Panic(fmt.Sprintf("invalid argument number in placeholder: %s", match[0]), runRaw.Span())
 		}
 		if argNum < 1 {
-			a.Panic("argument numbers must start from 1", runLua.Span())
+			a.Panic("argument numbers must start from 1", runRaw.Span())
 		}
 		usedArgs[argNum] = true
 		if argNum > maxArgUsed {
@@ -657,27 +657,27 @@ func (a *Analysis) handleRunLua(scope *Scope, runLua *ast.ExprRunLua) Type {
 
 	for i := 1; i <= maxArgUsed; i++ {
 		if !usedArgs[i] {
-			a.Panic(fmt.Sprintf("argument {@%d@} is missing - all arguments from 1 to %d must be used", i, maxArgUsed), runLua.Span())
+			a.Panic(fmt.Sprintf("argument {@%d@} is missing - all arguments from 1 to %d must be used", i, maxArgUsed), runRaw.Span())
 		}
 	}
 
-	actualArgs := len(runLua.Args)
+	actualArgs := len(runRaw.Args)
 	if actualArgs != maxArgUsed {
 		if maxArgUsed == 0 {
-			a.Panic(fmt.Sprintf("no argument placeholders found in code, but %d arguments provided", actualArgs), runLua.Span())
+			a.Panic(fmt.Sprintf("no argument placeholders found in code, but %d arguments provided", actualArgs), runRaw.Span())
 		} else {
-			a.Panic(fmt.Sprintf("expected %d arguments based on placeholders, but got %d", maxArgUsed, actualArgs), runLua.Span())
+			a.Panic(fmt.Sprintf("expected %d arguments based on placeholders, but got %d", maxArgUsed, actualArgs), runRaw.Span())
 		}
 	}
 
-	returnMatches := runLua.GetReturnRegex().FindAllStringSubmatch(code, -1)
+	returnMatches := runRaw.GetReturnRegex().FindAllStringSubmatch(code, -1)
 	if len(returnMatches) > 1 {
-		a.Panic("can't have more than one {@RETURN@} placeholder", runLua.Span())
+		a.Panic("can't have more than one {@RETURN@} placeholder", runRaw.Span())
 	}
 
-	for i := range runLua.Args {
-		a.handleExpr(scope, &runLua.Args[i])
+	for i := range runRaw.Args {
+		a.handleExpr(scope, &runRaw.Args[i])
 	}
 
-	return a.resolveType(scope, runLua.ReturnType)
+	return a.resolveType(scope, runRaw.ReturnType)
 }
