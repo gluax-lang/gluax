@@ -31,6 +31,7 @@ const (
 	ExprKindTuple
 	ExprKindUnsafeCast
 	ExprKindRunRaw
+	ExprKindVecInit
 )
 
 func (k ExprKind) String() string {
@@ -75,6 +76,8 @@ func (k ExprKind) String() string {
 		return "unsafe cast"
 	case ExprKindRunRaw:
 		return "run lua"
+	case ExprKindVecInit:
+		return "vec init"
 	default:
 		panic("unreachable")
 	}
@@ -650,3 +653,25 @@ var runRawReturnRegex = regexp.MustCompile(`\{@RETURN\s+(.+?)@\}`)
 func (r *ExprRunRaw) GetArgRegex() *regexp.Regexp    { return runRawArgRegex }
 func (r *ExprRunRaw) GetTempRegex() *regexp.Regexp   { return runRawTempRegex }
 func (r *ExprRunRaw) GetReturnRegex() *regexp.Regexp { return runRawReturnRegex }
+
+/* Vec Init */
+type ExprVecInit struct {
+	Values []Expr
+	span   common.Span
+}
+
+func NewVecInitExpr(values []Expr, span common.Span) Expr {
+	return NewExpr(&ExprVecInit{Values: values, span: span})
+}
+
+func (e *Expr) VecInit() *ExprVecInit {
+	if e.Kind() != ExprKindVecInit {
+		panic("not a vec init expression")
+	}
+	return e.data.(*ExprVecInit)
+}
+
+func (v *ExprVecInit) ExprKind() ExprKind { return ExprKindVecInit }
+func (v *ExprVecInit) Span() common.Span {
+	return v.span
+}

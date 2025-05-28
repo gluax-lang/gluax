@@ -217,6 +217,27 @@ func (a *Analysis) anyType() Type {
 	return a.getBuiltinType("any")
 }
 
+func (a *Analysis) vecType(t Type, span Span) Type {
+	vec := a.getBuiltinType("vec")
+	st := vec.Struct()
+	newSt := a.instantiateStruct(st.Def, []Type{t}, false)
+	return ast.NewSemType(newSt, span)
+}
+
+func (a *Analysis) mapType(key, value Type, span Span) Type {
+	mapTy := a.getBuiltinType("map")
+	st := mapTy.Struct()
+	newSt := a.instantiateStruct(st.Def, []Type{key, value}, false)
+	return ast.NewSemType(newSt, span)
+}
+
+func (a *Analysis) optionType(t Type, span Span) Type {
+	option := a.getBuiltinType("option")
+	st := option.Struct()
+	newSt := a.instantiateStruct(st.Def, []Type{t}, false)
+	return ast.NewSemType(newSt, span)
+}
+
 func (a *Analysis) Matches(ty, other Type, span Span) {
 	if !ty.Matches(other) {
 		a.Error(fmt.Sprintf("mismatched types, expected `%s`, got `%s`", ty.String(), other.String()), span)

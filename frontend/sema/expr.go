@@ -76,6 +76,8 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 		retTy = a.handleUnsafeCast(scope, expr.UnsafeCast())
 	case ast.ExprKindRunRaw:
 		retTy = a.handleRunRaw(scope, expr.RunRaw())
+	case ast.ExprKindVecInit:
+		retTy = a.handleVecInit(scope, expr.VecInit())
 	}
 	expr.SetType(retTy)
 	return flow
@@ -680,4 +682,26 @@ func (a *Analysis) handleRunRaw(scope *Scope, runRaw *ast.ExprRunRaw) Type {
 	}
 
 	return a.resolveType(scope, runRaw.ReturnType)
+}
+
+func (a *Analysis) handleVecInit(scope *Scope, vecInit *ast.ExprVecInit) Type {
+	var ty Type
+	tySet := false
+	for i := range vecInit.Values {
+		val := &vecInit.Values[i]
+		a.handleExpr(scope, val)
+		if !tySet {
+			ty = val.Type()
+			tySet = true
+		} else {
+			a.StrictMatches(ty, val.Type(), val.Span())
+		}
+	}
+	if !tySet {
+		a.Panic("cannot infer type of empty vector", vecInit.Span())
+	}
+	if ty.IsOption() || ty.IsNil() {
+		a.Panic(fmt.Sprintf("cannot use `%s` type in a vector", ty.String()), vecInit.Span())
+	}
+	return a.vecType(ty, vecInit.Span())
 }
