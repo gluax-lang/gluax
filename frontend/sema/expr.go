@@ -605,10 +605,15 @@ func (a *Analysis) handlePathCall(scope *Scope, call *ast.ExprPathCall) Type {
 	}
 
 	st := baseTy.Struct()
-	if call.Generics != nil {
+	if len(call.Generics) > 0 {
+		firstSpan := call.Generics[0].Span()
+		lastSpan := call.Generics[len(call.Generics)-1].Span()
 		var concrete []Type
 		for _, tyAst := range call.Generics {
 			concrete = append(concrete, a.resolveType(scope, tyAst))
+		}
+		if a.SetStructSetupSpan(common.SpanFrom(firstSpan, lastSpan)) {
+			defer a.ClearStructSetupSpan()
 		}
 		st = a.instantiateStruct(st.Def, concrete, false)
 	}

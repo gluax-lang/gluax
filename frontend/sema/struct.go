@@ -2,7 +2,6 @@ package sema
 
 import (
 	"fmt"
-	"runtime/debug"
 
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
@@ -10,7 +9,6 @@ import (
 func (a *Analysis) setupStruct(def *ast.Struct, concrete []Type) *SemStruct {
 	for _, ty := range concrete {
 		if !isInnerTypeRuleCompliant(ty) {
-			debug.PrintStack()
 			a.Panic(
 				fmt.Sprintf("type `%s` cannot be used as a generic type", ty.String()),
 				a.GetStructSetupSpan(def.Span()),
@@ -76,7 +74,7 @@ func (a *Analysis) instantiateStruct(def *ast.Struct, concrete []Type, withBody 
 		a.Panic(
 			fmt.Sprintf("struct `%s` expects %d generic argument(s), but %d provided",
 				def.Name.Raw, def.Generics.Len(), len(concrete)),
-			def.Span(),
+			a.GetStructSetupSpan(def.Span()),
 		)
 	}
 
