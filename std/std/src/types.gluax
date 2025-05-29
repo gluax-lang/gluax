@@ -17,6 +17,7 @@ pub struct bool {
 pub struct number {
     _priv: nil,
 
+    #[inline]
     func to_string(n: Self) -> string {
         globals::lua::tostring(n)
     }
@@ -25,19 +26,40 @@ pub struct number {
 pub struct string {
     _priv: nil,
 
+    #[inline]
     func to_number(s: Self) -> ?number {
         globals::lua::tonumber(s)
+    }
+
+    #[inline]
+    func len(s: Self) -> number {
+        @raw("{@RETURN #{@1@} @}", s) -> number
     }
 }
 
 // vector
 pub struct vec<T> {
     _priv: nil,
+
+    #[inline]
+    func new() -> Self {
+        @raw("{@RETURN {} @}") -> Self
+    }
+
+    #[inline]
+    func len(s: Self) -> number {
+        @raw("{@RETURN #{@1@} @}", s) -> number
+    }
 }
 
 // hashmap
 pub struct map<K, V> {
     _priv: nil,
+
+    #[inline]
+    func new() -> Self {
+        @raw("{@RETURN {} @}") -> Self
+    }
 }
 
 // option/nullable
