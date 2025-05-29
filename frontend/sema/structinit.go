@@ -74,7 +74,7 @@ func (a *Analysis) handleStructInit(scope *Scope, si *ast.ExprStructInit) Type {
 	}
 
 	// Now instantiate
-	newStruct := a.instantiateStruct(baseStruct.Def, concrete, false)
+	newStruct := a.instantiateStruct(baseStruct.Def, concrete)
 
 	// ensure all required fields are present
 	providedFields := make(map[string]struct{}, len(si.Fields))

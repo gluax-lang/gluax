@@ -461,7 +461,7 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 				finalGenerics[i] = bound
 			}
 
-			newSt = a.instantiateStruct(owner.Def, finalGenerics, false)
+			newSt = a.instantiateStruct(owner.Def, finalGenerics)
 			funcTy = newSt.Methods[funcTy.Def.Name.Raw]
 		}
 	}
@@ -620,7 +620,7 @@ func (a *Analysis) handlePathCall(scope *Scope, call *ast.ExprPathCall) Type {
 		if a.SetStructSetupSpan(common.SpanFrom(firstSpan, lastSpan)) {
 			defer a.ClearStructSetupSpan()
 		}
-		st = a.instantiateStruct(st.Def, concrete, false)
+		st = a.instantiateStruct(st.Def, concrete)
 	}
 
 	method, exists := st.GetMethod(call.MethodName.Raw)

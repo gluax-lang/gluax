@@ -46,7 +46,7 @@ func (a *Analysis) resolveType(scope *Scope, ty ast.Type) Type {
 		for _, g := range t.Generics {
 			concrete = append(concrete, a.resolveType(scope, g))
 		}
-		conSt := a.instantiateStruct(st.Def, concrete, false)
+		conSt := a.instantiateStruct(st.Def, concrete)
 		return ast.NewSemType(conSt, t.Span())
 	case *ast.Tuple:
 		elems := make([]Type, 0, len(t.Elems))

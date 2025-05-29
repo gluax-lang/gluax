@@ -53,19 +53,28 @@ func (a *Analysis) collectStructFields(st *SemStruct) {
 	}
 }
 
-func (a *Analysis) collectStructMethods(st *SemStruct, withBody bool) {
+func (a *Analysis) collectStructMethodsSignatures(st *SemStruct) {
 	for _, method := range st.Def.Methods {
 		if _, ok := st.Methods[method.Name.Raw]; ok {
 			a.Error("duplicate method name", method.Name.Span())
 		}
 		stScope := st.Scope.(*Scope)
-		funcTy := a.handleFunctionImpl(stScope, &method, withBody)
+		funcTy := a.handleFunctionSignature(stScope, &method)
 		funcTy.OwnerStruct = st
 		st.Methods[method.Name.Raw] = funcTy
 	}
 }
 
-func (a *Analysis) instantiateStruct(def *ast.Struct, concrete []Type, withBody bool) *SemStruct {
+func (a *Analysis) collectStructMethods(st *SemStruct) {
+	for _, method := range st.Def.Methods {
+		stScope := st.Scope.(*Scope)
+		funcTy := a.handleFunction(stScope, &method)
+		funcTy.OwnerStruct = st
+		st.Methods[method.Name.Raw] = funcTy
+	}
+}
+
+func (a *Analysis) instantiateStruct(def *ast.Struct, concrete []Type) *SemStruct {
 	if st := a.State.GetStruct(def, concrete); st != nil {
 		return st
 	}
@@ -83,7 +92,7 @@ func (a *Analysis) instantiateStruct(def *ast.Struct, concrete []Type, withBody 
 	stScope := st.Scope.(*Scope)
 	stScope.ForceAddType("Self", ast.NewSemType(st, def.Span()))
 	a.collectStructFields(st)
-	a.collectStructMethods(st, withBody)
+	a.collectStructMethodsSignatures(st)
 
 	return st
 }

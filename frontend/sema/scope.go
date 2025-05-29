@@ -92,6 +92,16 @@ func (s *Scope) AddValueVisibility(name string, val Value, span Span, public boo
 	return nil
 }
 
+func (s *Scope) RemoveSymbol(name string) {
+	if _, ok := s.Symbols[name]; ok {
+		delete(s.Symbols, name)
+		return
+	}
+	if s.Parent != nil {
+		s.Parent.RemoveSymbol(name)
+	}
+}
+
 func (s *Scope) GetValue(name string) *Value {
 	sym := s.GetSymbol(name)
 	if sym == nil || sym.Kind() != ast.SymValue {

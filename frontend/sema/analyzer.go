@@ -73,6 +73,8 @@ func (a *Analysis) handleAst(ast *ast.Ast) {
 }
 
 func (a *Analysis) addItems(items []ast.Item) {
+	// TODO: handle recursion if a let statement calls a function that uses the let statement
+
 	// imports first
 	if !a.IsStdTypes() {
 		for _, item := range items {
@@ -121,7 +123,7 @@ func (a *Analysis) addItems(items []ast.Item) {
 		}
 	}
 
-	// struct fields phase
+	// struct fields and methods signature phase
 	for _, item := range items {
 		switch it := item.(type) {
 		case *ast.Struct:
@@ -130,6 +132,17 @@ func (a *Analysis) addItems(items []ast.Item) {
 			SelfSt := stScope.GetType("Self").Struct()
 			a.collectStructFields(SelfSt)
 			a.collectStructFields(st)
+
+			a.collectStructMethodsSignatures(SelfSt)
+			a.collectStructMethodsSignatures(st)
+		}
+	}
+
+	// let statements phase
+	for _, item := range items {
+		switch it := item.(type) {
+		case *ast.Let:
+			a.handleLet(a.Scope, it)
 		}
 	}
 
@@ -138,10 +151,10 @@ func (a *Analysis) addItems(items []ast.Item) {
 		switch it := item.(type) {
 		case *ast.Struct:
 			st := a.State.GetStruct(it, nil)
-			stScope := st.Scope.(*Scope)
-			SelfSt := stScope.GetType("Self").Struct()
-			a.collectStructMethods(SelfSt, false)
-			a.collectStructMethods(st, true)
+			// stScope := st.Scope.(*Scope)
+			// SelfSt := stScope.GetType("Self").Struct()
+			// a.collectStructMethods(SelfSt, false)
+			a.collectStructMethods(st)
 		}
 	}
 }
@@ -238,21 +251,21 @@ func (a *Analysis) anyType() Type {
 func (a *Analysis) vecType(t Type, span Span) Type {
 	vec := a.getBuiltinType("vec")
 	st := vec.Struct()
-	newSt := a.instantiateStruct(st.Def, []Type{t}, false)
+	newSt := a.instantiateStruct(st.Def, []Type{t})
 	return ast.NewSemType(newSt, span)
 }
 
 func (a *Analysis) mapType(key, value Type, span Span) Type {
 	mapTy := a.getBuiltinType("map")
 	st := mapTy.Struct()
-	newSt := a.instantiateStruct(st.Def, []Type{key, value}, false)
+	newSt := a.instantiateStruct(st.Def, []Type{key, value})
 	return ast.NewSemType(newSt, span)
 }
 
 func (a *Analysis) optionType(t Type, span Span) Type {
 	option := a.getBuiltinType("option")
 	st := option.Struct()
-	newSt := a.instantiateStruct(st.Def, []Type{t}, false)
+	newSt := a.instantiateStruct(st.Def, []Type{t})
 	return ast.NewSemType(newSt, span)
 }
 

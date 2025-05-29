@@ -7,7 +7,7 @@ import (
 func (a *Analysis) handleItem(scope *Scope, item ast.Item) {
 	switch it := item.(type) {
 	case *ast.Let:
-		a.handleLet(scope, it)
+		// handled in Analysis.handleAst
 	case *ast.Struct:
 		// handled in Analysis.handleAst
 	case *ast.Import:

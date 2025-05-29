@@ -1,7 +1,6 @@
 package codegen
 
 import (
-	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -162,12 +161,17 @@ func (cg *Codegen) generate() {
 	cg.ln("")
 
 	for _, item := range cg.Ast.Items {
-		switch st := item.(type) {
+		switch it := item.(type) {
 		case *ast.Struct:
-			if !st.Public {
-				for _, inst := range cg.Analysis.State.GetStructStack(st) {
-					cg.ln("local %s", cg.decorateStName(inst.Type))
+			if !it.Public {
+				for _, inst := range cg.Analysis.State.GetStructStack(it) {
+					cg.ln("local %s;", cg.decorateStName(inst.Type))
 				}
+			}
+		case *ast.Let:
+			if !it.Public {
+				lhs := cg.genLetLHS(it)
+				cg.ln("local %s;", strings.Join(lhs, ", "))
 			}
 		}
 	}
@@ -195,12 +199,6 @@ func (cg *Codegen) generate() {
 	for _, item := range cg.Ast.Items {
 		cg.genItem(item)
 	}
-}
-
-// returns "_6D61696E"
-func toUnderscorePrefixedHex(s string) string {
-	hexed := hex.EncodeToString([]byte(s))
-	return "_" + hexed
 }
 
 // returns "\x6D\x61\x69\x6E"
