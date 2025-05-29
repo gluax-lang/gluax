@@ -178,8 +178,13 @@ func (a *Analysis) handleUnaryExpr(scope *Scope, unE *ast.ExprUnary) Type {
 			a.Panic("unary bitwise not operator requires an integer value", unE.Span())
 		}
 		return a.numberType()
+	case ast.UnaryOpLength:
+		if !ty.IsVec() && !ty.IsString() {
+			a.Panic("unary length operator requires a vector or string value", unE.Span())
+		}
+		return a.numberType()
 	default:
-		return a.anyType()
+		panic("unreachable: unknown unary operator")
 	}
 }
 
