@@ -22,8 +22,10 @@ func (a *Analysis) handleFunctionImpl(scope *Scope, it *ast.Function, withBody b
 	for _, param := range it.Params {
 		ty := a.resolveType(child, param.Type)
 		if param.Name != nil {
-			paramValue := ast.NewSemFunctionParam(param, ty)
-			a.AddValue(child, param.Name.Raw, ast.NewValue(paramValue), param.Name.Span())
+			if withBody {
+				paramValue := ast.NewSemFunctionParam(param, ty)
+				a.AddValue(child, param.Name.Raw, ast.NewValue(paramValue), param.Name.Span())
+			}
 		}
 		params = append(params, ty)
 	}
