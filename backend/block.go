@@ -34,7 +34,9 @@ func (cg *Codegen) genBlockX(b *ast.Block, flags BlockFlag) string {
 	}
 
 	if flags&BlockDropValue != 0 {
-		cg.ln("local _ = %s", toReturn)
+		if toReturn != "nil" {
+			cg.ln("local _ = %s", toReturn)
+		}
 	}
 
 	if flags&BlockWrap != 0 {
