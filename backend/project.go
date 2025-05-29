@@ -24,7 +24,7 @@ func GenerateProject(pA *sema.ProjectAnalysis) (string, string) {
 	}
 	serverCg.bufCtx.buf.Grow(1024 * 2)
 	headers(&serverCg)
-	serverCg.handleFiles(sema.StdProjectAnalysis.ServerFiles())
+	serverCg.handleFiles(sema.GetStdProjectAnalysis().ServerFiles())
 	serverCg.handleFiles(pA.ServerFiles())
 	serverCg.ln("%s(\"%s\");", RUN_IMPORT, toHexEscapedLiteral(pA.Main))
 	serverCode := serverCg.bufCtx.buf.String()
@@ -39,7 +39,7 @@ func GenerateProject(pA *sema.ProjectAnalysis) (string, string) {
 	}
 	clientCg.bufCtx.buf.Grow(1024 * 2)
 	headers(&clientCg)
-	clientCg.handleFiles(sema.StdProjectAnalysis.ClientFiles())
+	clientCg.handleFiles(sema.GetStdProjectAnalysis().ClientFiles())
 	clientCg.handleFiles(pA.ClientFiles())
 	clientCg.ln("%s(\"%s\");", RUN_IMPORT, toHexEscapedLiteral(pA.Main))
 	clientCode := clientCg.bufCtx.buf.String()

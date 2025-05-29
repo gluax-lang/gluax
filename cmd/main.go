@@ -18,6 +18,7 @@ func main() {
 type CLI struct {
 	Build   BuildCmd   `cmd:"" help:"Build the project." aliases:"compile"`
 	New     NewCmd     `cmd:"" help:"Create a new project."`
+	Check   CheckCmd   `cmd:"" help:"Check the project for errors."`
 	Lsp     LspCmd     `cmd:"" help:"Run the LSP server."`
 	Version VersionCmd `cmd:"" help:"Show version."`
 }

@@ -2,11 +2,21 @@ package sema
 
 import (
 	"fmt"
+	"runtime/debug"
 
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
 func (a *Analysis) setupStruct(def *ast.Struct, concrete []Type) *SemStruct {
+	for _, ty := range concrete {
+		if !isInnerTypeRuleCompliant(ty) {
+			debug.PrintStack()
+			a.Panic(
+				fmt.Sprintf("type `%s` cannot be used as a generic type", ty.String()),
+				a.GetStructSetupSpan(def.Span()),
+			)
+		}
+	}
 	stScope := a.Scope.Child(false)
 	st := ast.NewSemStruct(def)
 	st.Scope = stScope
@@ -92,10 +102,6 @@ func (a *Analysis) unify(
 
 	// If base is already bound to something in placeholders, unify that again:
 	if base.IsGeneric() {
-		if actual.IsTuple() || actual.IsVararg() {
-			return base
-		}
-
 		gname := base.Generic().Ident.Raw
 		// If we've already bound T => Something, unify that "Something" with actual
 		if existing, ok := placeholders[gname]; ok {

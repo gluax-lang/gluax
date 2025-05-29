@@ -28,6 +28,9 @@ func (a *Analysis) resolveType(scope *Scope, ty ast.Type) Type {
 		found.SetSpan(t.Span())
 		return found
 	case *ast.GenericStruct:
+		if a.SetStructSetupSpan(ty.Span()) {
+			defer a.ClearStructSetupSpan()
+		}
 		ty := a.resolvePathType(scope, &t.Path)
 		if !ty.IsStruct() {
 			a.Panic(fmt.Sprintf("expected struct type, got: %s", ty.String()), t.Span())

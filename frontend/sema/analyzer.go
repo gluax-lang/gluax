@@ -18,15 +18,16 @@ func (pa *ProjectAnalysis) StripWorkspace(path string) string {
 }
 
 type Analysis struct {
-	Src         string // source file name
-	Workspace   string // workspace root
-	Scope       *Scope // root scope
-	Diags       []Diagnostic
-	InlayHints  []InlayHint
-	TempIdx     *int
-	Project     *ProjectAnalysis
-	Ast         *ast.Ast
-	SpanSymbols map[Span]ast.Symbol // map of spans to symbols for hover and diagnostics
+	Src                    string // source file name
+	Workspace              string // workspace root
+	Scope                  *Scope // root scope
+	Diags                  []Diagnostic
+	InlayHints             []InlayHint
+	TempIdx                *int
+	Project                *ProjectAnalysis
+	Ast                    *ast.Ast
+	SpanSymbols            map[Span]ast.Symbol // map of spans to symbols for hover and diagnostics
+	currentStructSetupSpan *Span               // used to track the span of the current struct setup
 }
 
 func (a *Analysis) AddSpanSymbol(span Span, sym ast.Symbol) {
@@ -37,6 +38,25 @@ func (a *Analysis) AddSpanSymbol(span Span, sym ast.Symbol) {
 		return
 	}
 	a.SpanSymbols[span] = sym
+}
+
+func (a *Analysis) SetStructSetupSpan(span Span) bool {
+	if a.currentStructSetupSpan == nil {
+		a.currentStructSetupSpan = &span
+		return true
+	}
+	return false
+}
+
+func (a *Analysis) ClearStructSetupSpan() {
+	a.currentStructSetupSpan = nil
+}
+
+func (a *Analysis) GetStructSetupSpan(def Span) Span {
+	if a.currentStructSetupSpan == nil {
+		return def
+	}
+	return *a.currentStructSetupSpan
 }
 
 func (a *Analysis) IsStdTypes() bool {
@@ -68,7 +88,7 @@ func (a *Analysis) addItems(items []ast.Item) {
 		case *ast.Struct:
 			oldScope := a.Scope
 			if a.IsStdTypes() {
-				a.Scope = a.Project.rootScope
+				a.Scope = a.Project.currentState.RootScope
 			}
 			st := a.setupStruct(it, nil)
 
@@ -183,9 +203,6 @@ func (a *Analysis) InlayHintType(label string, span Span) {
 }
 
 func (a *Analysis) getBuiltinType(name string) Type {
-	if ty := ast.GetBuiltinType(name); ty != nil {
-		return *ty
-	}
 	scope := a.Scope
 	ty := scope.GetType(name)
 	if ty == nil {

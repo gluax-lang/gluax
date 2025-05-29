@@ -86,25 +86,11 @@ func (t SemType) OptionInnerType() SemType {
 	if !t.IsOption() {
 		panic("not an option")
 	}
-	return t.Struct().OptionInnerType()
-}
-
-// make sure to not allow nested options to be assigned to anything at all
-func checkOptionRules(ty SemType) bool {
-	if !ty.IsOption() {
-		return true
-	}
-	tyS := ty.Struct()
-	inner := tyS.OptionInnerType()
-	return !inner.IsOption() && !inner.IsNil()
+	return t.Struct().InnerType()
 }
 
 func (t SemType) Matches(other SemType) bool {
 	if t.IsError() || other.IsError() {
-		return false
-	}
-
-	if !checkOptionRules(t) || !checkOptionRules(other) {
 		return false
 	}
 
@@ -126,9 +112,6 @@ func (t SemType) Matches(other SemType) bool {
 }
 
 func (t SemType) StrictMatches(other SemType) bool {
-	if !checkOptionRules(t) || !checkOptionRules(other) {
-		return false
-	}
 	if t.Kind() != other.Kind() {
 		return false
 	}
@@ -270,11 +253,12 @@ func (t *SemStruct) IsGeneric() bool {
 	return len(t.Def.Generics.Params) > 0
 }
 
-func (t *SemStruct) OptionInnerType() SemType {
-	if !t.IsOption() {
-		panic("not an option")
-	}
+func (t *SemStruct) InnerType() SemType {
 	return t.Generics.Params[0]
+}
+
+func (t *SemStruct) InnerType2() (SemType, SemType) {
+	return t.Generics.Params[0], t.Generics.Params[1]
 }
 
 func (s SemStruct) Matches(other SemType) bool {
@@ -293,12 +277,12 @@ func (s SemStruct) Matches(other SemType) bool {
 	oS := other.Struct()
 
 	if s.IsOption() {
-		inner := s.OptionInnerType()
+		inner := s.InnerType()
 		if other.IsNil() {
 			return true
 		}
 		if other.IsOption() {
-			otherInner := oS.OptionInnerType()
+			otherInner := oS.InnerType()
 			return inner.StrictMatches(otherInner)
 		}
 		return inner.StrictMatches(other)
@@ -332,14 +316,14 @@ func (s SemStruct) StrictMatches(other SemType) bool {
 			return false
 		}
 		otherS := other.Struct()
-		return s.OptionInnerType().StrictMatches(otherS.OptionInnerType())
+		return s.InnerType().StrictMatches(otherS.InnerType())
 	}
 	return s.Matches(other)
 }
 
 func (s SemStruct) String() string {
 	if s.IsOption() {
-		return "?" + s.OptionInnerType().String()
+		return "?" + s.InnerType().String()
 	}
 	return s.Def.Name.Raw + s.Generics.String()
 }

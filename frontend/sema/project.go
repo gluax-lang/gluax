@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"sync"
 
 	"slices"
 
@@ -36,10 +37,6 @@ func NewState(label string, scope *Scope) *State {
 	}
 }
 
-var StdProjectAnalysis *ProjectAnalysis = nil
-var stdServerScope *Scope = nil
-var stdClientScope *Scope = nil
-
 func createImport(name string, analysis *Analysis) ast.SemImport {
 	tokStr := lexer.NewTokString(name, common.SpanDefault())
 	tokIdent := lexer.NewTokIdent(name, common.SpanDefault())
@@ -47,45 +44,57 @@ func createImport(name string, analysis *Analysis) ast.SemImport {
 	return ast.NewSemImport(*importDef, name, analysis)
 }
 
-func init() {
-	var err error
-	StdProjectAnalysis, err = AnalyzeProject(std.Workspace, std.Files)
-	if err != nil {
-		panic(fmt.Sprintf("failed to analyze std project: %v", err))
-	}
-	// for f, analysis := range StdProjectAnalysis.ServerFiles() {
-	// 	println("xxxxx----------------------------")
-	// 	println(f)
-	// 	spew.Dump(analysis.Diags)
-	// 	println("--------------------------------------------------------")
-	// }
-	var buildStdScope = func(files map[string]*Analysis) *Scope {
-		mainAnalysis := files[StdProjectAnalysis.Main]
-		stdImport := createImport("std", mainAnalysis)
-		scope := NewScope(nil)
-		// for _, sym := range analysis.Scope.Symbols {
-		// 	if sym.IsPublic() && (sym.IsUse()) {
-		// 		println(sym.Name)
-		// 		scope.Symbols[sym.Name] = sym
-		// 	}
-		// }
-		for name, sym := range mainAnalysis.Scope.Parent.Symbols {
-			if ast.IsBuiltinType(sym.Name) {
-				scope.Symbols[name] = sym
-			}
+var (
+	stdInitOnce        sync.Once
+	stdProjectAnalysis *ProjectAnalysis
+	stdServerScope     *Scope
+	stdClientScope     *Scope
+)
+
+func initStd() {
+	stdInitOnce.Do(func() {
+		var err error
+		stdProjectAnalysis, err = AnalyzeProject(std.Workspace, std.Files)
+		if err != nil {
+			panic(fmt.Sprintf("failed to analyze std project: %v", err))
 		}
-		publicPath := StdProjectAnalysis.StripWorkspace(filepath.Join("src", "public.gluax"))
-		publicAnalysis := files[publicPath]
-		for name, sym := range publicAnalysis.Scope.Symbols {
-			if sym.IsPublic() {
-				scope.Symbols[name] = sym
+		var buildStdScope = func(files map[string]*Analysis) *Scope {
+			mainAnalysis := files[stdProjectAnalysis.Main]
+			stdImport := createImport("std", mainAnalysis)
+			scope := NewScope(nil)
+			for name, sym := range mainAnalysis.Scope.Parent.Symbols {
+				if ast.IsBuiltinType(sym.Name) {
+					scope.Symbols[name] = sym
+				}
 			}
+			publicPath := stdProjectAnalysis.StripWorkspace(filepath.Join("src", "public.gluax"))
+			publicAnalysis := files[publicPath]
+			for name, sym := range publicAnalysis.Scope.Symbols {
+				if sym.IsPublic() {
+					scope.Symbols[name] = sym
+				}
+			}
+			_ = scope.AddImport("std", stdImport, common.SpanDefault(), true)
+			return scope
 		}
-		_ = scope.AddImport("std", stdImport, common.SpanDefault(), true)
-		return scope
-	}
-	stdServerScope = buildStdScope(StdProjectAnalysis.ServerFiles())
-	stdClientScope = buildStdScope(StdProjectAnalysis.ClientFiles())
+		stdServerScope = buildStdScope(stdProjectAnalysis.ServerFiles())
+		stdClientScope = buildStdScope(stdProjectAnalysis.ClientFiles())
+	})
+}
+
+func GetStdProjectAnalysis() *ProjectAnalysis {
+	initStd()
+	return stdProjectAnalysis
+}
+
+func GetStdServerScope() *Scope {
+	initStd()
+	return stdServerScope
+}
+
+func GetStdClientScope() *Scope {
+	initStd()
+	return stdClientScope
 }
 
 // ProjectAnalysis manages analysis of an entire workspace.
@@ -93,7 +102,6 @@ type ProjectAnalysis struct {
 	Main      string // path to main.gluax
 	Config    frontend.GluaxToml
 	workspace string
-	rootScope *Scope
 	overrides map[string]string
 
 	// Name of the current package being analyzed
@@ -169,7 +177,7 @@ func (pa *ProjectAnalysis) newAnalysis(path string) *Analysis {
 	return &Analysis{
 		Workspace: pa.workspace,
 		Src:       path,
-		Scope:     NewScope(pa.rootScope),
+		Scope:     NewScope(pa.currentState.RootScope),
 		Project:   pa,
 	}
 }
@@ -278,7 +286,7 @@ func (pa *ProjectAnalysis) importGlobals() {
 		_ = globalsA.Scope.AddImport(inferredName, createdImport, common.SpanDefault(), true)
 	}
 	globalsImport := createImport("globals", globalsA)
-	err := pa.rootScope.AddImport("globals", globalsImport, common.SpanDefault(), true)
+	err := pa.currentState.RootScope.AddImport("globals", globalsImport, common.SpanDefault(), true)
 	if err != nil {
 		panic(err)
 	}
@@ -289,12 +297,15 @@ func (pa *ProjectAnalysis) processState(state *State, mainPath string) {
 	pa.currentState = state
 
 	if pa.Config.Std {
-		pa.rootScope = NewScope(nil)
+		state.RootScope = NewScope(nil)
 	} else {
-		if state.Label == "SERVER" {
-			pa.rootScope = NewScope(stdServerScope)
-		} else {
-			pa.rootScope = NewScope(stdClientScope)
+		switch state {
+		case pa.serverState:
+			state.RootScope = NewScope(GetStdServerScope())
+		case pa.clientState:
+			state.RootScope = NewScope(GetStdClientScope())
+		default:
+			panic(fmt.Sprintf("unknown state: %s", state.Label))
 		}
 	}
 
@@ -335,6 +346,10 @@ func AnalyzeProject(workspace string, overrides map[string]string) (*ProjectAnal
 			}
 		}
 		pa.Config = gluaxToml
+	}
+
+	if !pa.Config.Std {
+		GetStdProjectAnalysis()
 	}
 
 	pa.serverState = NewState("SERVER", nil)

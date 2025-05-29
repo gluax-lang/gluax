@@ -19,6 +19,10 @@ func (a *Analysis) handleStructInit(scope *Scope, si *ast.ExprStructInit) Type {
 	expected := len(baseStruct.Generics.Params)
 	provided := len(si.Generics)
 
+	if a.SetStructSetupSpan(si.Span()) {
+		defer a.ClearStructSetupSpan()
+	}
+
 	// If user provided generics but struct is not generic:
 	switch {
 	case expected == 0 && provided > 0:

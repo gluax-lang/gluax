@@ -11,3 +11,12 @@ func disallowedKind(t Type) bool {
 		return false
 	}
 }
+
+func isInnerTypeRuleCompliant(ty Type) bool {
+	switch {
+	case ty.IsOption(), ty.IsNil(), ty.IsVararg(), ty.IsTuple():
+		return false
+	default:
+		return true
+	}
+}

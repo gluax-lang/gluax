@@ -9,7 +9,6 @@ import (
 
 type Scope struct {
 	Parent         *Scope
-	Children       []*Scope
 	Symbols        map[string]Symbol
 	InFunc         bool
 	IsFuncErroable bool
@@ -20,13 +19,9 @@ type Scope struct {
 
 func NewScope(parent *Scope) *Scope {
 	scope := &Scope{
-		Parent:   parent,
-		Children: make([]*Scope, 0),
-		Symbols:  make(map[string]Symbol),
-		Labels:   make(map[string]struct{}),
-	}
-	if parent != nil {
-		parent.Children = append(parent.Children, scope)
+		Parent:  parent,
+		Symbols: make(map[string]Symbol),
+		Labels:  make(map[string]struct{}),
 	}
 	return scope
 }
@@ -75,18 +70,6 @@ func (s *Scope) GetSymbol(name string) *Symbol {
 	}
 	if s.Parent != nil {
 		return s.Parent.GetSymbol(name)
-	}
-	return nil
-}
-
-func (s *Scope) GetSymbolInChildren(name string) *Symbol {
-	if sym, ok := s.Symbols[name]; ok {
-		return &sym
-	}
-	for _, child := range s.Children {
-		if sym := child.GetSymbolInChildren(name); sym != nil {
-			return sym
-		}
 	}
 	return nil
 }

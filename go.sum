@@ -10,12 +10,6 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/gabriel-vasile/mimetype v1.4.9 h1:5k+WDwEsD9eTLL8Tz3L0VnmVh9QxGjRmjBvAG7U/oYY=
 github.com/gabriel-vasile/mimetype v1.4.9/go.mod h1:WnSQhFKJuBlRyLiKohA/2DtIlPFAbguNaG7QCHcyGok=
-github.com/gluax-lang/lsp v0.0.0-20250521154555-36fb8e9a482d h1:+bHNCSJhfC6o6LYDYGM+72/SasVK/wynf5uFoNinWPY=
-github.com/gluax-lang/lsp v0.0.0-20250521154555-36fb8e9a482d/go.mod h1:0fc3h9JCzrPMhYmkfjOuLNEXVXe3RfnA4BHFy8IaA3E=
-github.com/gluax-lang/lsp v0.0.0-20250523115223-f10aee21f4d5 h1:yWMXRvDC2ddcqW7+baHpo1qKXdfGaZnLQwPVmPmvgak=
-github.com/gluax-lang/lsp v0.0.0-20250523115223-f10aee21f4d5/go.mod h1:0fc3h9JCzrPMhYmkfjOuLNEXVXe3RfnA4BHFy8IaA3E=
-github.com/gluax-lang/lsp v0.0.0-20250525215104-5e348a76299f h1:po7QmMgxtnV9fECk2puT0KndL/iYFKwOjTwCKaznQVE=
-github.com/gluax-lang/lsp v0.0.0-20250525215104-5e348a76299f/go.mod h1:0fc3h9JCzrPMhYmkfjOuLNEXVXe3RfnA4BHFy8IaA3E=
 github.com/gluax-lang/lsp v0.0.0-20250526001210-db133c290b85 h1:aKCa9PfR1BI/W9hoOpdx0aaIeHT/g3hvrXUaZM9PxvA=
 github.com/gluax-lang/lsp v0.0.0-20250526001210-db133c290b85/go.mod h1:0fc3h9JCzrPMhYmkfjOuLNEXVXe3RfnA4BHFy8IaA3E=
 github.com/go-playground/assert/v2 v2.2.0 h1:JvknZsQTYeFEAhQwI4qEt9cyV5ONwRHC+lYKSsYSR8s=

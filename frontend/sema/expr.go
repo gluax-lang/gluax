@@ -703,5 +703,8 @@ func (a *Analysis) handleVecInit(scope *Scope, vecInit *ast.ExprVecInit) Type {
 	if ty.IsOption() || ty.IsNil() {
 		a.Panic(fmt.Sprintf("cannot use `%s` type in a vector", ty.String()), vecInit.Span())
 	}
+	if a.SetStructSetupSpan(vecInit.Span()) {
+		defer a.ClearStructSetupSpan()
+	}
 	return a.vecType(ty, vecInit.Span())
 }
