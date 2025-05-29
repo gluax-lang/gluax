@@ -117,6 +117,8 @@ func (cg *Codegen) genExprX(e ast.Expr) string {
 		return cg.genExprX(e.UnsafeCast().Expr)
 	case ast.ExprKindRunRaw:
 		return cg.genRunRaw(e.RunRaw())
+	case ast.ExprKindVecInit:
+		return cg.genVecInit(e.VecInit())
 	default:
 		panic("unreachable; unhandled expression type")
 	}
@@ -338,6 +340,11 @@ func (cg *Codegen) genRunRaw(run *ast.ExprRunRaw) string {
 	cg.ln("%s", code)
 
 	return returnExpr
+}
+
+func (cg *Codegen) genVecInit(v *ast.ExprVecInit) string {
+	_, values := cg.genExprsToLocals(v.Values, true)
+	return fmt.Sprintf("{%s}", values)
 }
 
 /* Loops */

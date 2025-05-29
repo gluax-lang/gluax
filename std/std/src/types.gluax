@@ -50,6 +50,31 @@ pub struct vec<T> {
     func len(s: Self) -> number {
         @raw("{@RETURN #{@1@} @}", s) -> number
     }
+
+    #[inline]
+    func push(s: Self, v: T) {
+        @raw("{@1@}[#{@1@}+1]={@2@}", s, v);
+    }
+
+    #[inline]
+    func pop(s: Self) -> ?T {
+        @raw("do local len = #{@1@}; {@TEMP1@}, {@1@}[len] = {@1@}[len], nil; {@RETURN {@TEMP1@} @} end;", s) -> ?T
+    }
+
+    #[inline]
+    func is_empty(s: Self) -> bool {
+        @raw("{@RETURN #{@1@} == 0 @}", s) -> bool
+    }
+
+    #[inline]
+    func remove(s: Self, index: number) -> ?T {
+        @raw("{@RETURN table.remove({@1@}, {@2@}) @}", s, index) -> ?T
+    }
+
+    #[inline]
+    func get(s: Self, index: number) -> ?T {
+        @raw("{@RETURN {@1@}[{@2@}] @}", s, index) -> ?T
+    }
 }
 
 // hashmap
@@ -59,6 +84,32 @@ pub struct map<K, V> {
     #[inline]
     func new() -> Self {
         @raw("{@RETURN {} @}") -> Self
+    }
+
+    #[inline]
+    func get(s: Self, key: K) -> ?V {
+        @raw("{@RETURN {@1@}[{@2@}] @}", s, key) -> ?V
+    }
+
+    #[inline]
+    func set(s: Self, key: K, value: V) {
+        @raw("{@1@}[{@2@}] = {@3@}", s, key, value);
+    }
+
+    #[inline]
+    func remove(s: Self, key: K) {
+        @raw("{@1@}[{@2@}] = nil;", s, key);
+    }
+
+    #[inline]
+    func take(s: Self, key: K) -> ?V {
+        @raw("do {@TEMP1@}, {@1@}[{@2@}] = {@1@}[{@2@}], nil; {@RETURN {@TEMP1@} @} end;", s, key) -> ?V
+    }
+
+    // Same as `set`, but returns the previous value if it exists
+    #[inline]
+    func insert(s: Self, key: K, value: V) -> ?V {
+        @raw("do {@TEMP1@}, {@1@}[{@2@}] = {@1@}[{@2@}], {@3@}; {@RETURN {@TEMP1@} @} end;", s, key, value) -> ?V
     }
 }
 
