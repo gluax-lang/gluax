@@ -39,13 +39,6 @@ func SetItemAttributes(item Item, attrs []Attribute) bool {
 
 /* Struct */
 
-type StructInstantiation struct {
-	Args []SemType
-	Type *SemStruct
-}
-
-type StructsStack []StructInstantiation
-
 type StructField struct {
 	Id     int // the field id, in order of declaration
 	Name   lexer.TokIdent
@@ -59,7 +52,6 @@ type Struct struct {
 	Generics Generics
 	Fields   []StructField
 	Methods  []Function
-	SemStack []StructInstantiation
 	span     common.Span
 }
 
@@ -73,29 +65,6 @@ func (si *Struct) SetPublic(b bool) { si.Public = b }
 
 func (si Struct) Span() common.Span {
 	return si.span
-}
-
-func (si *Struct) AddToStack(semTy *SemStruct, concrete []SemType) {
-	si.SemStack = append(si.SemStack, StructInstantiation{Args: concrete, Type: semTy})
-}
-
-func (si *Struct) GetFromStack(concrete []SemType) *SemStruct {
-	for _, inst := range si.SemStack {
-		if len(inst.Args) != len(concrete) {
-			continue
-		}
-		same := true
-		for i, ty := range concrete {
-			if !ty.StrictMatches(inst.Args[i]) {
-				same = false
-				break
-			}
-		}
-		if same {
-			return inst.Type.Ref() // reuse cached *StructType
-		}
-	}
-	return nil
 }
 
 /* Import */

@@ -27,6 +27,7 @@ type Analysis struct {
 	Project                *ProjectAnalysis
 	Ast                    *ast.Ast
 	SpanSymbols            map[Span]ast.Symbol // map of spans to symbols for hover and diagnostics
+	State                  *State              // current state of the analysis
 	currentStructSetupSpan *Span               // used to track the span of the current struct setup
 }
 
@@ -88,7 +89,7 @@ func (a *Analysis) addItems(items []ast.Item) {
 		case *ast.Struct:
 			oldScope := a.Scope
 			if a.IsStdTypes() {
-				a.Scope = a.Project.currentState.RootScope
+				a.Scope = a.State.RootScope
 			}
 			st := a.setupStruct(it, nil)
 
@@ -124,7 +125,7 @@ func (a *Analysis) addItems(items []ast.Item) {
 	for _, item := range items {
 		switch it := item.(type) {
 		case *ast.Struct:
-			st := it.GetFromStack(nil)
+			st := a.State.GetStruct(it, nil)
 			stScope := st.Scope.(*Scope)
 			SelfSt := stScope.GetType("Self").Struct()
 			a.collectStructFields(SelfSt)
@@ -136,7 +137,7 @@ func (a *Analysis) addItems(items []ast.Item) {
 	for _, item := range items {
 		switch it := item.(type) {
 		case *ast.Struct:
-			st := it.GetFromStack(nil)
+			st := a.State.GetStruct(it, nil)
 			stScope := st.Scope.(*Scope)
 			SelfSt := stScope.GetType("Self").Struct()
 			a.collectStructMethods(SelfSt, false)

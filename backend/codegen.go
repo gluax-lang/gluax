@@ -165,7 +165,7 @@ func (cg *Codegen) generate() {
 		switch st := item.(type) {
 		case *ast.Struct:
 			if !st.Public {
-				for _, inst := range st.SemStack {
+				for _, inst := range cg.Analysis.State.GetStructStack(st) {
 					cg.ln("local %s", cg.decorateStName(inst.Type))
 				}
 			}
@@ -186,7 +186,7 @@ func (cg *Codegen) generate() {
 	for _, item := range cg.Ast.Items {
 		switch st := item.(type) {
 		case *ast.Struct:
-			for _, inst := range st.SemStack {
+			for _, inst := range cg.Analysis.State.GetStructStack(st) {
 				cg.generateStruct(inst.Type)
 			}
 		}

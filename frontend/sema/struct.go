@@ -18,8 +18,8 @@ func (a *Analysis) setupStruct(def *ast.Struct, concrete []Type) *SemStruct {
 	stScope := a.Scope.Child(false)
 	st := ast.NewSemStruct(def)
 	st.Scope = stScope
-	if def.GetFromStack(concrete) == nil {
-		def.AddToStack(st, concrete)
+	if a.State.GetStruct(def, concrete) == nil {
+		a.State.AddStruct(def, st, concrete)
 	}
 	a.buildGenericsTable(stScope, st, concrete)
 	return st
@@ -66,7 +66,7 @@ func (a *Analysis) collectStructMethods(st *SemStruct, withBody bool) {
 }
 
 func (a *Analysis) instantiateStruct(def *ast.Struct, concrete []Type, withBody bool) *SemStruct {
-	if st := def.GetFromStack(concrete); st != nil {
+	if st := a.State.GetStruct(def, concrete); st != nil {
 		return st
 	}
 
