@@ -42,5 +42,11 @@ func (cg *Codegen) genLetLHS(l *ast.Let) []string {
 func (cg *Codegen) genLet(l *ast.Let) {
 	_, rhs := cg.genExprsToLocals(l.Values, true)
 	lhs := cg.genLetLHS(l)
-	cg.ln("%s = %s;", strings.Join(lhs, ", "), rhs)
+	if l.IsItem {
+		cg.ln("%s = %s;", strings.Join(lhs, ", "), rhs)
+
+	} else {
+		cg.ln("local %s = %s;", strings.Join(lhs, ", "), rhs)
+
+	}
 }
