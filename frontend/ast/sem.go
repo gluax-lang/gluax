@@ -561,8 +561,8 @@ func (t SemVararg) StrictMatches(other SemType) bool {
 	return other.IsVararg()
 }
 
-func (t SemVararg) String() string    { return "..." }
-func (t SemVararg) AstString() string { return "..." }
+func (t SemVararg) String() string    { return "..." + t.Type.String() }
+func (t SemVararg) AstString() string { return "..." + t.Type.AstString() }
 
 /* SemUnreachable */
 type SemUnreachable struct{}
