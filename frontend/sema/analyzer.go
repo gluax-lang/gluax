@@ -263,9 +263,6 @@ func (a *Analysis) mapType(key, value Type, span Span) Type {
 }
 
 func (a *Analysis) optionType(t Type, span Span) Type {
-	if t.IsAny() {
-		return t
-	}
 	option := a.getBuiltinType("option")
 	st := option.Struct()
 	newSt := a.instantiateStruct(st.Def, []Type{t})

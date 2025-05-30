@@ -389,7 +389,10 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 	requiredCount := len(fixedParamTys)
 	varArgTy := a.anyType()
 	if hasVarArgParam {
-		varArgTy = a.optionType(funcTy.VarargParamType(), call.Span())
+		vpty := funcTy.VarargParamType()
+		if !vpty.IsAny() {
+			varArgTy = a.optionType(vpty, call.Span())
+		}
 	}
 
 	var (
