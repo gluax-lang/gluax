@@ -364,7 +364,7 @@ func (cg *Codegen) genWhileExpr(w *ast.ExprWhile) string {
 	cg.pushLoop(lopLbl)
 
 	// body
-	cg.genBlockX(&w.Body, BlockNone|BlockDropValue)
+	cg.genBlockX(&w.Body, BlockWrap|BlockDropValue)
 
 	cg.popLoop()
 
@@ -393,7 +393,7 @@ func (cg *Codegen) genLoopExpr(l *ast.ExprLoop) string {
 	cg.pushLoop(lopLbl)
 
 	// body
-	cg.genBlockX(&l.Body, BlockNone|BlockDropValue)
+	cg.genBlockX(&l.Body, BlockWrap|BlockDropValue)
 
 	cg.popLoop()
 
