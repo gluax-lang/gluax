@@ -33,6 +33,9 @@ func SetItemAttributes(item Item, attrs []Attribute) bool {
 	case *Let:
 		v.Attributes = attrs
 		return true
+	case *Struct:
+		v.Attributes = attrs
+		return true
 	}
 	return false
 }
@@ -47,12 +50,14 @@ type StructField struct {
 }
 
 type Struct struct {
-	Public   bool
-	Name     lexer.TokIdent
-	Generics Generics
-	Fields   []StructField
-	Methods  []Function
-	span     common.Span
+	Public      bool
+	Name        lexer.TokIdent
+	Generics    Generics
+	Fields      []StructField
+	Methods     []Function
+	Attributes  []Attribute
+	IsGlobalDef bool // true if this is a global definition
+	span        common.Span
 }
 
 func NewStruct(name lexer.TokIdent, generics Generics, fields []StructField, methods []Function, span common.Span) *Struct {

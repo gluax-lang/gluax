@@ -43,6 +43,20 @@ func (cg *Codegen) decorateStName_internal(st *ast.SemStruct) string {
 }
 
 func (cg *Codegen) decorateStName(st *ast.SemStruct) string {
+	{
+		raw := st.Def.Name.Raw
+		if st.Def.Public && st.Def.IsGlobalDef {
+			attrs := st.Def.Attributes
+			for _, attr := range attrs {
+				if attr.Key.Raw == "rename_to" {
+					if attr.IsInputString() {
+						return attr.String.Raw
+					}
+				}
+			}
+			return raw
+		}
+	}
 	baseName := cg.decorateStName_internal(st)
 	if st.Def.Public {
 		return cg.getPublic(baseName) + fmt.Sprintf(" --[[struct: %s]]", st.String())

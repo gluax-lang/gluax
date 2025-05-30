@@ -93,7 +93,9 @@ func (p *parser) parseStruct() ast.Item {
 
 	span := SpanFrom(spanStart, p.prevSpan())
 
-	return ast.NewStruct(name, generics, fields, methods, span)
+	st := ast.NewStruct(name, generics, fields, methods, span)
+	st.IsGlobalDef = p.processingGlobals
+	return st
 }
 
 func (p *parser) parseStructField(id int) ast.StructField {
