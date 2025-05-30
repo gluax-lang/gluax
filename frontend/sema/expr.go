@@ -21,7 +21,8 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 	case ast.ExprKindString:
 		retTy = a.stringType()
 	case ast.ExprKindVararg:
-		retTy = ast.NewSemType(ast.NewSemVararg(), expr.Span())
+		// TODO, retrieve current function's vararg type
+		retTy = ast.NewSemType(ast.NewSemVararg(a.anyType()), expr.Span())
 	case ast.ExprKindBinary:
 		retTy = a.handleBinaryExpr(scope, expr.Binary())
 	case ast.ExprKindUnary:

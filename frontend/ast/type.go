@@ -53,11 +53,12 @@ func (t *Tuple) Span() common.Span {
 /* Vararg */
 
 type Vararg struct {
+	Type Type
 	span common.Span
 }
 
-func NewVararg(span common.Span) *Vararg {
-	return &Vararg{span: span}
+func NewVararg(ty Type, span common.Span) *Vararg {
+	return &Vararg{Type: ty, span: span}
 }
 
 func (v *Vararg) isType() {}

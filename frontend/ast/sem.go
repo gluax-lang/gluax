@@ -519,12 +519,14 @@ func (t SemTuple) AstString() string {
 
 /* Vararg */
 
-type SemVararg struct{}
+type SemVararg struct {
+	Type SemType // The type of the vararg elements
+}
 
 func (t SemVararg) TypeKind() SemTypeKind { return SemVarargKind }
 
-func NewSemVararg() SemVararg {
-	return SemVararg{}
+func NewSemVararg(ty SemType) SemVararg {
+	return SemVararg{Type: ty}
 }
 
 func (t SemVararg) Matches(other SemType) bool {

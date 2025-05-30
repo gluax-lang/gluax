@@ -23,11 +23,14 @@ func (p *parser) parseFunctionSignature(paramFlags Flags) ast.FunctionSignature 
 
 func (p *parser) parseFunctionParam(flags Flags) ast.FunctionParam {
 	if flags.Has(FlagFuncParamVarArg) && p.tryConsume("...") {
+		varargSpan := p.prevSpan()
+		varargTy := p.parseType()
+		varargSpan = SpanFrom(varargSpan, p.prevSpan())
 		if !p.Token.Is(")") {
 			p.expect(")")
 		}
-		var ty ast.Type = ast.NewVararg(p.prevSpan())
-		return ast.NewFunctionParam(nil, ty, p.prevSpan())
+		var ty ast.Type = ast.NewVararg(varargTy, varargSpan)
+		return ast.NewFunctionParam(nil, ty, varargSpan)
 	}
 
 	spanStart := p.span()

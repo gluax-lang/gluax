@@ -41,7 +41,7 @@ func (p *parser) parseTypeX(flags Flags) ast.Type {
 
 	if flags.Has(FlagTypeVarArg) && p.Token.Is("...") {
 		p.advance()
-		return ast.NewVararg(p.prevSpan())
+		return ast.NewVararg(p.parseType(), SpanFrom(spanStart, p.prevSpan()))
 	}
 
 	return p.parsePathType(spanStart, nil)

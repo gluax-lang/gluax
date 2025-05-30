@@ -56,7 +56,11 @@ func (a *Analysis) resolveType(scope *Scope, ty ast.Type) Type {
 		}
 		return ast.NewSemType(ast.SemTuple{Elems: elems}, t.Span())
 	case *ast.Vararg:
-		return ast.NewSemType(ast.NewSemVararg(), t.Span())
+		ty := a.resolveType(scope, t.Type)
+		if !isInnerTypeRuleCompliant(ty) {
+			a.Panic(fmt.Sprintf("type `%s` is not a valid vararg type", ty.String()), ty.Span())
+		}
+		return ast.NewSemType(ast.NewSemVararg(ty), t.Span())
 	case *ast.Function:
 		fun := a.handleFunctionSignature(scope, t)
 		return ast.NewSemType(fun, t.Span())
