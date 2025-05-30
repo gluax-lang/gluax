@@ -7,6 +7,7 @@ import (
 
 	"github.com/gluax-lang/gluax/frontend/ast"
 	"github.com/gluax-lang/gluax/frontend/common"
+	"github.com/gluax-lang/gluax/frontend/lexer"
 	protocol "github.com/gluax-lang/lsp"
 )
 
@@ -66,21 +67,50 @@ func (a *Analysis) IsStdTypes() bool {
 
 func (a *Analysis) handleAst(ast *ast.Ast) {
 	a.Ast = ast
-	a.addItems(ast.Items)
-	for _, item := range ast.Items {
-		a.handleItem(a.Scope, item)
-	}
+	a.handleItems(ast.Items)
 }
 
-func (a *Analysis) addItems(items []ast.Item) {
+func (a *Analysis) handleItems(items []ast.Item) {
 	// TODO: handle recursion if a let statement calls a function that uses the let statement
 
-	// imports first
 	if !a.IsStdTypes() {
 		for _, item := range items {
 			switch it := item.(type) {
 			case *ast.Import:
 				a.handleImport(a.Scope, it)
+			}
+		}
+	}
+
+	for _, item := range items {
+		switch it := item.(type) {
+		case *ast.Use:
+			a.handleUse(a.Scope, it)
+		}
+	}
+
+	{
+		fakeScope := NewScope(a.Scope)
+		var fakeSymbol ast.Symbol
+		for _, item := range items {
+			var name lexer.TokIdent
+			switch it := item.(type) {
+			case *ast.Let:
+				for _, name := range it.Names {
+					err := fakeScope.AddSymbol(name.Raw, fakeSymbol)
+					if err != nil {
+						a.Panic(err.Error(), name.Span())
+					}
+				}
+			case *ast.Struct:
+				name = it.Name
+			case *ast.Function:
+				name = *it.Name
+			case *ast.Import, *ast.Use:
+				continue
+			}
+			if err := fakeScope.AddSymbol(name.Raw, fakeSymbol); err != nil {
+				a.Panic(err.Error(), name.Span())
 			}
 		}
 	}
@@ -135,6 +165,10 @@ func (a *Analysis) addItems(items []ast.Item) {
 
 			a.collectStructMethodsSignatures(SelfSt)
 			a.collectStructMethodsSignatures(st)
+		case *ast.Function:
+			funcSem := a.handleFunctionSignature(a.Scope, it)
+			it.SetSem(&funcSem)
+			a.AddValue(a.Scope, it.Name.Raw, ast.NewValue(funcSem), it.Name.Span())
 		}
 	}
 
@@ -155,6 +189,8 @@ func (a *Analysis) addItems(items []ast.Item) {
 			// SelfSt := stScope.GetType("Self").Struct()
 			// a.collectStructMethods(SelfSt, false)
 			a.collectStructMethods(st)
+		case *ast.Function:
+			a.handleFunction(a.Scope, it)
 		}
 	}
 }

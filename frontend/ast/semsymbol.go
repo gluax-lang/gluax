@@ -31,7 +31,6 @@ type Symbol struct {
 	Name   string
 	Span   common.Span
 	public bool
-	isUse  bool // true if this symbol is added by a use statement
 	data   symbolData
 }
 
@@ -57,14 +56,6 @@ func (s *Symbol) SetPublic(b bool) {
 
 func (s *Symbol) IsPublic() bool {
 	return s.public
-}
-
-func (s *Symbol) SetIsUse(b bool) {
-	s.isUse = b
-}
-
-func (s *Symbol) IsUse() bool {
-	return s.isUse
 }
 
 func (s *Symbol) Kind() SymbolKind {

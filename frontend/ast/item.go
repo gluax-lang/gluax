@@ -109,3 +109,10 @@ func (u *Use) isItem() {}
 func (u *Use) Span() common.Span {
 	return u.span
 }
+
+func (u Use) NameIdent() lexer.TokIdent {
+	if u.As != nil {
+		return *u.As
+	}
+	return u.Path.Idents[len(u.Path.Idents)-1]
+}
