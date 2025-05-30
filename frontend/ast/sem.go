@@ -455,6 +455,30 @@ func (t SemFunction) HasVarargReturn() bool {
 	return false
 }
 
+func (t SemFunction) VarargParamType() SemType {
+	if !t.HasVarargParam() {
+		panic("no vararg param")
+	}
+	return t.Params[len(t.Params)-1].Vararg().Type
+}
+
+func (t SemFunction) VarargReturnType() SemType {
+	if !t.HasVarargReturn() {
+		panic("no vararg return")
+	}
+	if t.Return.IsVararg() {
+		return t.Return.Vararg().Type
+	}
+	if t.Return.IsTuple() {
+		for _, elem := range t.Return.Tuple().Elems {
+			if elem.IsVararg() {
+				return elem.Vararg().Type
+			}
+		}
+	}
+	panic("no vararg return type found")
+}
+
 func (t SemFunction) ReturnCount() int {
 	if t.HasVarargReturn() {
 		panic("can't get return count when vararg return is present")
