@@ -387,6 +387,13 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 		fixedParamTys = append(fixedParamTys, funcTy.Params[i])
 	}
 	requiredCount := len(fixedParamTys)
+	varArgTy := a.anyType()
+	if hasVarArgParam {
+		vpty := funcTy.VarargParamType()
+		if !vpty.IsAny() {
+			varArgTy = a.optionType(vpty, call.Span())
+		}
+	}
 
 	var (
 		flatArgTys   []Type
@@ -475,6 +482,15 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 
 	for i := range requiredCount {
 		a.Matches(funcTy.Params[i], flatArgTys[i], flatArgSpans[i])
+	}
+
+	if !varArgTy.IsAny() {
+		varargStartIndex := requiredCount
+		for i := varargStartIndex; i < len(flatArgTys); i++ {
+			argTy := flatArgTys[i]
+			argSpan := flatArgSpans[i]
+			a.Matches(varArgTy, argTy, argSpan)
+		}
 	}
 
 	if call.IsTryCall {
