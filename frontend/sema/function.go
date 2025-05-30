@@ -14,8 +14,6 @@ func (a *Analysis) handleFunction(scope *Scope, it *ast.Function) ast.SemFunctio
 
 func (a *Analysis) handleFunctionImpl(scope *Scope, it *ast.Function, withBody bool) ast.SemFunction {
 	child := scope.Child(false)
-	child.InFunc = true
-	child.IsFuncErroable = it.Errorable
 
 	// parameters
 	var params []Type
@@ -32,7 +30,13 @@ func (a *Analysis) handleFunctionImpl(scope *Scope, it *ast.Function, withBody b
 
 	// return type
 	returnType := a.resolveType(child, it.ReturnType)
-	child.FuncReturnType = &returnType
+
+	funcType := ast.SemFunction{
+		Def:    *it,
+		Params: params,
+		Return: returnType,
+	}
+	child.Func = &funcType
 
 	if returnType.IsTuple() {
 		for _, elem := range returnType.Tuple().Elems {
@@ -45,12 +49,6 @@ func (a *Analysis) handleFunctionImpl(scope *Scope, it *ast.Function, withBody b
 	if withBody && it.Body != nil && !a.Project.processingGlobals {
 		_ = a.handleBlock(child, it.Body)
 		a.Matches(returnType, it.Body.Type(), it.Body.Span())
-	}
-
-	funcType := ast.SemFunction{
-		Def:    *it,
-		Params: params,
-		Return: returnType,
 	}
 
 	if funcType.HasVarargReturn() && it.Errorable {

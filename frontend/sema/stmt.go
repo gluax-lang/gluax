@@ -48,11 +48,11 @@ func (a *Analysis) handleStmt(scope *Scope, raw ast.Stmt) (Type, FlowStatus) {
 }
 
 func (a *Analysis) handleReturn(scope *Scope, stmt *ast.StmtReturn) {
-	if !scope.InFunc {
+	if scope.Func == nil {
 		a.Panic("return statement outside of function", stmt.Span())
 	}
 
-	stmt.IsFuncErroable = scope.IsFuncErroable
+	stmt.IsFuncErroable = scope.IsFuncErrorable()
 
 	getReturnTypes := func() Type {
 		exprs := stmt.Exprs
@@ -72,11 +72,11 @@ func (a *Analysis) handleReturn(scope *Scope, stmt *ast.StmtReturn) {
 
 	returnType := getReturnTypes()
 
-	a.Matches(*scope.FuncReturnType, returnType, stmt.Span())
+	a.Matches(scope.Func.Return, returnType, stmt.Span())
 }
 
 func (a *Analysis) handleThrow(scope *Scope, stmt *ast.StmtThrow) {
-	if !scope.IsFuncErroable {
+	if !scope.IsFuncErrorable() {
 		a.Error("throw is not allowed outside of an erroable function", stmt.Span())
 	}
 	a.handleExpr(scope, &stmt.Value)

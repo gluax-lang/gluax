@@ -366,7 +366,7 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 			a.Panic("cannot try-call on non-erroable function", call.Span())
 		}
 
-		if !scope.IsFuncErroable {
+		if !scope.IsFuncErrorable() {
 			a.Panic("cannot call try-call outside non erroable function", call.Span())
 		}
 	}

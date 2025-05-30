@@ -8,13 +8,11 @@ import (
 )
 
 type Scope struct {
-	Parent         *Scope
-	Symbols        map[string]Symbol
-	InFunc         bool
-	IsFuncErroable bool
-	FuncReturnType *ast.SemType
-	InLoop         bool
-	Labels         map[string]struct{}
+	Parent  *Scope
+	Symbols map[string]Symbol
+	Func    *ast.SemFunction // the function that this scope is in, if any
+	InLoop  bool
+	Labels  map[string]struct{}
 }
 
 func NewScope(parent *Scope) *Scope {
@@ -29,13 +27,18 @@ func NewScope(parent *Scope) *Scope {
 func (s *Scope) Child(copyState bool) *Scope {
 	child := NewScope(s)
 	if copyState {
-		child.InFunc = s.InFunc
-		child.IsFuncErroable = s.IsFuncErroable
-		child.FuncReturnType = s.FuncReturnType
+		child.Func = s.Func
 		child.InLoop = s.InLoop
 		child.Labels = maps.Clone(s.Labels)
 	}
 	return child
+}
+
+func (s *Scope) IsFuncErrorable() bool {
+	if s.Func != nil {
+		return s.Func.Def.Errorable
+	}
+	return false
 }
 
 func (s *Scope) AddLabel(name string) error {
