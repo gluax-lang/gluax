@@ -201,6 +201,14 @@ func (cg *Codegen) generate() {
 	}
 }
 
+// check if "s" is a no-op expression
+func isNoOp(s string) bool {
+	if lexer.IsValidIdent(s) {
+		return true
+	}
+	return false
+}
+
 // returns "\x6D\x61\x69\x6E"
 func toHexEscapedLiteral(s string) string {
 	var builder strings.Builder

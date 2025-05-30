@@ -14,7 +14,7 @@ func (cg *Codegen) genStmt(stmt ast.Stmt) (string, bool) {
 			cg.ln("do")
 			cg.pushIndent()
 			val := cg.genExprX(stmt.Expr)
-			if val != "nil" {
+			if !isNoOp(val) {
 				cg.ln("local _ = %s;", val)
 			}
 			cg.popIndent()
