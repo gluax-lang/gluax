@@ -554,11 +554,17 @@ func NewSemVararg(ty SemType) SemVararg {
 }
 
 func (t SemVararg) Matches(other SemType) bool {
-	return other.IsVararg() || other.IsAny()
+	if other.IsVararg() {
+		return t.Type.Matches(other.Vararg().Type)
+	}
+	return t.Type.Matches(other)
 }
 
 func (t SemVararg) StrictMatches(other SemType) bool {
-	return other.IsVararg()
+	if !other.IsVararg() {
+		return false
+	}
+	return t.Type.StrictMatches(other.Vararg().Type)
 }
 
 func (t SemVararg) String() string    { return "..." + t.Type.String() }

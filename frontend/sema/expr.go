@@ -377,65 +377,67 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 		}
 	}
 
-	var fixedParamTys []Type
-	hasVarArgParam := false
+	var fixedParams []Type
+	var varargParam Type
+	hasVararg := false
 	for i, param := range funcTy.Def.Params {
 		if ast.IsVararg(param.Type) {
-			hasVarArgParam = true
+			hasVararg = true
+			varargParam = funcTy.Params[i]
 			break
 		}
-		fixedParamTys = append(fixedParamTys, funcTy.Params[i])
-	}
-	requiredCount := len(fixedParamTys)
-	varArgTy := a.anyType()
-	if hasVarArgParam {
-		varArgTy = funcTy.VarargParamType()
+		fixedParams = append(fixedParams, funcTy.Params[i])
 	}
 
 	var (
-		flatArgTys   []Type
-		flatArgSpans []Span
+		processedArgs  []Type
+		processedSpans []Span
 	)
-	lastArgIndex := len(call.Args) - 1
 
 	appendArg := func(t Type, s Span) {
-		flatArgTys = append(flatArgTys, t)
-		flatArgSpans = append(flatArgSpans, s)
+		processedArgs = append(processedArgs, t)
+		processedSpans = append(processedSpans, s)
 	}
 
 	for i := range call.Args {
 		rawArg := &call.Args[i]
 		a.handleExpr(scope, rawArg)
-		exprTy := rawArg.Type()
-		switch exprTy.Kind() {
+		argType := rawArg.Type()
+		isLastArg := i == len(call.Args)-1
+
+		switch argType.Kind() {
 		case ast.SemVarargKind:
-			if i != lastArgIndex {
+			if !isLastArg {
 				a.Panic("vararg value is only permitted as the last argument in a call", rawArg.Span())
 			}
-			if !hasVarArgParam {
+			if !hasVararg {
 				a.Panic("function does not accept vararg arguments", rawArg.Span())
 			}
+			a.Matches(varargParam, argType, rawArg.Span())
 		case ast.SemTupleKind:
-			if i != lastArgIndex {
+			if !isLastArg {
 				a.Panic("tuple value is only permitted as the last argument in a call", rawArg.Span())
 			}
-			for _, elemType := range exprTy.Tuple().Elems {
+			for _, elemType := range argType.Tuple().Elems {
 				appendArg(elemType, rawArg.Span())
 			}
 		default:
-			appendArg(exprTy, rawArg.Span())
+			appendArg(argType, rawArg.Span())
 		}
 	}
 
-	if len(flatArgTys) < requiredCount {
+	requiredCount := len(fixedParams)
+	actualCount := len(processedArgs)
+
+	if actualCount < requiredCount {
 		a.Panic(
-			fmt.Sprintf("expected at least %d argument(s), found %d", requiredCount, len(flatArgTys)),
+			fmt.Sprintf("expected at least %d argument(s), found %d", requiredCount, actualCount),
 			call.Span(),
 		)
 	}
-	if !hasVarArgParam && len(flatArgTys) != requiredCount {
+	if !hasVararg && actualCount != requiredCount {
 		a.Panic(
-			fmt.Sprintf("expected exactly %d argument(s), found %d", requiredCount, len(flatArgTys)),
+			fmt.Sprintf("expected exactly %d argument(s), found %d", requiredCount, actualCount),
 			call.Span(),
 		)
 	}
@@ -452,11 +454,11 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 					break // done unifying
 				}
 
-				if i >= len(flatArgTys) {
+				if i >= len(processedArgs) {
 					break // not enough arguments, but we already handled that above
 				}
-				argTy := flatArgTys[i]
-				a.unify(paramTy, argTy, placeholders, flatArgSpans[i])
+				argTy := processedArgs[i]
+				a.unify(paramTy, argTy, placeholders, processedSpans[i])
 			}
 
 			// Build final generics
@@ -478,15 +480,12 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 	}
 
 	for i := range requiredCount {
-		a.Matches(funcTy.Params[i], flatArgTys[i], flatArgSpans[i])
+		a.Matches(funcTy.Params[i], processedArgs[i], processedSpans[i])
 	}
 
-	if !varArgTy.IsAny() {
-		varargStartIndex := requiredCount
-		for i := varargStartIndex; i < len(flatArgTys); i++ {
-			argTy := flatArgTys[i]
-			argSpan := flatArgSpans[i]
-			a.Matches(varArgTy, argTy, argSpan)
+	if hasVararg {
+		for i := requiredCount; i < actualCount; i++ {
+			a.Matches(varargParam, processedArgs[i], processedSpans[i])
 		}
 	}
 
