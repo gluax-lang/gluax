@@ -21,8 +21,14 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 	case ast.ExprKindString:
 		retTy = a.stringType()
 	case ast.ExprKindVararg:
-		// TODO, retrieve current function's vararg type
-		retTy = ast.NewSemType(ast.NewSemVararg(a.anyType()), expr.Span())
+		fun := scope.Func
+		if fun == nil {
+			a.Panic("vararg outside of function", expr.Span())
+		}
+		if !fun.HasVarargParam() {
+			a.Panic("vararg used in function that does not accept varargs", expr.Span())
+		}
+		retTy = ast.NewSemType(ast.NewSemVararg(fun.VarargParamType()), expr.Span())
 	case ast.ExprKindBinary:
 		retTy = a.handleBinaryExpr(scope, expr.Binary())
 	case ast.ExprKindUnary:
