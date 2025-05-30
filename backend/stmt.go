@@ -7,6 +7,8 @@ import (
 )
 
 func (cg *Codegen) genStmt(stmt ast.Stmt) (string, bool) {
+	releaseTemps := cg.collectTemps()
+	defer releaseTemps()
 	switch stmt := stmt.(type) {
 	case *ast.StmtExpr:
 		if stmt.HasSemicolon {

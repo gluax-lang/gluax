@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gluax-lang/gluax/frontend/ast"
+	"github.com/gluax-lang/gluax/frontend/lexer"
 	"github.com/gluax-lang/gluax/frontend/sema"
 )
 
@@ -12,6 +13,12 @@ type Analysis = sema.Analysis
 
 type bufCtx struct {
 	buf strings.Builder
+}
+
+type tempScope struct {
+	all       []string // ALL temp vars created in this scope (for emitTempLocals)
+	available []string // temp vars that can be reused
+	allocated []string // temp vars currently allocated (not available)
 }
 
 type Codegen struct {
@@ -31,7 +38,7 @@ type Codegen struct {
 
 	generatedStructs map[string]struct{} // from decorated struct name -> struct
 
-	tempVarStack [][]string
+	tempVarStack []tempScope
 }
 
 type loopLabel struct{ cont, brk string }
@@ -122,26 +129,68 @@ func (cg *Codegen) getSymbol(symName string) *sema.Symbol {
 }
 
 func (cg *Codegen) pushTempScope() {
-	cg.tempVarStack = append(cg.tempVarStack, []string{})
+	cg.tempVarStack = append(cg.tempVarStack, tempScope{
+		all:       []string{},
+		available: []string{},
+		allocated: []string{},
+	})
 }
 
 func (cg *Codegen) popTempScope() []string {
 	if len(cg.tempVarStack) == 0 {
 		panic("codegen: popTempScope underflow")
 	}
-	vars := cg.tempVarStack[len(cg.tempVarStack)-1]
+	scope := cg.tempVarStack[len(cg.tempVarStack)-1]
 	cg.tempVarStack = cg.tempVarStack[:len(cg.tempVarStack)-1]
-	return vars
+	return scope.all
 }
 
 func (cg *Codegen) getTempVar() string {
-	name := cg.temp()
 	if len(cg.tempVarStack) == 0 {
 		panic("codegen: getTempVar called without a temp scope")
 	}
-	scopeIdx := len(cg.tempVarStack) - 1
-	cg.tempVarStack[scopeIdx] = append(cg.tempVarStack[scopeIdx], name)
+
+	scope := &cg.tempVarStack[len(cg.tempVarStack)-1]
+
+	var name string
+	if len(scope.available) > 0 {
+		// reuse an available temp var
+		name = scope.available[len(scope.available)-1]
+		scope.available = scope.available[:len(scope.available)-1]
+	} else {
+		// create a new temp var
+		name = cg.temp()
+		scope.all = append(scope.all, name)
+	}
+
+	scope.allocated = append(scope.allocated, name)
 	return name
+}
+
+func (cg *Codegen) collectTemps() func() {
+	if len(cg.tempVarStack) == 0 {
+		panic("codegen: collectTemps called without a temp scope")
+	}
+
+	scope := &cg.tempVarStack[len(cg.tempVarStack)-1]
+	marker := len(scope.allocated)
+	released := false
+
+	return func() {
+		if released || len(cg.tempVarStack) == 0 {
+			return // gracefully handle double-release or popped scope
+		}
+
+		currentScope := &cg.tempVarStack[len(cg.tempVarStack)-1]
+		if marker < len(currentScope.allocated) {
+			// move variables allocated since marker back to available pool
+			releasedVars := currentScope.allocated[marker:]
+			currentScope.available = append(currentScope.available, releasedVars...)
+			currentScope.allocated = currentScope.allocated[:marker]
+		}
+
+		released = true
+	}
 }
 
 func (cg *Codegen) emitTempLocals() {
