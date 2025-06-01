@@ -125,13 +125,13 @@ func (cg *Codegen) genExprX(e ast.Expr) string {
 }
 
 func (cg *Codegen) genPathExpr(path *ast.Path) string {
-	sym := path.Symbols[len(path.Symbols)-1]
+	sym := path.ResolvedSymbol
 	val := sym.Value()
 	switch val.Kind() {
 	case ast.ValVariable:
 		v := val.Variable()
 		suffix := ""
-		if len(path.Symbols) > 1 {
+		if len(path.Idents) > 1 {
 			suffix = fmt.Sprintf(" --[[%s]]", path.String())
 		}
 		return cg.decorateLetName(&v.Def, v.N) + suffix
@@ -141,7 +141,7 @@ func (cg *Codegen) genPathExpr(path *ast.Path) string {
 	case ast.ValFunction:
 		v := val.Function()
 		suffix := ""
-		if len(path.Symbols) > 1 {
+		if len(path.Idents) > 1 {
 			suffix = fmt.Sprintf(" --[[%s]]", path.String())
 		}
 		return cg.decorateFuncName(&v) + suffix

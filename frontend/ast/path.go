@@ -9,8 +9,9 @@ import (
 // Path represents a path to a symbol/struct function/type.
 // It is a sequence of identifiers separated by "::".
 type Path struct {
-	Idents  []Ident
-	Symbols []Symbol // each ident's type
+	Idents         []Ident
+	Generics       map[Ident][]Type // generic parameters for each ident
+	ResolvedSymbol *Symbol          // resolved symbol, if any
 }
 
 func NewPath(idents []Ident) Path {

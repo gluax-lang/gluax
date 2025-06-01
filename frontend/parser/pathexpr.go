@@ -5,7 +5,7 @@ import (
 )
 
 func (p *parser) parsePathExpr(ctx ExprCtx, ident *ast.Ident) ast.Expr {
-	path := ast.Path{Idents: []ast.Ident{}}
+	path := ast.Path{Idents: []ast.Ident{}, Generics: make(map[ast.Ident][]ast.Type)}
 
 	if ident != nil {
 		path.Idents = append(path.Idents, *ident)
@@ -15,7 +15,8 @@ func (p *parser) parsePathExpr(ctx ExprCtx, ident *ast.Ident) ast.Expr {
 			return p.parsePathCall(path, nil, false)
 		}
 	} else {
-		path.Idents = append(path.Idents, p.expectIdent())
+		currentIdent := p.expectIdent()
+		path.Idents = append(path.Idents, currentIdent)
 
 		for p.tryConsume("::") {
 			// `::<` -> turbofish generics
@@ -24,12 +25,14 @@ func (p *parser) parsePathExpr(ctx ExprCtx, ident *ast.Ident) ast.Expr {
 				if p.Token.Is("{") {
 					return p.parseStructInit(path, generics)
 				} else {
+					path.Generics[currentIdent] = generics
 					return p.parsePathCall(path, generics, true)
 				}
 			}
 
 			// Ordinary path segment.
-			path.Idents = append(path.Idents, p.expectIdent())
+			currentIdent = p.expectIdent()
+			path.Idents = append(path.Idents, currentIdent)
 		}
 	}
 

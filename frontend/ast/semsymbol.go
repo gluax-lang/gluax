@@ -99,6 +99,7 @@ type SemImport struct {
 	Path     string
 	Def      Import
 	Analysis any // basically sema.Analysis, but to avoid a circular dependency lol
+	Scope    any // another hack, to avoid circular dependency with sema.Scope
 }
 
 func NewSemImport(def Import, path string, analysis any) SemImport {
