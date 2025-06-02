@@ -1,0 +1,63 @@
+import "../math";
+
+impl number {
+    #[inline]
+    func to_string(n: Self) -> string {
+        globals::base::tostring(n)
+    }
+
+    #[inline]
+    func is_nan(n: Self) -> bool { n != n }
+
+    #[inline]
+    func is_inf(n: Self) -> bool { n == math::HUGE || n == -math::HUGE }
+
+    #[inline]
+    func is_int(n: Self) -> bool { n == n.floor() }
+
+    #[inline]
+    func clamp(n: Self, mi: number, ma: number) -> number { math::clamp(n, mi, ma) }
+
+    #[inline]
+    func abs(n: Self) -> number { math::abs(n) }
+
+    #[inline]
+    func acos(n: Self) -> number { math::acos(n) }
+
+    #[inline]
+    func asin(n: Self) -> number { math::asin(n) }
+
+    #[inline]
+    func atan(n: Self) -> number { math::atan(n) }
+
+    #[inline]
+    func ceil(n: Self) -> number { math::ceil(n) }
+
+    #[inline]
+    func cos(n: Self) -> number { math::cos(n) }
+
+    #[inline]
+    func cosh(n: Self) -> number { math::cosh(n) }
+
+    #[inline]
+    func deg(n: Self) -> number { math::deg(n) }
+
+    #[inline]
+    func exp(n: Self) -> number { math::exp(n) }
+
+    #[inline]
+    func floor(n: Self) -> number { math::floor(n) }
+
+    #[inline]
+    func frexp(n: Self) -> (number, number) { math::frexp(n) }
+
+    #[inline]
+    func log(n: Self, base: ?number) -> number { math::log(n, base) }
+
+    #[inline]
+    func log10(n: Self) -> number { math::log10(n) }
+
+    func max(n: Self, mi: number, ma: number, ...number) -> number { math::max(n, mi, ma, ...) }
+
+    func min(n: Self, mi: number, ma: number, ...number) -> number { math::min(n, mi, ma, ...) }
+}

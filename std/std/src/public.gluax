@@ -1,4 +1,11 @@
-// This file is used to export symbols as public, to basically be public in every file. Just like builtin types.
+// This file is used to export symbols as public, to basically be public in every file.
 
-pub use globals::lua::print;
-pub use globals::lua::_VERSION;
+import "base";
+
+pub use globals::base::print;
+pub use globals::base::error;
+pub use globals::base::error_level;
+pub use globals::base::_VERSION;
+
+pub use base::printf;
+pub use base::errorf;

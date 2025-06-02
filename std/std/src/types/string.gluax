@@ -1,0 +1,49 @@
+use globals::str;
+
+impl string {
+    func char(...number) -> string { str::char(...) }
+
+    #[inline]
+    func to_number(s: Self) -> ?number {
+        globals::base::tonumber(s)
+    }
+
+    #[inline]
+    func len(s: Self) -> number {
+        @raw("{@RETURN #{@1@} @}", s) -> number
+    }
+
+    #[inline]
+    func is_empty(s: Self) -> bool { s == "" }
+
+    #[inline]
+    func sub(s: Self, s_pos: number, e_pos: ?number) -> string {
+        str::sub(s, s_pos, e_pos)
+    }
+
+    // can't be inlined yet, because of the variadic return type and uses `return` statement
+    func byte(s: Self, s_pos: number, e_pos: number) -> ...string {
+        return str::byte(s, s_pos, e_pos);
+    }
+
+    #[inline]
+    func starts_with(s: Self, prefix: string) -> bool {
+        s.sub(1, #prefix) == prefix
+    }
+
+    #[inline]
+    func ends_with(s: Self, suffix: string) -> bool {
+        suffix == "" || s.sub(-#suffix, nil) == suffix
+    }
+
+    func format(fmt: Self, ...any) -> string { str::format(fmt, ...) }
+
+    #[inline]
+    func rep(s: Self, n: number, sep: ?string) -> string { str::rep(s, n, sep) }
+
+    #[inline]
+    func upper(s: Self) -> string { str::upper(s) }
+
+    #[inline]
+    func lower(s: Self) -> string { str::lower(s) }
+}

@@ -227,7 +227,7 @@ type SemStruct struct {
 	Def      *Struct
 	Generics SemGenerics
 	Fields   map[string]SemStructField
-	Methods  map[string]SemFunction
+	Methods  map[string]SemFunction // Methods defined on this struct
 	Scope    any
 }
 
@@ -353,11 +353,6 @@ func (s SemStruct) AstString() string {
 	return sb.String()
 }
 
-func (s SemStruct) GetMethod(name string) (SemFunction, bool) {
-	f, ok := s.Methods[name]
-	return f, ok
-}
-
 func (s SemStruct) IsOption() bool {
 	return s.Def.Name.Raw == "option"
 }
@@ -373,10 +368,10 @@ func (s SemStruct) IsTable() bool {
 /* FunctionType */
 
 type SemFunction struct {
-	Def         Function
-	Params      []SemType
-	Return      SemType
-	OwnerStruct *SemStruct
+	Def        Function
+	Params     []SemType
+	Return     SemType
+	ImplStruct *ImplStruct
 }
 
 func (t SemFunction) TypeKind() SemTypeKind { return SemFunctionKind }

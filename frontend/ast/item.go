@@ -25,7 +25,7 @@ func SetItemPublic(item Item, b bool) {
 	}
 }
 
-func SetItemAttributes(item Item, attrs []Attribute) bool {
+func SetItemAttributes(item Item, attrs Attributes) bool {
 	switch v := item.(type) {
 	case *Function:
 		v.Attributes = attrs
@@ -54,14 +54,14 @@ type Struct struct {
 	Name        lexer.TokIdent
 	Generics    Generics
 	Fields      []StructField
-	Methods     []Function
-	Attributes  []Attribute
+	Attributes  Attributes
 	IsGlobalDef bool // true if this is a global definition
+	Scope       any
 	span        common.Span
 }
 
-func NewStruct(name lexer.TokIdent, generics Generics, fields []StructField, methods []Function, span common.Span) *Struct {
-	return &Struct{Name: name, Generics: generics, Fields: fields, Methods: methods, span: span}
+func NewStruct(name lexer.TokIdent, generics Generics, fields []StructField, span common.Span) *Struct {
+	return &Struct{Name: name, Generics: generics, Fields: fields, span: span}
 }
 
 func (si *Struct) isItem() {}
@@ -72,13 +72,34 @@ func (si Struct) Span() common.Span {
 	return si.span
 }
 
+/* Impl Struct */
+type ImplStruct struct {
+	Generics      Generics
+	Struct        Type
+	Methods       []Function
+	Scope         any
+	GenericsScope any
+	span          common.Span
+}
+
+func NewImplStruct(generics Generics, st Type, methods []Function, span common.Span) *ImplStruct {
+	return &ImplStruct{Generics: generics, Struct: st, Methods: methods, span: span}
+}
+
+func (is *ImplStruct) isItem() {}
+
+func (is *ImplStruct) Span() common.Span {
+	return is.span
+}
+
 /* Import */
 
 type Import struct {
-	Public bool
-	Path   lexer.TokString
-	As     *lexer.TokIdent
-	span   common.Span
+	Public   bool
+	Path     lexer.TokString
+	As       *lexer.TokIdent
+	SafePath string
+	span     common.Span
 }
 
 func NewImport(path lexer.TokString, as *lexer.TokIdent, span common.Span) *Import {

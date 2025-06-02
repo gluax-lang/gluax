@@ -15,7 +15,7 @@ type Stmt interface {
 type Let struct {
 	Public bool
 
-	Attributes []Attribute
+	Attributes Attributes
 	Names      []lexer.TokIdent
 	Types      []*Type
 	Values     []Expr

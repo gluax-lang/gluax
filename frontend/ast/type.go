@@ -26,6 +26,16 @@ func IsOption(ty Type) bool {
 	return false
 }
 
+func IsSelf(ty Type) bool {
+	if p, ok := ty.(*Path); ok {
+		idents := p.Idents
+		if len(idents) == 1 && idents[0].Raw == "Self" {
+			return true
+		}
+	}
+	return false
+}
+
 func IsVararg(ty Type) bool {
 	if _, ok := ty.(*Vararg); ok {
 		return true

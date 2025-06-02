@@ -49,10 +49,16 @@ func (v Value) AstString() string {
 }
 
 func (v Value) CanShadow(other Value) bool {
-	if v.Kind() != ValVariable || other.Kind() != ValVariable {
+	if v.Kind() == ValFunction || other.Kind() == ValFunction {
 		return false
 	}
-	return !v.Variable().Def.IsItem && !other.Variable().Def.IsItem
+	if v.Kind() == ValVariable && v.Variable().Def.IsItem {
+		return false
+	}
+	if other.Kind() == ValVariable && other.Variable().Def.IsItem {
+		return false
+	}
+	return true
 }
 
 func (v Value) Type() SemType {

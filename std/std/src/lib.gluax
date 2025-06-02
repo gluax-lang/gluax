@@ -1,5 +1,7 @@
-import "types";
+import "types/types";
 
-pub import "lua";
+pub import "base";
+pub import "math";
+pub import "debug";
 
 import "public";

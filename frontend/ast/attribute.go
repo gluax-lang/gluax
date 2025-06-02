@@ -49,3 +49,45 @@ func (a Attribute) IsInputTokenTree() bool {
 func (a Attribute) IsInputString() bool {
 	return a.Kind == AttrInputString
 }
+
+type Attributes []Attribute
+
+// Has returns true if an attribute with the given key exists.
+func (attrs Attributes) Has(key string) bool {
+	for _, attr := range attrs {
+		if attr.Key.Raw == key {
+			return true
+		}
+	}
+	return false
+}
+
+// Get returns the first attribute with the given key, or nil if not found.
+func (attrs Attributes) Get(key string) *Attribute {
+	for _, attr := range attrs {
+		if attr.Key.Raw == key {
+			return &attr
+		}
+	}
+	return nil
+}
+
+func (attrs Attributes) GetAll(key string) []Attribute {
+	var result []Attribute
+	for _, attr := range attrs {
+		if attr.Key.Raw == key {
+			result = append(result, attr)
+		}
+	}
+	return result
+}
+
+// GetString returns the string value of the first attribute with the given key,
+// or empty string if not found or not a string attribute.
+func (attrs Attributes) GetString(key string) *string {
+	attr := attrs.Get(key)
+	if attr != nil && attr.IsInputString() && attr.String != nil {
+		return &attr.String.Raw
+	}
+	return nil
+}

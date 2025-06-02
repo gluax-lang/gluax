@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"strings"
-	"sync"
 
 	"slices"
 
@@ -34,15 +33,17 @@ type State struct {
 	RootScope      *Scope                       // which root scope we attach to in this pass
 	Files          map[string]*Analysis         // where we store the resulting analyses
 	CreatedStructs map[*ast.Struct]StructsStack // Created structs stack for this state
+	StructsMethods map[*ast.Struct]*StructMethods
 }
 
-func NewState(label string, scope *Scope) *State {
+func NewState(label string) *State {
 	return &State{
 		Label:          label,
 		Macros:         make(map[string]string),
-		RootScope:      scope,
+		RootScope:      NewScope(nil),
 		Files:          make(map[string]*Analysis),
 		CreatedStructs: make(map[*ast.Struct]StructsStack),
+		StructsMethods: make(map[*ast.Struct]*StructMethods),
 	}
 }
 
@@ -88,68 +89,11 @@ func createImport(name string, analysis *Analysis) ast.SemImport {
 	return ast.NewSemImport(*importDef, name, analysis)
 }
 
-var (
-	stdInitOnce        sync.Once
-	stdProjectAnalysis *ProjectAnalysis
-	stdServerScope     *Scope
-	stdClientScope     *Scope
-)
-
-func initStd() {
-	stdInitOnce.Do(func() {
-		var err error
-		stdProjectAnalysis, err = AnalyzeProject(std.Workspace, std.Files)
-		if err != nil {
-			panic(fmt.Sprintf("failed to analyze std project: %v", err))
-		}
-		var buildStdScope = func(files map[string]*Analysis) *Scope {
-			mainAnalysis := files[stdProjectAnalysis.Main]
-			stdImport := createImport("std", mainAnalysis)
-			scope := NewScope(nil)
-			for name, sym := range mainAnalysis.Scope.Parent.Symbols {
-				if ast.IsBuiltinType(sym.Name) {
-					scope.Symbols[name] = sym
-				}
-			}
-			publicPath := stdProjectAnalysis.StripWorkspace(filepath.Join("src", "public.gluax"))
-			publicAnalysis := files[publicPath]
-			for name, sym := range publicAnalysis.Scope.Symbols {
-				if sym.IsPublic() {
-					scope.Symbols[name] = sym
-				}
-			}
-			_ = scope.AddImport("std", stdImport, common.SpanDefault(), true)
-			return scope
-		}
-		stdServerScope = buildStdScope(stdProjectAnalysis.ServerFiles())
-		stdClientScope = buildStdScope(stdProjectAnalysis.ClientFiles())
-	})
-}
-
-func GetStdProjectAnalysis() *ProjectAnalysis {
-	initStd()
-	return stdProjectAnalysis
-}
-
-func GetStdServerScope() *Scope {
-	initStd()
-	return stdServerScope
-}
-
-func GetStdClientScope() *Scope {
-	initStd()
-	return stdClientScope
-}
-
-// ProjectAnalysis manages analysis of an entire workspace.
 type ProjectAnalysis struct {
 	Main      string // path to main.gluax
 	Config    frontend.GluaxToml
 	workspace string
 	overrides map[string]string
-
-	// Name of the current package being analyzed
-	currentPackage string
 
 	// Processing Globals declarations or not?
 	processingGlobals bool
@@ -161,6 +105,8 @@ type ProjectAnalysis struct {
 
 	// After merging, final map that combines them
 	files map[string]*Analysis
+
+	allGlobals []string
 }
 
 // NewProjectAnalysis builds a project-level container.
@@ -171,6 +117,8 @@ func NewProjectAnalysis(workspace string, overrides map[string]string) *ProjectA
 
 		// Final merged map
 		files: make(map[string]*Analysis),
+
+		allGlobals: make([]string, 0, 10),
 	}
 
 	for p, c := range overrides {
@@ -188,7 +136,7 @@ func (pa *ProjectAnalysis) getStateFiles() map[string]*Analysis {
 
 func (pa *ProjectAnalysis) globalsList() []string {
 	out := make([]string, 0, 60)
-	if pa.Config.Std && pa.workspace == std.Workspace { // std build: collect from std/globals/*.gluax in overrides
+	if pa.Config.Std && pa.workspace == std.Workspace {
 		const (
 			prefix = "std/globals/"
 			suffix = ".gluax"
@@ -196,6 +144,7 @@ func (pa *ProjectAnalysis) globalsList() []string {
 		for p := range pa.overrides {
 			if strings.HasPrefix(p, prefix) && strings.HasSuffix(p, suffix) {
 				out = append(out, p)
+				pa.allGlobals = append(pa.allGlobals, pa.StripWorkspace(p)) // keep for later
 			}
 		}
 	} else {
@@ -210,7 +159,8 @@ func (pa *ProjectAnalysis) globalsList() []string {
 			}
 			if strings.HasSuffix(e.Name(), ".gluax") {
 				name := common.FilePathClean(filepath.Join(globalsDir, e.Name()))
-				out = append(out, name) // full absolute path
+				out = append(out, name)                                        // full absolute path
+				pa.allGlobals = append(pa.allGlobals, pa.StripWorkspace(name)) // keep for later
 			}
 		}
 	}
@@ -218,10 +168,14 @@ func (pa *ProjectAnalysis) globalsList() []string {
 }
 
 func (pa *ProjectAnalysis) newAnalysis(path string) *Analysis {
+	scope := pa.currentState.RootScope
+	if path != "types" {
+		scope = NewScope(pa.currentState.RootScope)
+	}
 	return &Analysis{
 		Workspace: pa.workspace,
 		Src:       path,
-		Scope:     NewScope(pa.currentState.RootScope),
+		Scope:     scope,
 		Project:   pa,
 		State:     pa.currentState,
 	}
@@ -231,6 +185,7 @@ func (pa *ProjectAnalysis) AnalyzeFile(path string) (analysis *Analysis, hardErr
 	path = common.FilePathClean(path)
 	m := pa.getStateFiles()
 
+	// println(false, path)
 	if existing, ok := m[path]; ok {
 		// Already analyzed under this pass (SERVER or CLIENT)
 		return existing, false
@@ -309,12 +264,24 @@ func (pa *ProjectAnalysis) Files() map[string]*Analysis {
 	return pa.files
 }
 
+func (pa ProjectAnalysis) ServerState() *State {
+	return pa.serverState
+}
+
 func (pa ProjectAnalysis) ServerFiles() map[string]*Analysis {
 	return pa.serverState.Files
 }
 
+func (pa ProjectAnalysis) ClientState() *State {
+	return pa.clientState
+}
+
 func (pa *ProjectAnalysis) ClientFiles() map[string]*Analysis {
 	return pa.clientState.Files
+}
+
+func (pa *ProjectAnalysis) CurrentPackage() string {
+	return pa.Config.Name
 }
 
 func (pa *ProjectAnalysis) importGlobals() {
@@ -331,88 +298,132 @@ func (pa *ProjectAnalysis) importGlobals() {
 		_ = globalsA.Scope.AddImport(inferredName, createdImport, common.SpanDefault(), true)
 	}
 	globalsImport := createImport("globals", globalsA)
-	err := pa.currentState.RootScope.AddImport("globals", globalsImport, common.SpanDefault(), true)
+	globalsScope := NewScope(pa.currentState.RootScope)
+	err := globalsScope.AddImport("globals", globalsImport, common.SpanDefault(), true)
 	if err != nil {
 		panic(err)
 	}
+	pa.currentState.RootScope = globalsScope
 	pa.processingGlobals = false
 }
 
-func (pa *ProjectAnalysis) processState(state *State, mainPath string) {
-	pa.currentState = state
+func (pa *ProjectAnalysis) getProjectConfig(workspace string) (frontend.GluaxToml, error) {
+	config := frontend.GluaxToml{}
+	tomlContent, err := pa.loadFileContent(filepath.Join(workspace, "gluax.toml"))
+	if err != nil {
+		return config, fmt.Errorf("failed to load gluax.toml: %w", err)
+	}
+	gluaxToml, err := frontend.HandleGluaxToml(tomlContent)
+	if err != nil {
+		return config, fmt.Errorf("failed to load gluax.toml: %w", err)
+	}
+	return gluaxToml, nil
+}
 
-	if pa.Config.Std {
-		state.RootScope = NewScope(nil)
-	} else {
-		switch state {
-		case pa.serverState:
-			state.RootScope = NewScope(GetStdServerScope())
-		case pa.clientState:
-			state.RootScope = NewScope(GetStdClientScope())
-		default:
-			panic(fmt.Sprintf("unknown state: %s", state.Label))
+func (pa *ProjectAnalysis) processPackage(pkgPath string) error {
+	oldWs, oldConfig, oldRootScope := pa.workspace, pa.Config, pa.currentState.RootScope
+	pa.workspace = pkgPath
+
+	mainPath := filepath.Join(pkgPath, "src", "main.gluax")
+
+	isMain := pa.workspace == oldWs
+
+	if !isMain {
+		var err error
+		pa.Config, err = pa.getProjectConfig(pkgPath)
+		if err != nil {
+			return fmt.Errorf("failed to load project config: %w", err)
 		}
 	}
 
-	if pa.Config.Std {
-		mainPath = common.FilePathClean(mainPath)
+	if pa.Config.Lib {
+		mainPath = filepath.Join(pkgPath, "src", "lib.gluax")
 	}
 
-	// process globals, if doing std, then std will manually call it
-	if !pa.Config.Std {
-		pa.importGlobals()
-	}
+	mainPath = common.FilePathClean(mainPath)
+	pa.Main = pa.StripWorkspace(mainPath)
 
-	_, _ = pa.AnalyzeFile(mainPath)
+	pa.importGlobals()
 
+	analysis, _ := pa.AnalyzeFile(mainPath)
+
+	state := pa.currentState
 	// don't leak full path
 	for p, a := range state.Files {
+		if !pa.StartsWithWorkspace(p) {
+			continue
+		}
 		delete(state.Files, p)
 		state.Files[pa.StripWorkspace(p)] = a
 	}
+
+	packageName := pa.CurrentPackage()
+
+	pa.workspace, pa.Config, pa.currentState.RootScope = oldWs, oldConfig, oldRootScope
+
+	if !isMain {
+		imp := createImport(packageName, analysis)
+		err := state.RootScope.AddImport(packageName, imp, common.SpanDefault(), true)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return nil
+}
+
+func (pa *ProjectAnalysis) processState(state *State, workspace string) error {
+	pa.currentState = state
+	_, _ = pa.AnalyzeFile("types")
+	// if we are processing std, then don't process std twice
+	if !pa.Config.Std {
+		// keeping these comments for future reference
+		// stdPath := "full std path"
+		// stdPath = common.FilePathClean(stdPath)
+		oldOverrides := pa.overrides
+		pa.overrides = std.Files
+		if err := pa.processPackage(std.Workspace); err != nil {
+			return err
+		}
+		pa.overrides = oldOverrides
+		publicPath := common.FilePathClean(filepath.Join("std", "src", "public.gluax"))
+		publicAnalysis := pa.currentState.Files[publicPath]
+		for name, sym := range publicAnalysis.Scope.Symbols {
+			if sym.IsPublic() {
+				pa.currentState.RootScope.Symbols[name] = sym
+			}
+		}
+	}
+	if err := pa.processPackage(workspace); err != nil {
+		return err
+	}
+	return nil
 }
 
 func AnalyzeProject(workspace string, overrides map[string]string) (*ProjectAnalysis, error) {
+	overrides["types"] = ast.BuiltinTypes
 	pa := NewProjectAnalysis(workspace, overrides)
 
-	mainPath := filepath.Join(workspace, "src", "main.gluax")
-
-	{
-		tomlContent, err := pa.loadFileContent(filepath.Join(workspace, "gluax.toml"))
-		if err != nil {
-			return nil, fmt.Errorf("failed to load gluax.toml: %w", err)
-		}
-		gluaxToml, err := frontend.HandleGluaxToml(tomlContent)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load gluax.toml: %w", err)
-		} else {
-			if gluaxToml.Lib {
-				mainPath = filepath.Join(workspace, "src", "lib.gluax")
-			}
-		}
-		pa.Config = gluaxToml
+	var err error
+	pa.Config, err = pa.getProjectConfig(workspace)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load project config: %w", err)
 	}
 
-	if !pa.Config.Std {
-		GetStdProjectAnalysis()
+	pa.serverState = NewState("SERVER")
+	pa.clientState = NewState("CLIENT")
+
+	if err := pa.processState(pa.serverState, workspace); err != nil {
+		return nil, err
 	}
-
-	pa.serverState = NewState("SERVER", nil)
-	pa.clientState = NewState("CLIENT", nil)
-
-	mainPath = common.FilePathClean(mainPath)
-
-	pa.currentPackage = pa.Config.Name
-	pa.Main = pa.StripWorkspace(mainPath)
-
-	pa.processState(pa.serverState, mainPath)
-	pa.processState(pa.clientState, mainPath)
+	if err := pa.processState(pa.clientState, workspace); err != nil {
+		return nil, err
+	}
 
 	// Now unify pa.filesServer and pa.filesClient into pa.files
 	pa.mergeAll()
 
-	for _, path := range pa.globalsList() {
-		path = pa.StripWorkspace(path)
+	for _, path := range pa.allGlobals {
 		delete(pa.serverState.Files, path)
 		delete(pa.clientState.Files, path)
 	}

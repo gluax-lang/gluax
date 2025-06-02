@@ -42,12 +42,6 @@ func (a *Analysis) resolveImportPath(currentFile, relative string) (string, erro
 
 func (a *Analysis) handleImport(scope *Scope, it *ast.Import) {
 	importPath := it.Path.Raw
-	if a.Project.Config.Std {
-		if importPath == "globals*" {
-			a.Project.importGlobals()
-			return
-		}
-	}
 
 	// Resolve relative path
 	resolved, err := a.resolveImportPath(a.Src, importPath)
@@ -75,6 +69,7 @@ func (a *Analysis) handleImport(scope *Scope, it *ast.Import) {
 	}
 
 	importInfo := ast.NewSemImport(*it, resolved, importedAnalysis)
+	it.SafePath = a.Project.StripWorkspace(resolved)
 	if err := scope.AddImport(it.As.Raw, importInfo, it.As.Span(), it.Public); err != nil {
 		a.Error(err.Error(), it.As.Span())
 	}

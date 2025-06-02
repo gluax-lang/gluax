@@ -46,13 +46,8 @@ func (cg *Codegen) decorateStName(st *ast.SemStruct) string {
 	{
 		raw := st.Def.Name.Raw
 		if st.Def.Public && st.Def.IsGlobalDef {
-			attrs := st.Def.Attributes
-			for _, attr := range attrs {
-				if attr.Key.Raw == "rename_to" {
-					if attr.IsInputString() {
-						return attr.String.Raw
-					}
-				}
+			if rename_to := st.Def.Attributes.GetString("rename_to"); rename_to != nil {
+				return *rename_to
 			}
 			return raw
 		}
@@ -69,17 +64,33 @@ func structHeaders(cg *Codegen) {
 }
 
 func (cg *Codegen) generateStruct(st *ast.SemStruct) {
+	for _, g := range st.Generics.Params {
+		if g.IsGeneric() {
+			return // we don't generate structs with generics, because they are not concrete types
+		}
+	}
 	name := cg.decorateStName(st)
-	if st.Def.Public {
+	{
 		if _, ok := cg.generatedStructs[name]; ok {
 			return
 		}
 		cg.generatedStructs[name] = struct{}{}
 	}
+	if !st.Def.Public {
+		cg.currentTempScope().all = append(cg.currentTempScope().all, name)
+	}
 	cg.ln("%s = {", name)
 	cg.pushIndent()
-	for _, m := range st.Methods {
-		cg.ln("%s = %s,", m.Def.Name.Raw, cg.genFunction(&m))
+	stMethods := cg.Analysis.State.StructsMethods[st.Def]
+	if stMethods != nil {
+		for e := range stMethods.Methods {
+			method, exists := stMethods.GetStructMethod(e, st.Generics.Params)
+			if exists {
+				// we need to handle it with body, to make sure body calls are generated correctly
+				method = cg.Analysis.HandleStructMethod(st, method, true)
+				cg.ln("%s = %s,", e, cg.genFunction(&method))
+			}
+		}
 	}
 	cg.popIndent()
 	cg.ln("}\n")
@@ -151,7 +162,7 @@ func (cg *Codegen) genPathCall(call *ast.ExprPathCall) string {
 	}
 	st := call.Struct()
 	name := cg.decorateStName(st)
-	method, _ := st.GetMethod(call.MethodName.Raw)
+	method := st.Methods[call.MethodName.Raw]
 	methodTy := ast.NewSemType(method, call.Span())
 	callCode := cg.genCall(&call.Call, name+"."+call.MethodName.Raw, methodTy)
 	return callCode

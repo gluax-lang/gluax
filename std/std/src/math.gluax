@@ -1,0 +1,36 @@
+import "base";
+import "debug";
+
+pub use globals::math::HUGE;
+pub use globals::math::PI;
+
+pub use globals::math::abs;
+pub use globals::math::acos;
+pub use globals::math::asin;
+pub use globals::math::atan;
+pub use globals::math::atan2;
+pub use globals::math::ceil;
+pub use globals::math::cos;
+pub use globals::math::cosh;
+pub use globals::math::deg;
+pub use globals::math::exp;
+pub use globals::math::floor;
+pub use globals::math::fmod;
+pub use globals::math::frexp;
+pub use globals::math::ldexp;
+pub use globals::math::log;
+pub use globals::math::log10;
+pub use globals::math::max;
+pub use globals::math::min;
+
+#[inline]
+pub func clamp(n: number, mi: number, ma: number) -> number {
+    debug::assert(mi <= ma, "math.clamp: min (%s) must be less than or equal to max (%s)", mi, ma);
+    if n < mi {
+        mi
+    } else if n > ma {
+        ma
+    } else {
+        n
+    }
+}

@@ -1,12 +1,32 @@
 package ast
 
-var StdBuiltinTypes = map[string]SemType{}
+const BuiltinTypes = `
+pub struct nil 	{ _priv: nil }
+pub struct any { _priv: nil }
+pub struct bool { _priv: nil }
+pub struct number { _priv: nil }
+pub struct string { _priv: nil }
+pub struct vec<T> { _priv: nil }
+pub struct map<K, V> { _priv: nil }
+pub struct option<T> { _priv: nil }
+pub struct anyfunc { _priv: nil }
+pub struct table { _priv: nil }
+`
 
-func IsBuiltinType(name string) bool {
-	_, ok := StdBuiltinTypes[name]
-	return ok
+var builtin = map[string]struct{}{
+	"nil":     {},
+	"any":     {},
+	"bool":    {},
+	"number":  {},
+	"string":  {},
+	"vec":     {},
+	"map":     {},
+	"option":  {},
+	"anyfunc": {},
+	"table":   {},
 }
 
-func AddBuiltinType(name string, ty SemType) {
-	StdBuiltinTypes[name] = ty
+func IsBuiltinType(name string) bool {
+	_, exists := builtin[name]
+	return exists
 }

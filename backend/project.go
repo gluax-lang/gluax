@@ -24,9 +24,8 @@ func GenerateProject(pA *sema.ProjectAnalysis) (string, string) {
 	}
 	serverCg.bufCtx.buf.Grow(1024 * 2)
 	headers(&serverCg)
-	serverCg.handleFiles(sema.GetStdProjectAnalysis().ServerFiles())
 	serverCg.handleFiles(pA.ServerFiles())
-	serverCg.ln("%s(\"%s\");", RUN_IMPORT, toHexEscapedLiteral(pA.Main))
+	serverCg.ln("%s(%s);", RUN_IMPORT, pathToLuaString(pA.Main))
 	serverCode := serverCg.bufCtx.buf.String()
 
 	clientCg := Codegen{
@@ -39,9 +38,8 @@ func GenerateProject(pA *sema.ProjectAnalysis) (string, string) {
 	}
 	clientCg.bufCtx.buf.Grow(1024 * 2)
 	headers(&clientCg)
-	clientCg.handleFiles(sema.GetStdProjectAnalysis().ClientFiles())
 	clientCg.handleFiles(pA.ClientFiles())
-	clientCg.ln("%s(\"%s\");", RUN_IMPORT, toHexEscapedLiteral(pA.Main))
+	clientCg.ln("%s(%s);", RUN_IMPORT, pathToLuaString(pA.Main))
 	clientCode := clientCg.bufCtx.buf.String()
 
 	return removeRedundantBlankLines(serverCode), removeRedundantBlankLines(clientCode)
@@ -84,9 +82,8 @@ func importsHeaders(cg *Codegen) {
 }
 
 func addImport(cg *Codegen, path string, analysis *sema.Analysis) {
-	cg.writef("-- import: %s\n", path)
-	path = toHexEscapedLiteral(path)
-	cg.writef("%s[\"%s\"] = ", IMPORTS_TBL, path)
+	path = pathToLuaString(path)
+	cg.writef("%s[%s] = ", IMPORTS_TBL, path)
 	cg.writeString("function()\n")
 	cg.pushIndent()
 	cg.setAnalysis(analysis)

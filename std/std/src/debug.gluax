@@ -1,0 +1,26 @@
+import "base";
+
+#define DEBUG
+
+#ifndef DEBUG
+#[no_op]
+#endif
+pub func assert(cond: bool, fmt: string, ...any) {
+    if !cond {
+        base::errorf(fmt, ...);
+    }
+}
+
+#ifndef DEBUG
+#[no_op]
+#endif
+pub func print(...any) {
+    globals::base::print(...);
+}
+
+#ifndef DEBUG
+#[no_op]
+#endif
+pub func printf(fmt: string, ...any) {
+    base::printf(fmt, ...);
+}

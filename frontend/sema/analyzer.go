@@ -15,7 +15,13 @@ import (
 func (pa *ProjectAnalysis) StripWorkspace(path string) string {
 	ws := pa.workspace
 	ws, path = common.FilePathClean(ws), common.FilePathClean(path)
-	return common.FilePathClean(filepath.Join(pa.currentPackage, strings.TrimPrefix(path, ws)))
+	return common.FilePathClean(filepath.Join(pa.CurrentPackage(), strings.TrimPrefix(path, ws)))
+}
+
+func (pa *ProjectAnalysis) StartsWithWorkspace(path string) bool {
+	ws := common.FilePathClean(pa.workspace)
+	path = common.FilePathClean(path)
+	return strings.HasPrefix(path, ws)
 }
 
 type Analysis struct {
@@ -61,10 +67,6 @@ func (a *Analysis) GetStructSetupSpan(def Span) Span {
 	return *a.currentStructSetupSpan
 }
 
-func (a *Analysis) IsStdTypes() bool {
-	return a.Project.Config.Std && strings.HasSuffix(a.Src, "src/types.gluax")
-}
-
 func (a *Analysis) handleAst(ast *ast.Ast) {
 	a.Ast = ast
 	a.handleItems(ast.Items)
@@ -73,12 +75,10 @@ func (a *Analysis) handleAst(ast *ast.Ast) {
 func (a *Analysis) handleItems(items []ast.Item) {
 	// TODO: handle recursion if a let statement calls a function that uses the let statement
 
-	if !a.IsStdTypes() {
-		for _, item := range items {
-			switch it := item.(type) {
-			case *ast.Import:
-				a.handleImport(a.Scope, it)
-			}
+	for _, item := range items {
+		switch it := item.(type) {
+		case *ast.Import:
+			a.handleImport(a.Scope, it)
 		}
 	}
 
@@ -102,11 +102,12 @@ func (a *Analysis) handleItems(items []ast.Item) {
 						a.Panic(err.Error(), name.Span())
 					}
 				}
+				continue
 			case *ast.Struct:
 				name = it.Name
 			case *ast.Function:
 				name = *it.Name
-			case *ast.Import, *ast.Use:
+			case *ast.Import, *ast.Use, *ast.ImplStruct:
 				continue
 			}
 			if err := fakeScope.AddSymbol(name.Raw, fakeSymbol); err != nil {
@@ -119,10 +120,7 @@ func (a *Analysis) handleItems(items []ast.Item) {
 	for _, item := range items {
 		switch it := item.(type) {
 		case *ast.Struct:
-			oldScope := a.Scope
-			if a.IsStdTypes() {
-				a.Scope = a.State.RootScope
-			}
+			it.Scope = a.Scope
 			st := a.setupStruct(it, nil)
 
 			SelfSt := a.setupStruct(it, nil)
@@ -137,19 +135,6 @@ func (a *Analysis) handleItems(items []ast.Item) {
 
 			stSem := ast.NewSemType(st, it.Name.Span())
 			a.AddTypeVisibility(a.Scope, it.Name.Raw, stSem, it.Public)
-			if a.IsStdTypes() {
-				ast.AddBuiltinType(it.Name.Raw, stSem)
-				a.Scope = oldScope
-			}
-		}
-	}
-
-	if a.IsStdTypes() {
-		for _, item := range items {
-			switch it := item.(type) {
-			case *ast.Import:
-				a.handleImport(a.Scope, it)
-			}
 		}
 	}
 
@@ -162,13 +147,34 @@ func (a *Analysis) handleItems(items []ast.Item) {
 			SelfSt := stScope.GetType("Self").Struct()
 			a.collectStructFields(SelfSt)
 			a.collectStructFields(st)
-
-			a.collectStructMethodsSignatures(SelfSt)
-			a.collectStructMethodsSignatures(st)
 		case *ast.Function:
 			funcSem := a.handleFunctionSignature(a.Scope, it)
 			it.SetSem(&funcSem)
 			a.AddValue(a.Scope, it.Name.Raw, ast.NewValue(funcSem), it.Name.Span())
+		case *ast.ImplStruct:
+			it.Scope = a.Scope
+			genericsScope := NewScope(a.Scope)
+			for _, g := range it.Generics.Params {
+				binding := ast.NewSemGenericType(g.Name, true)
+				a.AddType(genericsScope, g.Name.Raw, binding)
+			}
+			stTy := a.resolveType(genericsScope, it.Struct)
+			if !stTy.IsStruct() {
+				a.Panic(fmt.Sprintf("expected struct type, got: %s", stTy.String()), it.Struct.Span())
+			}
+			if err := genericsScope.AddType("Self", stTy); err != nil {
+				a.Error(err.Error(), it.Struct.Span())
+			}
+			st := stTy.Struct()
+			for _, method := range it.Methods {
+				funcTy := a.handleFunctionSignature(genericsScope, &method)
+				funcTy.ImplStruct = it
+				if err := a.State.AddStructMethod(st.Def, method.Name.Raw, funcTy, st.Generics.Params); err != nil {
+					a.Error(err.Error(), method.Name.Span())
+				}
+				st.Methods[method.Name.Raw] = funcTy
+			}
+			it.GenericsScope = genericsScope
 		}
 	}
 
@@ -183,14 +189,12 @@ func (a *Analysis) handleItems(items []ast.Item) {
 	// struct methods phase
 	for _, item := range items {
 		switch it := item.(type) {
-		case *ast.Struct:
-			st := a.State.GetStruct(it, nil)
-			// stScope := st.Scope.(*Scope)
-			// SelfSt := stScope.GetType("Self").Struct()
-			// a.collectStructMethods(SelfSt, false)
-			a.collectStructMethods(st)
 		case *ast.Function:
 			a.handleFunction(a.Scope, it)
+		case *ast.ImplStruct:
+			for _, method := range it.Methods {
+				_ = a.handleFunction(it.GenericsScope.(*Scope), &method)
+			}
 		}
 	}
 }

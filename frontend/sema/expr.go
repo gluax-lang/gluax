@@ -342,7 +342,7 @@ func (a *Analysis) handlePostfixExpr(scope *Scope, e *ast.ExprPostfix) Type {
 	switch op := e.Op.(type) {
 	case *ast.Call:
 		if op.Method == nil {
-			ty, _ = a.handleCall(scope, op, exprTy, expr.Span())
+			ty = a.handleCall(scope, op, exprTy, expr.Span())
 		} else {
 			ty = a.handleMethodCall(scope, op, expr)
 		}
@@ -357,7 +357,7 @@ func (a *Analysis) handlePostfixExpr(scope *Scope, e *ast.ExprPostfix) Type {
 	return ty
 }
 
-func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span Span) (Type, *SemStruct) {
+func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span Span) Type {
 	if toCallTy.Kind() != ast.SemFunctionKind {
 		a.Panic(fmt.Sprintf("expected function type, got: %s", toCallTy.String()), span)
 	}
@@ -442,43 +442,6 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 		)
 	}
 
-	var newSt *SemStruct
-	if owner := funcTy.OwnerStruct; owner != nil && owner.Generics.Len() > 0 {
-		generics := owner.Generics
-		unboundCount := generics.UnboundCount()
-		if unboundCount > 0 {
-			placeholders := make(map[string]Type, unboundCount)
-
-			for i, paramTy := range funcTy.Params {
-				if ast.IsVararg(funcTy.Def.Params[i].Type) {
-					break // done unifying
-				}
-
-				if i >= len(processedArgs) {
-					break // not enough arguments, but we already handled that above
-				}
-				argTy := processedArgs[i]
-				a.unify(paramTy, argTy, placeholders, processedSpans[i])
-			}
-
-			// Build final generics
-			finalGenerics := make([]Type, len(generics.Params))
-			for i, g := range generics.Params {
-				bound, ok := placeholders[g.Generic().Ident.Raw]
-				if !ok {
-					a.Panic(
-						fmt.Sprintf("cannot infer generic `%s` for call", g.Generic().Ident.Raw),
-						common.SpanFrom(span, call.Span()),
-					)
-				}
-				finalGenerics[i] = bound
-			}
-
-			newSt = a.instantiateStruct(owner.Def, finalGenerics)
-			funcTy = newSt.Methods[funcTy.Def.Name.Raw]
-		}
-	}
-
 	for i := range requiredCount {
 		a.Matches(funcTy.Params[i], processedArgs[i], processedSpans[i])
 	}
@@ -490,7 +453,7 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 	}
 
 	if call.IsTryCall {
-		return funcTy.Return, newSt
+		return funcTy.Return
 	}
 
 	if call.Catch != nil {
@@ -501,15 +464,15 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 
 		a.handleBlock(catchScope, &catch.Block)
 		a.Matches(funcTy.Return, catch.Block.Type(), catch.Block.Span())
-		return funcTy.Return, newSt
+		return funcTy.Return
 	}
 
 	if funcTy.Def.Errorable {
 		a.Warning("unhandled error", call.Span())
-		return ast.NewErrorType(call.Span()), newSt
+		return ast.NewErrorType(call.Span())
 	}
 
-	return funcTy.Return, newSt
+	return funcTy.Return
 }
 
 func (a *Analysis) handleDotAccess(expr *ast.DotAccess, toIndex *ast.Expr) Type {
@@ -547,24 +510,19 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 
 	st := toCallTy.Struct()
 
-	method, exists := st.GetMethod(call.Method.Raw)
+	method, exists := a.State.GetStructMethod(st.Def, call.Method.Raw, st.Generics.Params)
 	if !exists {
 		a.Panic(
-			fmt.Sprintf("no method named `%s` in `%s`", call.Method.Raw, st.Def.Name.Raw),
+			fmt.Sprintf("no method named `%s` in `%s`", call.Method.Raw, st.String()),
 			call.Method.Span(),
 		)
 	}
 
-	if len(method.Params) < 1 {
-		a.Panic(
-			fmt.Sprintf("no method named `%s` in `%s`", call.Method.Raw, st.Def.Name.Raw),
-			call.Method.Span(),
-		)
-	}
+	method = a.HandleStructMethod(st, method, false)
 
-	if !method.Params[0].StrictMatches(toCallTy) {
+	if len(method.Params) < 1 || !ast.IsSelf(method.Def.Params[0].Type) {
 		a.Panic(
-			fmt.Sprintf("no method named `%s` in `%s`", call.Method.Raw, st.Def.Name.Raw),
+			fmt.Sprintf("no method named `%s` in `%s`", call.Method.Raw, st.String()),
 			call.Method.Span(),
 		)
 	}
@@ -574,7 +532,7 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 
 	methodTy := ast.NewSemType(method, call.Span())
 
-	ret, _ := a.handleCall(scope, call, methodTy, call.Span())
+	ret := a.handleCall(scope, call, methodTy, call.Span())
 	return ret
 }
 
@@ -613,7 +571,7 @@ func (a *Analysis) handlePathCall(scope *Scope, call *ast.ExprPathCall) Type {
 				a.Panic(fmt.Sprintf("cannot find method `%s` in `%s`", call.MethodName.Raw, call.Name.String()), call.Span())
 			}
 			funcTy := funVal.Type()
-			ret, _ := a.handleCall(scope, &call.Call, funcTy, call.Span())
+			ret := a.handleCall(scope, &call.Call, funcTy, call.Span())
 			call.SetImportedFunc(funVal.Type())
 			a.AddSpanSymbol(call.MethodName.Span(), *analysis.Scope.GetSymbol(call.MethodName.Raw))
 			return ret
@@ -642,22 +600,20 @@ func (a *Analysis) handlePathCall(scope *Scope, call *ast.ExprPathCall) Type {
 		st = a.instantiateStruct(st.Def, concrete)
 	}
 
-	method, exists := st.GetMethod(call.MethodName.Raw)
+	method, exists := a.State.GetStructMethod(st.Def, call.MethodName.Raw, st.Generics.Params)
 	if !exists {
 		a.Panic(
 			fmt.Sprintf("no method named `%s` in `%s`", call.MethodName.Raw, st.Def.Name.Raw),
 			call.MethodName.Span(),
 		)
 	}
+	method = a.HandleStructMethod(st, method, false)
 
 	call.SetStructSem(st)
 
 	methodTy := ast.NewSemType(method, call.Span())
 
-	ret, newSt := a.handleCall(scope, &call.Call, methodTy, common.SpanFrom(call.Name.Span(), call.Span()))
-	if newSt != nil {
-		call.SetStructSem(newSt)
-	}
+	ret := a.handleCall(scope, &call.Call, methodTy, common.SpanFrom(call.Name.Span(), call.Span()))
 
 	return ret
 }

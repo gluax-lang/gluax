@@ -10,13 +10,8 @@ import (
 func (cg *Codegen) decorateFuncName(f *ast.SemFunction) string {
 	raw := f.Def.Name.Raw
 	if f.Def.Public && f.Def.IsGlobalDef {
-		attrs := f.Def.Attributes
-		for _, attr := range attrs {
-			if attr.Key.Raw == "rename_to" {
-				if attr.IsInputString() {
-					return attr.String.Raw
-				}
-			}
+		if rename_to := f.Def.Attributes.GetString("rename_to"); rename_to != nil {
+			return *rename_to
 		}
 		return raw
 	}
@@ -125,18 +120,16 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 		fun = toCallTy.Function()
 	}
 
+	if fun.Def.Attributes.Has("no_op") {
+		// If the function has a "no_op" attribute, we don't generate any code for it.
+		return "nil"
+	}
+
 	var canInline = func() bool {
 		if fun.HasVarargParam() || fun.HasVarargReturn() {
 			return false
 		}
-		hasInlineAttr := false
-		for _, attr := range fun.Def.Attributes {
-			if attr.Key.Raw == "inline" {
-				hasInlineAttr = true
-				break
-			}
-		}
-		if !hasInlineAttr {
+		if !fun.Def.Attributes.Has("inline") {
 			return false
 		}
 		return true

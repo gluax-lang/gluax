@@ -18,13 +18,13 @@ type Function struct {
 	Errorable   bool
 	ReturnType  Type
 	Body        *Block // nil if abstract
-	Attributes  []Attribute
+	Attributes  Attributes
 	sem         *SemFunction
 	span        common.Span
 	IsGlobalDef bool // true if this is a global definition
 }
 
-func NewFunction(name *lexer.TokIdent, sig FunctionSignature, body *Block, attributes []Attribute, span common.Span) *Function {
+func NewFunction(name *lexer.TokIdent, sig FunctionSignature, body *Block, attributes Attributes, span common.Span) *Function {
 	return &Function{
 		Public:     false,
 		Name:       name,

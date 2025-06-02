@@ -154,8 +154,7 @@ func (cg *Codegen) genPathExpr(path *ast.Path) string {
 func (cg *Codegen) genBinaryExpr(binE *ast.ExprBinary) string {
 	lhs := cg.getTempVar()
 	cg.ln("%s = %s;", lhs, cg.genExprX(binE.Left))
-	rhs := cg.getTempVar()
-	cg.ln("%s = %s;", rhs, cg.genExprX(binE.Right))
+	rhs := cg.genExprX(binE.Right)
 	var op string
 	switch binE.Op {
 	case ast.BinaryOpInvalid:
@@ -205,8 +204,7 @@ func (cg *Codegen) genBinaryExpr(binE *ast.ExprBinary) string {
 }
 
 func (cg *Codegen) genUnaryExpr(unE *ast.ExprUnary) string {
-	value := cg.getTempVar()
-	cg.ln("%s = %s;", value, cg.genExprX(unE.Value))
+	value := cg.genExprX(unE.Value)
 	switch unE.Op {
 	case ast.UnaryOpNot:
 		return fmt.Sprintf("(not %s)", value)

@@ -23,6 +23,8 @@ func (p *parser) parseItem() ast.Item {
 		item = p.parseImport()
 	case "func":
 		item = p.parseFunction()
+	case "impl":
+		item = p.parseImplStruct()
 	default:
 		common.PanicDiag("expected item", p.span())
 	}
@@ -58,9 +60,7 @@ func (p *parser) parseStruct() ast.Item {
 	p.expect("{")
 
 	var (
-		fields     []ast.StructField
-		methods    []ast.Function
-		seenMethod bool
+		fields []ast.StructField
 	)
 
 	fieldId := 1 // Start field IDs at 1
@@ -70,30 +70,20 @@ func (p *parser) parseStruct() ast.Item {
 		for p.Token.Is("#") {
 			attributes = append(attributes, p.parseAttribute())
 		}
-		if p.Token.Is("func") {
-			seenMethod = true
-			method := p.parseStructMethod()
-			method.Attributes = attributes
-			methods = append(methods, method)
-		} else {
-			if seenMethod {
-				common.PanicDiag("cannot define fields after methods", p.span())
-			}
 
-			fields = append(fields, p.parseStructField(fieldId))
-			fieldId++ // Increment field ID for the next field
+		fields = append(fields, p.parseStructField(fieldId))
+		fieldId++ // Increment field ID for the next field
 
-			// optional trailing comma
-			if !p.tryConsume(",") {
-				break
-			}
+		// optional trailing comma
+		if !p.tryConsume(",") {
+			break
 		}
 	}
 	p.expect("}")
 
 	span := SpanFrom(spanStart, p.prevSpan())
 
-	st := ast.NewStruct(name, generics, fields, methods, span)
+	st := ast.NewStruct(name, generics, fields, span)
 	st.IsGlobalDef = p.processingGlobals
 	return st
 }
@@ -109,6 +99,34 @@ func (p *parser) parseStructField(id int) ast.StructField {
 		Type:   ty,
 		Public: public,
 	}
+}
+
+func (p *parser) parseImplStruct() ast.Item {
+	spanStart := p.span()
+
+	p.expect("impl")
+	generics := p.parseGenerics()
+	st := p.parseType()
+
+	p.expect("{")
+
+	var methods []ast.Function
+
+	for !p.Token.Is("}") {
+		var attributes []ast.Attribute
+		for p.Token.Is("#") {
+			attributes = append(attributes, p.parseAttribute())
+		}
+		method := p.parseStructMethod()
+		method.Attributes = attributes
+		methods = append(methods, method)
+	}
+
+	p.expect("}")
+
+	span := SpanFrom(spanStart, p.prevSpan())
+
+	return ast.NewImplStruct(generics, st, methods, span)
 }
 
 func (p *parser) parseStructMethod() ast.Function {

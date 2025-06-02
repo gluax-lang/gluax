@@ -1,0 +1,23 @@
+use globals::base;
+
+pub use base::_VERSION;
+
+pub func getfenv_f(f: anyfunc) -> map<any, any> {
+    base::getfenv(f)
+}
+
+pub func getfenv_l(level: number) ! -> map<any, any> {
+    let success, res = base::pcall(base::getfenv, level);
+    if !success {
+        throw (res unsafe_cast_as string);
+    }
+    res unsafe_cast_as map<any, any>
+}
+
+pub func printf(fmt: string, ...any) {
+    base::print(fmt.format(...));
+}
+
+pub func errorf(msg: string, ...any) -> unreachable {
+    base::error(msg.format(...))
+}

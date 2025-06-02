@@ -136,11 +136,18 @@ func (cg *Codegen) pushTempScope() {
 	})
 }
 
+func (cg *Codegen) currentTempScope() *tempScope {
+	if len(cg.tempVarStack) == 0 {
+		panic("codegen: currentTempScope called without a temp scope")
+	}
+	return &cg.tempVarStack[len(cg.tempVarStack)-1]
+}
+
 func (cg *Codegen) popTempScope() []string {
 	if len(cg.tempVarStack) == 0 {
 		panic("codegen: popTempScope underflow")
 	}
-	scope := cg.tempVarStack[len(cg.tempVarStack)-1]
+	scope := cg.currentTempScope()
 	cg.tempVarStack = cg.tempVarStack[:len(cg.tempVarStack)-1]
 	return scope.all
 }
@@ -150,7 +157,7 @@ func (cg *Codegen) getTempVar() string {
 		panic("codegen: getTempVar called without a temp scope")
 	}
 
-	scope := &cg.tempVarStack[len(cg.tempVarStack)-1]
+	scope := cg.currentTempScope()
 
 	var name string
 	if len(scope.available) > 0 {
@@ -172,7 +179,7 @@ func (cg *Codegen) collectTemps() func() {
 		panic("codegen: collectTemps called without a temp scope")
 	}
 
-	scope := &cg.tempVarStack[len(cg.tempVarStack)-1]
+	scope := cg.currentTempScope()
 	marker := len(scope.allocated)
 	released := false
 
@@ -181,7 +188,7 @@ func (cg *Codegen) collectTemps() func() {
 			return // gracefully handle double-release or popped scope
 		}
 
-		currentScope := &cg.tempVarStack[len(cg.tempVarStack)-1]
+		currentScope := cg.currentTempScope()
 		if marker < len(currentScope.allocated) {
 			// move variables allocated since marker back to available pool
 			releasedVars := currentScope.allocated[marker:]
@@ -205,32 +212,6 @@ func (cg *Codegen) generate() {
 		switch it := item.(type) {
 		case *ast.Import:
 			cg.genImport(it)
-		}
-	}
-	cg.ln("")
-
-	for _, item := range cg.Ast.Items {
-		switch it := item.(type) {
-		case *ast.Struct:
-			if !it.Public {
-				for _, inst := range cg.Analysis.State.GetStructStack(it) {
-					cg.ln("local %s;", cg.decorateStName(inst.Type))
-				}
-			}
-		case *ast.Let:
-			if !it.Public {
-				lhs := cg.genLetLHS(it)
-				cg.ln("local %s;", strings.Join(lhs, ", "))
-			}
-		}
-	}
-
-	for _, item := range cg.Ast.Items {
-		switch it := item.(type) {
-		case *ast.Function:
-			if !it.Public {
-				cg.ln("local %s -- function", it.Name.Raw)
-			}
 		}
 	}
 
@@ -258,11 +239,6 @@ func isNoOp(s string) bool {
 	return false
 }
 
-// returns "\x6D\x61\x69\x6E"
-func toHexEscapedLiteral(s string) string {
-	var builder strings.Builder
-	for i := range len(s) {
-		fmt.Fprintf(&builder, "\\x%02X", s[i])
-	}
-	return builder.String()
+func pathToLuaString(path string) string {
+	return fmt.Sprintf(" [===[%s]===] ", path)
 }

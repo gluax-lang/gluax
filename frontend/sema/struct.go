@@ -15,7 +15,7 @@ func (a *Analysis) setupStruct(def *ast.Struct, concrete []Type) *SemStruct {
 			)
 		}
 	}
-	stScope := a.Scope.Child(false)
+	stScope := def.Scope.(*Scope).Child(false)
 	st := ast.NewSemStruct(def)
 	st.Scope = stScope
 	if a.State.GetStruct(def, concrete) == nil {
@@ -23,6 +23,30 @@ func (a *Analysis) setupStruct(def *ast.Struct, concrete []Type) *SemStruct {
 	}
 	a.buildGenericsTable(stScope, st, concrete)
 	return st
+}
+
+func (a *Analysis) HandleStructMethod(st *ast.SemStruct, method ast.SemFunction, withBody bool) ast.SemFunction {
+	impl := method.ImplStruct
+	genericsScope := NewScope(impl.Scope.(*Scope))
+	for i, g := range impl.Generics.Params {
+		stGTy := st.Generics.Params[i]
+		a.AddType(genericsScope, g.Name.Raw, stGTy)
+	}
+	{
+		stTy := ast.NewSemType(st, st.Def.Name.Span())
+		if err := genericsScope.AddType("Self", stTy); err != nil {
+			a.Error(err.Error(), st.Def.Name.Span())
+		}
+	}
+	var funcTy ast.SemFunction
+	if withBody {
+		funcTy = a.handleFunction(genericsScope, &method.Def)
+	} else {
+		funcTy = a.handleFunctionSignature(genericsScope, &method.Def)
+	}
+	funcTy.ImplStruct = impl
+	st.Methods[method.Def.Name.Raw] = funcTy
+	return funcTy
 }
 
 func (a *Analysis) buildGenericsTable(scope *Scope, st *SemStruct, concrete []Type) {
@@ -53,27 +77,6 @@ func (a *Analysis) collectStructFields(st *SemStruct) {
 	}
 }
 
-func (a *Analysis) collectStructMethodsSignatures(st *SemStruct) {
-	for _, method := range st.Def.Methods {
-		if _, ok := st.Methods[method.Name.Raw]; ok {
-			a.Error("duplicate method name", method.Name.Span())
-		}
-		stScope := st.Scope.(*Scope)
-		funcTy := a.handleFunctionSignature(stScope, &method)
-		funcTy.OwnerStruct = st
-		st.Methods[method.Name.Raw] = funcTy
-	}
-}
-
-func (a *Analysis) collectStructMethods(st *SemStruct) {
-	for _, method := range st.Def.Methods {
-		stScope := st.Scope.(*Scope)
-		funcTy := a.handleFunction(stScope, &method)
-		funcTy.OwnerStruct = st
-		st.Methods[method.Name.Raw] = funcTy
-	}
-}
-
 func (a *Analysis) instantiateStruct(def *ast.Struct, concrete []Type) *SemStruct {
 	if st := a.State.GetStruct(def, concrete); st != nil {
 		return st
@@ -92,7 +95,6 @@ func (a *Analysis) instantiateStruct(def *ast.Struct, concrete []Type) *SemStruc
 	stScope := st.Scope.(*Scope)
 	stScope.ForceAddType("Self", ast.NewSemType(st, def.Span()))
 	a.collectStructFields(st)
-	a.collectStructMethodsSignatures(st)
 
 	return st
 }

@@ -1,0 +1,20 @@
+#[rename_to = "string.sub"]
+pub func sub(s: string, s_pos: number, e_pos: ?number) -> string {}
+
+#[rename_to = "string.char"]
+pub func char(...number) -> string {}
+
+#[rename_to = "string.byte"]
+pub func byte(s: string, s_pos: number, e_pos: number) -> ...string {}
+
+#[rename_to = "string.format"]
+pub func format(fmt: string, ...any) -> string {}
+
+#[rename_to = "string.rep"]
+pub func rep(s: string, n: number, sep: ?string) -> string {}
+
+#[rename_to = "string.upper"]
+pub func upper(s: string) -> string {}
+
+#[rename_to = "string.lower"]
+pub func lower(s: string) -> string {}

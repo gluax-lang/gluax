@@ -1,0 +1,63 @@
+/* Constants */
+
+#[rename_to = "math.huge"]
+pub let HUGE: number = 0;
+
+#[rename_to = "math.pi"]
+pub let PI: number = 0;
+
+/* Functions */
+
+#[rename_to = "math.abs"]
+pub func abs(n: number) -> number {}
+
+#[rename_to = "math.acos"]
+pub func acos(n: number) -> number {}
+
+#[rename_to = "math.asin"]
+pub func asin(n: number) -> number {}
+
+#[rename_to = "math.atan"]
+pub func atan(n: number) -> number {}
+
+#[rename_to = "math.atan2"]
+pub func atan2(y: number, x: number) -> number {}
+
+#[rename_to = "math.ceil"]
+pub func ceil(n: number) -> number {}
+
+#[rename_to = "math.cos"]
+pub func cos(n: number) -> number {}
+
+#[rename_to = "math.cosh"]
+pub func cosh(n: number) -> number {}
+
+#[rename_to = "math.deg"]
+pub func deg(n: number) -> number {}
+
+#[rename_to = "math.exp"]
+pub func exp(n: number) -> number {}
+
+#[rename_to = "math.floor"]
+pub func floor(n: number) -> number {}
+
+#[rename_to = "math.fmod"]
+pub func fmod(x: number, y: number) -> number {}
+
+#[rename_to = "math.frexp"]
+pub func frexp(n: number) -> (number, number) {}
+
+#[rename_to = "math.ldexp"]
+pub func ldexp(m: number, e: number) -> number {}
+
+#[rename_to = "math.log"]
+pub func log(n: number, base: ?number) -> number {}
+
+#[rename_to = "math.log10"]
+pub func log10(n: number) -> number {}
+
+#[rename_to = "math.max"]
+pub func max(n: number, o: number, ...number) -> number {}
+
+#[rename_to = "math.min"]
+pub func min(n: number, o: number, ...number) -> number {}

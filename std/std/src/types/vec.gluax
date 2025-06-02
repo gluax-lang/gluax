@@ -1,0 +1,36 @@
+impl<T> vec<T> {
+    #[inline]
+    func new() -> Self {
+        @raw("{@RETURN {} @}") -> Self
+    }
+
+    #[inline]
+    func len(s: Self) -> number {
+        @raw("{@RETURN #{@1@} @}", s) -> number
+    }
+
+    #[inline]
+    func push(s: Self, v: T) {
+        @raw("{@1@}[#{@1@}+1]={@2@}", s, v);
+    }
+
+    #[inline]
+    func pop(s: Self) -> ?T {
+        @raw("do local len = #{@1@}; {@TEMP1@}, {@1@}[len] = {@1@}[len], nil; {@RETURN {@TEMP1@} @} end;", s) -> ?T
+    }
+
+    #[inline]
+    func is_empty(s: Self) -> bool {
+        @raw("{@RETURN #{@1@} == 0 @}", s) -> bool
+    }
+
+    #[inline]
+    func remove(s: Self, index: number) -> ?T {
+        @raw("{@RETURN table.remove({@1@}, {@2@}) @}", s, index) -> ?T
+    }
+
+    #[inline]
+    func get(s: Self, index: number) -> ?T {
+        @raw("{@RETURN {@1@}[{@2@}] @}", s, index) -> ?T
+    }
+}
