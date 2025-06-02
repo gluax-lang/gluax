@@ -1,7 +1,5 @@
 import "base";
 
-#define DEBUG
-
 #ifndef DEBUG
 #[no_op]
 #endif
