@@ -29,10 +29,6 @@ type (
 		TrueLabel  string
 		FalseLabel string
 	}
-	AssignLiteral struct {
-		Dest  string
-		Value bool
-	}
 )
 
 type LogicalGroup struct {
