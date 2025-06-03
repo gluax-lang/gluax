@@ -110,9 +110,6 @@ func (cg *Codegen) genExprX(e ast.Expr) string {
 		ty := e.Type()
 		st := ty.Struct()
 		return cg.genStructInit(e.StructInit(), st)
-	case ast.ExprKindPathCall:
-		callCode := cg.genPathCall(e.PathCall())
-		return callCode
 	case ast.ExprKindUnsafeCast:
 		return cg.genExprX(e.UnsafeCast().Expr)
 	case ast.ExprKindRunRaw:

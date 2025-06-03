@@ -27,10 +27,12 @@ func (cg *Codegen) decorateStName_internal(st *ast.SemStruct) string {
 			case g.IsStruct():
 				emit(g.Struct())
 			case g.IsGeneric():
+				panic("THIS SHOULD NOT HAPPEN WITH NEW VERSION OF GLUAX")
 				sb.WriteString(g.Generic().Ident.Raw)
 			case g.IsFunction():
-				f := g.Function()
-				sb.WriteString(cg.decorateFuncName(&f))
+				panic("TODO: handle function generics in struct names")
+				// f := g.Function()
+				// sb.WriteString(cg.decorateFuncName(&f))
 			case g.IsUnreachable():
 				sb.WriteString(UNREACHABLE_PREFIX)
 			default:
@@ -150,22 +152,6 @@ func (cg *Codegen) genStructInit(si *ast.ExprStructInit, st *ast.SemStruct) stri
 	sb.WriteString(fmt.Sprintf("}, %s)", toSetTo))
 
 	return sb.String()
-}
-
-func (cg *Codegen) genPathCall(call *ast.ExprPathCall) string {
-	if !call.IsStructMethod() {
-		funcTy := call.ImportedFunc()
-		fun := funcTy.Function()
-		name := cg.decorateFuncName(&fun)
-		callCode := cg.genCall(&call.Call, name, funcTy)
-		return callCode
-	}
-	st := call.Struct()
-	name := cg.decorateStName(st)
-	method := st.Methods[call.MethodName.Raw]
-	methodTy := ast.NewSemType(method, call.Span())
-	callCode := cg.genCall(&call.Call, name+"."+call.MethodName.Raw, methodTy)
-	return callCode
 }
 
 func (cg *Codegen) genDotAccess(expr *ast.DotAccess, toIndex string, toIndexTy ast.SemType) string {

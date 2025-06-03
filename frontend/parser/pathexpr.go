@@ -5,44 +5,37 @@ import (
 )
 
 func (p *parser) parsePathExpr(ctx ExprCtx, ident *ast.Ident) ast.Expr {
-	path := ast.Path{Idents: []ast.Ident{}, Generics: make(map[ast.Ident][]ast.Type)}
+	path := ast.Path{Idents: []ast.Ident{}, Generics: []ast.Type{}}
 
 	if ident != nil {
 		path.Idents = append(path.Idents, *ident)
-
-		if p.tryConsume("::") {
-			path.Idents = append(path.Idents, p.expectIdent())
-			return p.parsePathCall(path, nil, false)
-		}
 	} else {
-		currentIdent := p.expectIdent()
-		path.Idents = append(path.Idents, currentIdent)
+		path.Idents = append(path.Idents, p.expectIdent())
+	}
 
-		for p.tryConsume("::") {
-			// `::<` -> turbofish generics
-			if p.Token.Is("<") {
-				generics := p.parseTurbofishGenerics()
-				if p.Token.Is("{") {
-					return p.parseStructInit(path, generics)
-				} else {
-					path.Generics[currentIdent] = generics
-					return p.parsePathCall(path, generics, true)
-				}
+	for p.tryConsume("::") {
+		// `::<` -> turbofish generics
+		if p.Token.Is("<") {
+			generics := p.parseTurbofishGenerics()
+			if p.Token.Is("{") {
+				return p.parseStructInit(path, generics)
+			} else {
+				path.Generics = generics
+				p.expect("::")
 			}
+		}
 
-			// Ordinary path segment.
-			currentIdent = p.expectIdent()
-			path.Idents = append(path.Idents, currentIdent)
+		// Ordinary path segment.
+		path.Idents = append(path.Idents, p.expectIdent())
+
+		if len(path.Generics) > 0 {
+			break
 		}
 	}
 
 	// Struct initializer without turbofish:  Foo::Bar { ... }
 	if !ctx.IsCondition() && p.Token.Is("{") {
 		return p.parseStructInit(path, nil)
-	}
-
-	if len(path.Idents) > 1 && p.Token.Is("(") {
-		return p.parsePathCall(path, nil, false)
 	}
 
 	return ast.NewExpr(&path)
@@ -83,18 +76,4 @@ func (p *parser) parseStructInit(ty ast.Path, generics []ast.Type) ast.Expr {
 	span := SpanFrom(spanStart, spanEnd)
 
 	return ast.NewStructInit(ty, generics, fields, span)
-}
-
-func (p *parser) parsePathCall(path ast.Path, generics []ast.Type, parseMethod bool) ast.Expr {
-	var methodName ast.Ident
-	if parseMethod {
-		p.expect("::")
-		methodName = p.expectIdent()
-	} else {
-		methodName = path.Idents[len(path.Idents)-1]
-		path.Idents = path.Idents[:len(path.Idents)-1]
-	}
-	call := p.parseCall(methodName.Span(), nil)
-	span := SpanFrom(path.Span(), p.prevSpan())
-	return ast.NewPathCall(path, methodName, generics, *call.(*ast.Call), span)
 }

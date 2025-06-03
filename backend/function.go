@@ -15,6 +15,10 @@ func (cg *Codegen) decorateFuncName(f *ast.SemFunction) string {
 		}
 		return raw
 	}
+	if f.Struct != nil {
+		stName := cg.decorateStName(f.Struct)
+		return stName + "." + f.Def.Name.Raw
+	}
 	var sb strings.Builder
 	sb.WriteString(FUNC_PREFIX)
 	sb.WriteString(f.Def.Name.Raw)

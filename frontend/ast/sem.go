@@ -311,14 +311,28 @@ func (s SemStruct) Matches(other SemType) bool {
 }
 
 func (s SemStruct) StrictMatches(other SemType) bool {
-	if s.IsOption() {
-		if !other.IsOption() {
+	if other.Kind() != SemStructKind {
+		return false
+	}
+
+	oS := other.Struct()
+
+	if s.Def.Span() != oS.Def.Span() {
+		return false
+	}
+
+	if len(s.Generics.Params) != len(oS.Generics.Params) {
+		return false
+	}
+
+	for i, sg := range s.Generics.Params {
+		og := oS.Generics.Params[i]
+		if !sg.StrictMatches(og) {
 			return false
 		}
-		otherS := other.Struct()
-		return s.InnerType().StrictMatches(otherS.InnerType())
 	}
-	return s.Matches(other)
+
+	return true
 }
 
 func (s SemStruct) String() string {
@@ -368,9 +382,11 @@ func (s SemStruct) IsTable() bool {
 /* FunctionType */
 
 type SemFunction struct {
-	Def        Function
-	Params     []SemType
-	Return     SemType
+	Def    Function
+	Params []SemType
+	Return SemType
+
+	Struct     *SemStruct
 	ImplStruct *ImplStruct
 }
 

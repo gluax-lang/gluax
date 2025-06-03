@@ -30,7 +30,6 @@ func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafRe
 	fakeSymbol := ast.NewSymbol("", &fakeSemImport, common.Span{}, false)
 	currentSym := &fakeSymbol
 
-	syms := make([]Symbol, 0, len(idents))
 	for i, ident := range idents[:len(idents)-1] {
 		if currentSym.IsImport() {
 			imp := currentSym.Import()
@@ -49,10 +48,13 @@ func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafRe
 			} else {
 				a.AddSpanSymbol(ident.Span(), *currentSym)
 			}
-			syms = append(syms, *currentSym)
 		} else {
 			return nil
 		}
+	}
+
+	if currentSym == nil {
+		return nil
 	}
 
 	leaf := idents[len(idents)-1]
@@ -96,19 +98,20 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 			path.ResolvedSymbol = sym
 			a.AddSpanSymbol(name.Span(), *sym)
 			return sym.Value()
+		} else if sym.IsType() && sym.Type().IsStruct() {
+			st := sym.Type().Struct()
+			st = a.resolveStruct(scope, st, path.Generics, name.Span())
+			method, exists := a.State.GetStructMethod(st.Def, raw, st.Generics.Params)
+			if !exists {
+				return nil
+			}
+			method = a.HandleStructMethod(st, method, false)
+			val := ast.NewValue(method)
+			sym := ast.NewSymbol(raw, &val, method.Def.Name.Span(), method.Def.Public)
+			path.ResolvedSymbol = &sym
+			a.AddSpanSymbol(name.Span(), sym)
+			return &val
 		}
-		// else if sym.IsType() && sym.Type().IsStruct() {
-		// 	st := sym.Type().Struct()
-		// 	method, exists := st.GetMethod(raw)
-		// 	if !exists {
-		// 		return nil
-		// 	}
-		// 	val := ast.NewValue(method)
-		// 	sym := ast.NewSymbol(raw, &val, method.Def.Name.Span(), method.Def.Public)
-		// 	path.Symbols = append(path.Symbols, sym)
-		// 	a.AddSpanSymbol(name.Span(), sym)
-		// 	return &val
-		// }
 		return nil
 	})
 	if t == nil {

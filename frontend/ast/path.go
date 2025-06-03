@@ -10,8 +10,8 @@ import (
 // It is a sequence of identifiers separated by "::".
 type Path struct {
 	Idents         []Ident
-	Generics       map[Ident][]Type // generic parameters for each ident
-	ResolvedSymbol *Symbol          // resolved symbol, if any
+	Generics       []Type  // generic parameters
+	ResolvedSymbol *Symbol // resolved symbol, if any
 }
 
 func NewPath(idents []Ident) Path {

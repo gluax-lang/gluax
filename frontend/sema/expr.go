@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/gluax-lang/gluax/frontend/ast"
-	"github.com/gluax-lang/gluax/frontend/common"
 )
 
 func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
@@ -77,8 +76,6 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 		retTy = a.handlePostfixExpr(scope, expr.Postfix())
 	case ast.ExprKindStructInit:
 		retTy = a.handleStructInit(scope, expr.StructInit())
-	case ast.ExprKindPathCall:
-		retTy = a.handlePathCall(scope, expr.PathCall())
 	case ast.ExprKindUnsafeCast:
 		retTy = a.handleUnsafeCast(scope, expr.UnsafeCast())
 	case ast.ExprKindRunRaw:
@@ -558,64 +555,6 @@ func (a *Analysis) handleUnwrapOption(_ *Scope, unwrapOp *ast.UnwrapOption, expr
 		a.Panic("`?` can only be used on options", unwrapOp.Span())
 	}
 	return exprTy.OptionInnerType()
-}
-
-func (a *Analysis) handlePathCall(scope *Scope, call *ast.ExprPathCall) Type {
-	{
-		sym := a.resolvePathSymbol(scope, &call.Name)
-		if sym.IsImport() {
-			imp := sym.Import()
-			analysis := imp.Analysis.(*Analysis)
-			funVal := analysis.Scope.GetValue(call.MethodName.Raw)
-			if funVal == nil {
-				a.Panic(fmt.Sprintf("cannot find method `%s` in `%s`", call.MethodName.Raw, call.Name.String()), call.Span())
-			}
-			funcTy := funVal.Type()
-			ret := a.handleCall(scope, &call.Call, funcTy, call.Span())
-			call.SetImportedFunc(funVal.Type())
-			a.AddSpanSymbol(call.MethodName.Span(), *analysis.Scope.GetSymbol(call.MethodName.Raw))
-			return ret
-		}
-	}
-
-	baseTy := a.resolvePathType(scope, &call.Name)
-	if !baseTy.IsStruct() {
-		a.Panic(
-			fmt.Sprintf("expected struct type, got: %s", baseTy.String()),
-			call.Name.Span(),
-		)
-	}
-
-	st := baseTy.Struct()
-	if len(call.Generics) > 0 {
-		firstSpan := call.Generics[0].Span()
-		lastSpan := call.Generics[len(call.Generics)-1].Span()
-		var concrete []Type
-		for _, tyAst := range call.Generics {
-			concrete = append(concrete, a.resolveType(scope, tyAst))
-		}
-		if a.SetStructSetupSpan(common.SpanFrom(firstSpan, lastSpan)) {
-			defer a.ClearStructSetupSpan()
-		}
-		st = a.instantiateStruct(st.Def, concrete)
-	}
-
-	method, exists := a.State.GetStructMethod(st.Def, call.MethodName.Raw, st.Generics.Params)
-	if !exists {
-		a.Panic(
-			fmt.Sprintf("no method named `%s` in `%s`", call.MethodName.Raw, st.Def.Name.Raw),
-			call.MethodName.Span(),
-		)
-	}
-	method = a.HandleStructMethod(st, method, false)
-
-	call.SetStructSem(st)
-
-	methodTy := ast.NewSemType(method, call.Span())
-
-	ret := a.handleCall(scope, &call.Call, methodTy, common.SpanFrom(call.Name.Span(), call.Span()))
-
-	return ret
 }
 
 func (a *Analysis) handleRunRaw(scope *Scope, runRaw *ast.ExprRunRaw) Type {

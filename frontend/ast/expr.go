@@ -206,13 +206,6 @@ func (e *Expr) StructInit() *ExprStructInit {
 	return e.data.(*ExprStructInit)
 }
 
-func (e *Expr) PathCall() *ExprPathCall {
-	if e.Kind() != ExprKindPathCall {
-		panic("not a struct static call")
-	}
-	return e.data.(*ExprPathCall)
-}
-
 func (e *Expr) UnsafeCast() *UnsafeCast {
 	if e.Kind() != ExprKindUnsafeCast {
 		panic("not an unsafe cast")
@@ -555,51 +548,6 @@ func (s *ExprStructInit) ExprKind() ExprKind { return ExprKindStructInit }
 
 func (s *ExprStructInit) Span() common.Span {
 	return s.span
-}
-
-/* Path Call */
-
-type ExprPathCall struct {
-	Name       Path
-	MethodName Ident
-	Generics   []Type
-	Call       Call
-	st         *SemStruct // struct if it was a struct method call
-	funcTy     SemType    // function type if it was imported one
-	span       common.Span
-}
-
-func NewPathCall(name Path, methodName Ident, generics []Type, call Call, span common.Span) Expr {
-	return NewExpr(&ExprPathCall{Name: name, MethodName: methodName, Generics: generics, Call: call, span: span})
-}
-
-func (s *ExprPathCall) ExprKind() ExprKind { return ExprKindPathCall }
-
-func (s *ExprPathCall) Span() common.Span {
-	return s.span
-}
-
-func (s *ExprPathCall) SetStructSem(st *SemStruct) {
-	s.st = st
-}
-
-func (s *ExprPathCall) Struct() *SemStruct {
-	if s.st == nil {
-		panic("not a struct")
-	}
-	return s.st
-}
-
-func (s *ExprPathCall) SetImportedFunc(funcTy SemType) {
-	s.funcTy = funcTy
-}
-
-func (s *ExprPathCall) ImportedFunc() SemType {
-	return s.funcTy
-}
-
-func (s *ExprPathCall) IsStructMethod() bool {
-	return s.st != nil
 }
 
 /* UnsafeCast (unsafe_cast) */

@@ -44,6 +44,7 @@ func (a *Analysis) HandleStructMethod(st *ast.SemStruct, method ast.SemFunction,
 	} else {
 		funcTy = a.handleFunctionSignature(genericsScope, &method.Def)
 	}
+	funcTy.Struct = st
 	funcTy.ImplStruct = impl
 	st.Methods[method.Def.Name.Raw] = funcTy
 	return funcTy
@@ -95,6 +96,37 @@ func (a *Analysis) instantiateStruct(def *ast.Struct, concrete []Type) *SemStruc
 	stScope := st.Scope.(*Scope)
 	stScope.ForceAddType("Self", ast.NewSemType(st, def.Span()))
 	a.collectStructFields(st)
+
+	return st
+}
+
+func (a *Analysis) resolveStruct(scope *Scope, st *ast.SemStruct, generics []ast.Type, span Span) *ast.SemStruct {
+	if len(generics) == 0 {
+		if !st.Def.Generics.IsEmpty() {
+			if st.Generics.UnboundCount() == st.Generics.Len() {
+				a.Panic(fmt.Sprintf(
+					"struct `%s` is generic but no generic arguments were provided",
+					st.Def.Name.Raw,
+				), span)
+			}
+		}
+		return st
+	}
+
+	if st.Def.Generics.IsEmpty() {
+		a.Panic(fmt.Sprintf("struct `%s` is not generic but generics were provided", st.Def.Name.Raw), span)
+	}
+
+	if len(generics) != st.Def.Generics.Len() {
+		a.Panic(fmt.Sprintf("expected %d generics, got %d", st.Def.Generics.Len(), len(generics)), span)
+	}
+
+	concrete := make([]Type, 0, len(generics))
+	for _, g := range generics {
+		concrete = append(concrete, a.resolveType(scope, g))
+	}
+
+	st = a.instantiateStruct(st.Def, concrete)
 
 	return st
 }
