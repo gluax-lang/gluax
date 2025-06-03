@@ -126,7 +126,7 @@ func (cg *Codegen) genStructInit(si *ast.ExprStructInit, st *ast.SemStruct) stri
 		exprs[i] = f.Value
 	}
 
-	tempNames, _ := cg.genExprsToLocals(exprs, false)
+	tempNames := cg.genExprsToTempVars(exprs)
 
 	for i := range fieldEvals {
 		fieldEvals[i].Temp = tempNames[i]

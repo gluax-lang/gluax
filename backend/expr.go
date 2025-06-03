@@ -41,22 +41,57 @@ func (cg *Codegen) innermostLoop() loopLabel {
 	panic("no loop labels, should not happen")
 }
 
-func (cg *Codegen) genExprsToLocals(exprs []ast.Expr, directLast bool) ([]string, string) {
+func (cg *Codegen) genExprsToTempVars(exprs []ast.Expr) []string {
 	if len(exprs) == 0 {
-		return nil, ""
+		return nil
 	}
-	var locals, resultParts []string
+	var locals []string
+	for _, expr := range exprs {
+		local := cg.getTempVar()
+		locals = append(locals, local)
+		cg.ln("%s = %s;", local, cg.genExpr(expr))
+	}
+	return locals
+}
+
+func (cg *Codegen) genExprsToStrings(exprs []ast.Expr) []string {
+	if len(exprs) == 0 {
+		return nil
+	}
+	var resultParts []string
 	for i, expr := range exprs {
-		if directLast && i == len(exprs)-1 {
+		isLast := i == len(exprs)-1
+		if isSimpleExpr(expr) || isLast {
 			resultParts = append(resultParts, cg.genExpr(expr))
 		} else {
 			local := cg.getTempVar()
-			locals = append(locals, local)
 			cg.ln("%s = %s;", local, cg.genExpr(expr))
 			resultParts = append(resultParts, local)
 		}
 	}
-	return locals, strings.Join(resultParts, ", ")
+	return resultParts
+}
+
+func (cg *Codegen) genExprsLeftToRight(exprs []ast.Expr) string {
+	parts := cg.genExprsToStrings(exprs)
+	if parts == nil {
+		return ""
+	}
+	return strings.Join(parts, ", ")
+}
+
+func isSimpleExpr(e ast.Expr) bool {
+	// Simple expressions are those that can be evaluated directly without
+	// needing to generate a temporary variable.
+	switch e.Kind() {
+	case ast.ExprKindNil, ast.ExprKindBool, ast.ExprKindNumber, ast.ExprKindString,
+		ast.ExprKindVararg, ast.ExprKindFunction:
+		return true
+	case ast.ExprKindParenthesized:
+		return isSimpleExpr(e.Parenthesized().Value)
+	default:
+		return false
+	}
 }
 
 func (cg *Codegen) genExpr(e ast.Expr) string {
@@ -116,6 +151,8 @@ func (cg *Codegen) genExprX(e ast.Expr) string {
 		return cg.genRunRaw(e.RunRaw())
 	case ast.ExprKindVecInit:
 		return cg.genVecInit(e.VecInit())
+	case ast.ExprKindMapInit:
+		return cg.genMapInit(e.MapInit())
 	default:
 		panic("unreachable; unhandled expression type")
 	}
@@ -292,7 +329,7 @@ func (cg *Codegen) genTupleExpr(t *ast.ExprTuple) string {
 func (cg *Codegen) genRunRaw(run *ast.ExprRunRaw) string {
 	var tempVars []string
 	if len(run.Args) > 0 {
-		tempVars, _ = cg.genExprsToLocals(run.Args, false)
+		tempVars = cg.genExprsToTempVars(run.Args)
 	}
 
 	code := run.Code.Raw
@@ -338,8 +375,26 @@ func (cg *Codegen) genRunRaw(run *ast.ExprRunRaw) string {
 }
 
 func (cg *Codegen) genVecInit(v *ast.ExprVecInit) string {
-	_, values := cg.genExprsToLocals(v.Values, true)
+	values := cg.genExprsLeftToRight(v.Values)
 	return fmt.Sprintf("{%s}", values)
+}
+
+func (cg *Codegen) genMapInit(m *ast.ExprMapInit) string {
+	pairs := make([]ast.Expr, 0, len(m.Entries)*2)
+	for _, entry := range m.Entries {
+		pairs = append(pairs, entry.Key, entry.Value)
+	}
+	all := cg.genExprsToStrings(pairs)
+	var sb strings.Builder
+	sb.WriteString("{")
+	for i := 0; i < len(all); i += 2 {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(fmt.Sprintf("[%s] = %s", all[i], all[i+1]))
+	}
+	sb.WriteString("}")
+	return sb.String()
 }
 
 /* Loops */

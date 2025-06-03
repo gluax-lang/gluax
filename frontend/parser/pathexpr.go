@@ -64,6 +64,14 @@ func (p *parser) parseTurbofishGenerics() []ast.Type {
 }
 
 func (p *parser) parseStructInit(ty ast.Path, generics []ast.Type) ast.Expr {
+	if ty.IsVec() {
+		return p.parseVecInit(generics)
+	}
+
+	if ty.IsMap() {
+		return p.parseMapInit(generics)
+	}
+
 	spanStart := p.span()
 	p.expect("{")
 
@@ -76,4 +84,46 @@ func (p *parser) parseStructInit(ty ast.Path, generics []ast.Type) ast.Expr {
 	span := SpanFrom(spanStart, spanEnd)
 
 	return ast.NewStructInit(ty, generics, fields, span)
+}
+
+func (p *parser) parseVecInit(generics []ast.Type) ast.Expr {
+	spanStart := p.span()
+
+	p.expect("{")
+
+	var values []ast.Expr
+	p.parseCommaSeparatedDelimited("}", func(p *parser) {
+		values = append(values, p.parseExpr(ExprCtxNormal))
+	})
+
+	spanEnd := p.prevSpan()
+	span := SpanFrom(spanStart, spanEnd)
+
+	return ast.NewVecInitExpr(generics, values, span)
+}
+
+func (p *parser) parseMapEntry() ast.ExprMapEntry {
+	key := p.parseExpr(ExprCtxNormal)
+	p.expect(":")
+	value := p.parseExpr(ExprCtxNormal)
+	return ast.ExprMapEntry{
+		Key:   key,
+		Value: value,
+	}
+}
+
+func (p *parser) parseMapInit(generics []ast.Type) ast.Expr {
+	spanStart := p.span()
+
+	p.expect("{")
+
+	var entries []ast.ExprMapEntry
+	p.parseCommaSeparatedDelimited("}", func(p *parser) {
+		entries = append(entries, p.parseMapEntry())
+	})
+
+	spanEnd := p.prevSpan()
+	span := SpanFrom(spanStart, spanEnd)
+
+	return ast.NewMapInitExpr(generics, entries, span)
 }

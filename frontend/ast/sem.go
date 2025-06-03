@@ -67,6 +67,10 @@ func (t SemType) Kind() SemTypeKind {
 	return t.data.TypeKind()
 }
 
+func (t SemType) IsValid() bool {
+	return t.data != nil
+}
+
 func (t SemType) AstString() string {
 	if t.data == nil {
 		return "<nil>"

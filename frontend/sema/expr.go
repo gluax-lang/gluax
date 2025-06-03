@@ -82,6 +82,8 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 		retTy = a.handleRunRaw(scope, expr.RunRaw())
 	case ast.ExprKindVecInit:
 		retTy = a.handleVecInit(scope, expr.VecInit())
+	case ast.ExprKindMapInit:
+		retTy = a.handleMapInit(scope, expr.MapInit())
 	}
 	expr.SetType(retTy)
 	return flow
@@ -610,25 +612,57 @@ func (a *Analysis) handleRunRaw(scope *Scope, runRaw *ast.ExprRunRaw) Type {
 
 func (a *Analysis) handleVecInit(scope *Scope, vecInit *ast.ExprVecInit) Type {
 	var ty Type
-	tySet := false
+	generics := vecInit.Generics
+	if len(generics) > 1 {
+		a.Panic("vector only accepts up to 1 generic", vecInit.Span())
+	}
+	if len(generics) > 0 {
+		ty = a.resolveType(scope, generics[0])
+	}
 	for i := range vecInit.Values {
 		val := &vecInit.Values[i]
 		a.handleExpr(scope, val)
-		if !tySet {
+		if !ty.IsValid() {
 			ty = val.Type()
-			tySet = true
 		} else {
 			a.StrictMatches(ty, val.Type(), val.Span())
 		}
 	}
-	if !tySet {
+	if !ty.IsValid() {
 		a.Panic("cannot infer type of empty vector", vecInit.Span())
 	}
-	if ty.IsOption() || ty.IsNil() {
-		a.Panic(fmt.Sprintf("cannot use `%s` type in a vector", ty.String()), vecInit.Span())
-	}
-	if a.SetStructSetupSpan(vecInit.Span()) {
-		defer a.ClearStructSetupSpan()
-	}
 	return a.vecType(ty, vecInit.Span())
+}
+
+func (a *Analysis) handleMapInit(scope *Scope, mapInit *ast.ExprMapInit) Type {
+	var keyTy, valueTy Type
+	generics := mapInit.Generics
+	if len(generics) > 2 {
+		a.Panic("map only accepts up to 2 generics", mapInit.Span())
+	}
+	if len(generics) > 0 {
+		keyTy = a.resolveType(scope, generics[0])
+	}
+	if len(generics) > 1 {
+		valueTy = a.resolveType(scope, generics[1])
+	}
+	for i := range mapInit.Entries {
+		field := &mapInit.Entries[i]
+		a.handleExpr(scope, &field.Key)
+		if !keyTy.IsValid() {
+			keyTy = field.Key.Type()
+		} else {
+			a.StrictMatches(keyTy, field.Key.Type(), field.Key.Span())
+		}
+		a.handleExpr(scope, &field.Value)
+		if !valueTy.IsValid() {
+			valueTy = field.Value.Type()
+		} else {
+			a.StrictMatches(valueTy, field.Value.Type(), field.Value.Span())
+		}
+	}
+	if !keyTy.IsValid() {
+		a.Panic("cannot infer types of empty map", mapInit.Span())
+	}
+	return a.mapType(keyTy, valueTy, mapInit.Span())
 }

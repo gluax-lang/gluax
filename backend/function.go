@@ -72,7 +72,7 @@ func (cg *Codegen) genFunction(f *ast.SemFunction) string {
 }
 
 func (cg *Codegen) getCallArgs(call *ast.Call, toCall string) string {
-	_, args := cg.genExprsToLocals(call.Args, true)
+	args := cg.genExprsLeftToRight(call.Args)
 	if call.Method != nil {
 		if args == "" {
 			return toCall

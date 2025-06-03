@@ -91,8 +91,6 @@ func (p *parser) parsePrimaryExpr(ctx ExprCtx) ast.Expr {
 	case "...":
 		p.advance()
 		return ast.NewVarargExpr(p.prevSpan())
-	case "[":
-		return p.parseVecInitExpr()
 	default:
 		common.PanicDiag("expected expression", tok.Span())
 		panic("unreachable")
@@ -218,16 +216,4 @@ func (p *parser) parseRunRawExpr() ast.Expr {
 	returnType := p.parseFunctionReturnType(FlagTypeTuple|FlagTypeVarArg|FlagFuncReturnUnreachable, atLuaSpan)
 
 	return ast.NewRunRawExpr(code, args, returnType, SpanFrom(spanStart, p.prevSpan()))
-}
-
-func (p *parser) parseVecInitExpr() ast.Expr {
-	spanStart := p.span()
-	p.advance() // consume "["
-
-	var values []ast.Expr
-	p.parseCommaSeparatedDelimited("]", func(p *parser) {
-		values = append(values, p.parseExpr(ExprCtxNormal))
-	})
-
-	return ast.NewVecInitExpr(values, SpanFrom(spanStart, p.prevSpan()))
 }

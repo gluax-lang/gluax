@@ -32,6 +32,14 @@ func (p *Path) IsSelf() bool {
 	return len(p.Idents) == 1 && p.Idents[0].Raw == "Self"
 }
 
+func (p *Path) IsVec() bool {
+	return len(p.Idents) == 1 && p.Idents[0].Raw == "vec"
+}
+
+func (p *Path) IsMap() bool {
+	return len(p.Idents) == 1 && p.Idents[0].Raw == "map"
+}
+
 func (p *Path) String() string {
 	var sb strings.Builder
 	sb.WriteString(p.Idents[0].Raw)

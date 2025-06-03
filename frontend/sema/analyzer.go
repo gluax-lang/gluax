@@ -289,6 +289,9 @@ func (a *Analysis) anyType() Type {
 }
 
 func (a *Analysis) vecType(t Type, span Span) Type {
+	if a.SetStructSetupSpan(span) {
+		defer a.ClearStructSetupSpan()
+	}
 	vec := a.getBuiltinType("vec")
 	st := vec.Struct()
 	newSt := a.instantiateStruct(st.Def, []Type{t})
@@ -296,6 +299,9 @@ func (a *Analysis) vecType(t Type, span Span) Type {
 }
 
 func (a *Analysis) mapType(key, value Type, span Span) Type {
+	if a.SetStructSetupSpan(span) {
+		defer a.ClearStructSetupSpan()
+	}
 	mapTy := a.getBuiltinType("map")
 	st := mapTy.Struct()
 	newSt := a.instantiateStruct(st.Def, []Type{key, value})
