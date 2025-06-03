@@ -33,4 +33,9 @@ impl<T> vec<T> {
     func get(s: Self, index: number) -> ?T {
         @raw("{@RETURN {@1@}[{@2@}] @}", s, index) -> ?T
     }
+
+    #[inline]
+    func reverse(s: Self) {
+        @raw("local len = #{@1@}; for i = 1, math.floor(len / 2) do {@1@}[i], {@1@}[len - i + 1] = {@1@}[len - i + 1], {@1@}[i] end", s);
+    }
 }
