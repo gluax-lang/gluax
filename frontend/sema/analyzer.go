@@ -150,7 +150,7 @@ func (a *Analysis) handleItems(items []ast.Item) {
 		case *ast.Function:
 			funcSem := a.handleFunctionSignature(a.Scope, it)
 			it.SetSem(&funcSem)
-			a.AddValue(a.Scope, it.Name.Raw, ast.NewValue(funcSem), it.Name.Span())
+			a.AddValueVisibility(a.Scope, it.Name.Raw, ast.NewValue(funcSem), it.Name.Span(), it.Public)
 		case *ast.ImplStruct:
 			it.Scope = a.Scope
 			genericsScope := NewScope(a.Scope)
