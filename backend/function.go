@@ -144,12 +144,19 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 	}
 
 	var callExpr string
-	args := cg.getCallArgs(call, toCall)
 	if call.Method != nil {
 		st := toCallTy.Struct()
-		stName := cg.decorateStName(st)
-		callExpr = fmt.Sprintf("%s.%s(%s)", stName, call.Method.Raw, args)
+		if st.Def.Attributes.Has("no_metatable") {
+			st := toCallTy.Struct()
+			stName := cg.decorateStName(st)
+			args := cg.getCallArgs(call, toCall)
+			callExpr = fmt.Sprintf("%s.%s(%s)", stName, call.Method.Raw, args)
+		} else {
+			args := cg.genExprsLeftToRight(call.Args)
+			callExpr = fmt.Sprintf("%s:%s(%s)", toCall, call.Method.Raw, args)
+		}
 	} else {
+		args := cg.genExprsLeftToRight(call.Args)
 		callExpr = fmt.Sprintf("%s(%s)", toCall, args)
 	}
 	if fun.HasVarargReturn() {
