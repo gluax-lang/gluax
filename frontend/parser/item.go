@@ -24,7 +24,9 @@ func (p *parser) parseItem() ast.Item {
 	case "func":
 		item = p.parseFunction()
 	case "impl":
-		item = p.parseImplStruct()
+		item = p.parseImpl()
+	case "trait":
+		item = p.parseTrait()
 	default:
 		common.PanicDiag("expected item", p.span())
 	}
@@ -101,12 +103,25 @@ func (p *parser) parseStructField(id int) ast.StructField {
 	}
 }
 
-func (p *parser) parseImplStruct() ast.Item {
+func (p *parser) parseImpl() ast.Item {
 	spanStart := p.span()
 
 	p.expect("impl")
 	generics := p.parseGenerics()
-	st := p.parseType()
+	ty := p.parseType()
+
+	if p.tryConsume("for") {
+		if len(generics.Params) > 0 {
+			common.PanicDiag("generics not supported for impl trait yet", generics.Span)
+		}
+
+		st := p.parseType()
+
+		p.expect(";")
+
+		span := SpanFrom(spanStart, p.prevSpan())
+		return ast.NewImplTrait(ty, st, span)
+	}
 
 	p.expect("{")
 
@@ -117,7 +132,7 @@ func (p *parser) parseImplStruct() ast.Item {
 		for p.Token.Is("#") {
 			attributes = append(attributes, p.parseAttribute())
 		}
-		method := p.parseStructMethod()
+		method := p.parseStructMethod(false)
 		method.Attributes = attributes
 		methods = append(methods, method)
 	}
@@ -126,10 +141,10 @@ func (p *parser) parseImplStruct() ast.Item {
 
 	span := SpanFrom(spanStart, p.prevSpan())
 
-	return ast.NewImplStruct(generics, st, methods, span)
+	return ast.NewImplStruct(generics, ty, methods, span)
 }
 
-func (p *parser) parseStructMethod() ast.Function {
+func (p *parser) parseStructMethod(bodyOptional bool) ast.Function {
 	spanStart := p.span()
 
 	p.expect("func")
@@ -141,11 +156,43 @@ func (p *parser) parseStructMethod() ast.Function {
 			FlagFuncParamNamed,
 	)
 
-	body := p.parseBlock()
+	var body ast.Block
+	if !bodyOptional {
+		body = p.parseBlock()
+	} else {
+		if p.Token.Is("{") {
+			body = p.parseBlock()
+		} else {
+			p.expect(";")
+		}
+	}
 
 	span := SpanFrom(spanStart, p.prevSpan())
 
 	return *ast.NewFunction(&name, sig, &body, nil, span)
+}
+
+func (p *parser) parseTrait() ast.Item {
+	spanStart := p.span()
+
+	p.expect("trait")
+
+	name := p.expectIdentMsg("expected trait name")
+
+	p.expect("{")
+
+	var methods []ast.Function
+
+	for !p.Token.Is("}") {
+		method := p.parseStructMethod(true)
+		methods = append(methods, method)
+	}
+
+	p.expect("}")
+
+	span := SpanFrom(spanStart, p.prevSpan())
+
+	return ast.NewTrait(name, methods, span)
 }
 
 func (p *parser) parseImport() ast.Item {

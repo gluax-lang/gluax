@@ -26,6 +26,7 @@ func (v *Value) SymbolKind() SymbolKind          { return SymValue }
 func (t *SemType) SymbolKind() SymbolKind        { return SymType }
 func (i *SemImport) SymbolKind() SymbolKind      { return SymImport }
 func (f *SemStructField) SymbolKind() SymbolKind { return SymStructField }
+func (t *SemTrait) SymbolKind() SymbolKind       { return SymTrait }
 
 type Symbol struct {
 	Name   string
@@ -95,6 +96,17 @@ func (s *Symbol) Import() *SemImport {
 	return s.data.(*SemImport)
 }
 
+func (s *Symbol) IsTrait() bool {
+	return s.Kind() == SymTrait
+}
+
+func (s *Symbol) Trait() *SemTrait {
+	if s.Kind() != SymTrait {
+		panic("not a trait")
+	}
+	return s.data.(*SemTrait)
+}
+
 type SemImport struct {
 	Path     string
 	Def      Import
@@ -125,5 +137,45 @@ func (i SemImport) AstString() string {
 	sb.WriteString(" (\"")
 	sb.WriteString(i.Def.Path.Raw)
 	sb.WriteString("\")")
+	return sb.String()
+}
+
+type SemTrait struct {
+	Def     *Trait
+	Methods map[string]SemFunction
+	Scope   any
+}
+
+func NewSemTrait(def *Trait) SemTrait {
+	methodMap := make(map[string]SemFunction)
+	return SemTrait{
+		Def:     def,
+		Methods: methodMap,
+	}
+}
+
+func (t SemTrait) Matches(other SemType) bool {
+	return false
+}
+
+func (t SemTrait) StrictMatches(other SemType) bool {
+	return false
+}
+
+func (t SemTrait) String() string {
+	return t.Def.Name.Raw
+}
+
+func (t SemTrait) AstString() string {
+	var sb strings.Builder
+	sb.WriteString("trait ")
+	sb.WriteString(t.Def.Name.Raw)
+	// if len(t.Methods) > 0 {
+	// 	sb.WriteString(" {")
+	// 	for name, method := range t.Methods {
+	// 		sb.WriteString(method.AstString())
+	// 	}
+	// 	sb.WriteString("}")
+	// }
 	return sb.String()
 }

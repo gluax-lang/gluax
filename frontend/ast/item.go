@@ -36,6 +36,9 @@ func SetItemAttributes(item Item, attrs Attributes) bool {
 	case *Struct:
 		v.Attributes = attrs
 		return true
+	case *Trait:
+		v.Attributes = attrs
+		return true
 	}
 	return false
 }
@@ -73,6 +76,7 @@ func (si Struct) Span() common.Span {
 }
 
 /* Impl Struct */
+
 type ImplStruct struct {
 	Generics      Generics
 	Struct        Type
@@ -90,6 +94,46 @@ func (is *ImplStruct) isItem() {}
 
 func (is *ImplStruct) Span() common.Span {
 	return is.span
+}
+
+/* Trait */
+
+type Trait struct {
+	Public     bool
+	Name       lexer.TokIdent
+	Methods    []Function
+	Scope      any
+	Attributes Attributes
+	span       common.Span
+}
+
+func NewTrait(name lexer.TokIdent, methods []Function, span common.Span) *Trait {
+	return &Trait{Name: name, Methods: methods, span: span}
+}
+
+func (t *Trait) isItem() {}
+
+func (t *Trait) SetPublic(b bool) { t.Public = b }
+
+func (t Trait) Span() common.Span {
+	return t.span
+}
+
+/* Impl Trait */
+type ImplTrait struct {
+	Trait  Type
+	Struct Type // the type this trait is implemented for
+	span   common.Span
+}
+
+func NewImplTrait(trait Type, st Type, span common.Span) *ImplTrait {
+	return &ImplTrait{Trait: trait, Struct: st, span: span}
+}
+
+func (it *ImplTrait) isItem() {}
+
+func (it *ImplTrait) Span() common.Span {
+	return it.span
 }
 
 /* Import */

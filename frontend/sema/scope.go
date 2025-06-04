@@ -153,6 +153,20 @@ func (s *Scope) GetImport(name string) *ast.SemImport {
 	return imp
 }
 
+func (s *Scope) AddTrait(name string, trait ast.SemTrait, span Span, public bool) error {
+	symbol := ast.NewSymbol(name, &trait, span, public)
+	return s.AddSymbol(name, symbol)
+}
+
+func (s *Scope) GetTrait(name string) *ast.SemTrait {
+	sym := s.GetSymbol(name)
+	if sym == nil || sym.Kind() != ast.SymTrait {
+		return nil
+	}
+	trait := sym.Trait()
+	return trait
+}
+
 func (s *Scope) IsSymbolPublic(name string) bool {
 	sym := s.GetSymbol(name)
 	if sym == nil {
