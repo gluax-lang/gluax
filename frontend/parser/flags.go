@@ -8,9 +8,11 @@ const (
 	FlagFuncParamNamed Flags = 1 << iota
 	FlagFuncParamVarArg
 	FlagFuncParamSelf
+	FlagFuncReturnUnreachable
+
 	FlagTypeTuple
 	FlagTypeVarArg
-	FlagFuncReturnUnreachable
+	FlagTypeImplTrait
 
 	FlagAllowUnderscore
 )
@@ -54,6 +56,12 @@ func (f Flags) String() string {
 	}
 	if f.Has(FlagAllowUnderscore) {
 		parts = append(parts, "AllowUnderscore")
+	}
+	if f.Has(FlagFuncReturnUnreachable) {
+		parts = append(parts, "FuncReturnUnreachable")
+	}
+	if f.Has(FlagTypeImplTrait) {
+		parts = append(parts, "TypeImplTrait")
 	}
 	return strings.Join(parts, "|")
 }

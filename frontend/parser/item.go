@@ -115,12 +115,17 @@ func (p *parser) parseImpl() ast.Item {
 			common.PanicDiag("generics not supported for impl trait yet", generics.Span)
 		}
 
+		trait, ok := ty.(*ast.Path)
+		if !ok {
+			common.PanicDiag("invalid trait", ty.Span())
+		}
+
 		st := p.parseType()
 
 		p.expect(";")
 
 		span := SpanFrom(spanStart, p.prevSpan())
-		return ast.NewImplTrait(ty, st, span)
+		return ast.NewImplTraitForStruct(*trait, st, span)
 	}
 
 	p.expect("{")

@@ -131,6 +131,53 @@ func (a *Analysis) resolveStruct(scope *Scope, st *ast.SemStruct, generics []ast
 	return st
 }
 
+var getImplType = func(sI StructInstance, idx int) (Type, bool) {
+	if idx < 0 || idx >= len(sI.Args) {
+		return Type{}, false
+	}
+	ty := sI.Args[idx]
+	if ty.IsGeneric() {
+		return Type{}, false
+	}
+	return ty, true
+}
+
+func (a *Analysis) addStructMethod(st *ast.SemStruct, method ast.SemFunction) {
+	methodName := method.Def.Name.Raw
+	if _, exists := a.getStructMethod(st, methodName); exists {
+		a.Error(fmt.Sprintf("method '%s' already exists for these concrete types", methodName), method.Def.Name.Span())
+		return
+	}
+	st.Methods[methodName] = method
+}
+
+func (a *Analysis) getStructMethod(st *ast.SemStruct, methodName string) (ast.SemFunction, bool) {
+	if method, ok := st.Methods[methodName]; ok {
+		return method, true
+	}
+	stack := a.State.GetStructStack(st.Def)
+	for _, inst := range stack {
+		if method, ok := inst.Type.Methods[methodName]; ok {
+			this := true
+			for i, t := range st.Generics.Params {
+				ty, ok := getImplType(inst, i)
+				if !ok {
+					continue
+				}
+				if !t.StrictMatches(ty) {
+					this = false
+					break
+				}
+			}
+			if this {
+				method = a.HandleStructMethod(st, method, false) // handle it without body
+				return method, true
+			}
+		}
+	}
+	return ast.SemFunction{}, false
+}
+
 func (a *Analysis) unify(
 	base Type,
 	actual Type,

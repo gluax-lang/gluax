@@ -119,20 +119,20 @@ func (t Trait) Span() common.Span {
 	return t.span
 }
 
-/* Impl Trait */
-type ImplTrait struct {
-	Trait  Type
+/* Impl Trait for Struct */
+type ImplTraitForStruct struct {
+	Trait  Path
 	Struct Type // the type this trait is implemented for
 	span   common.Span
 }
 
-func NewImplTrait(trait Type, st Type, span common.Span) *ImplTrait {
-	return &ImplTrait{Trait: trait, Struct: st, span: span}
+func NewImplTraitForStruct(trait Path, st Type, span common.Span) *ImplTraitForStruct {
+	return &ImplTraitForStruct{Trait: trait, Struct: st, span: span}
 }
 
-func (it *ImplTrait) isItem() {}
+func (it *ImplTraitForStruct) isItem() {}
 
-func (it *ImplTrait) Span() common.Span {
+func (it *ImplTraitForStruct) Span() common.Span {
 	return it.span
 }
 

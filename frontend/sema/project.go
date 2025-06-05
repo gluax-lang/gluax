@@ -3,6 +3,7 @@ package sema
 import (
 	"fmt"
 	"log"
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -33,7 +34,6 @@ type State struct {
 	RootScope      *Scope                       // which root scope we attach to in this pass
 	Files          map[string]*Analysis         // where we store the resulting analyses
 	CreatedStructs map[*ast.Struct]StructsStack // Created structs stack for this state
-	StructsMethods map[*ast.Struct]*StructMethods
 }
 
 func NewState(label string) *State {
@@ -43,7 +43,6 @@ func NewState(label string) *State {
 		RootScope:      NewScope(nil),
 		Files:          make(map[string]*Analysis),
 		CreatedStructs: make(map[*ast.Struct]StructsStack),
-		StructsMethods: make(map[*ast.Struct]*StructMethods),
 	}
 }
 
@@ -73,6 +72,35 @@ func (s *State) GetStruct(def *ast.Struct, concrete []Type) *SemStruct {
 		}
 	}
 	return nil
+}
+
+func (s *State) GetStructMethods(st *ast.SemStruct) map[string]ast.SemFunction {
+	methods := make(map[string]ast.SemFunction, len(st.Methods))
+	maps.Copy(methods, st.Methods) // start with already cached methods
+
+	stack := s.GetStructStack(st.Def)
+	for _, inst := range stack {
+		this := true
+		for i, t := range st.Generics.Params {
+			ty, ok := getImplType(inst, i)
+			if !ok {
+				continue
+			}
+			if !t.StrictMatches(ty) {
+				this = false
+				break
+			}
+		}
+		if this {
+			for name, method := range inst.Type.Methods {
+				if _, exists := methods[name]; !exists {
+					methods[name] = method
+				}
+			}
+		}
+	}
+
+	return methods
 }
 
 func (s *State) GetStructStack(def *ast.Struct) StructsStack {

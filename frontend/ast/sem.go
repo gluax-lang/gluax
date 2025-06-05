@@ -26,6 +26,8 @@ func (k SemTypeKind) String() string {
 		return "unreachable"
 	case SemErrorKind:
 		return "error"
+	case SemImplTraitKind:
+		return "impl_trait"
 	default:
 		panic("unreachable")
 	}
@@ -40,6 +42,7 @@ const (
 	SemGenericKind
 	SemUnreachableKind
 	SemErrorKind
+	SemImplTraitKind
 )
 
 type semTypeData interface {
@@ -627,6 +630,38 @@ func (t SemError) TypeKind() SemTypeKind { return SemErrorKind }
 
 func (t SemError) String() string    { return "error" }
 func (t SemError) AstString() string { return t.String() }
+
+/* SemImplTrait */
+
+type SemImplTrait struct {
+	Def   *ImplTrait
+	Trait *SemTrait
+}
+
+func NewSemImplTrait(def *ImplTrait, trait *SemTrait) SemType {
+	return SemType{
+		data: SemImplTrait{Def: def, Trait: trait},
+		span: def.Span(),
+	}
+}
+
+func (t SemImplTrait) TypeKind() SemTypeKind { return SemImplTraitKind }
+
+func (t SemImplTrait) Matches(other SemType) bool {
+	return false
+}
+
+func (t SemImplTrait) StrictMatches(other SemType) bool {
+	return false
+}
+
+func (t SemImplTrait) String() string {
+	return "todo"
+}
+
+func (t SemImplTrait) AstString() string {
+	return "todo"
+}
 
 /* Generics */
 

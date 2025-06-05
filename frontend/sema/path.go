@@ -101,11 +101,10 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 		} else if sym.IsType() && sym.Type().IsStruct() {
 			st := sym.Type().Struct()
 			st = a.resolveStruct(scope, st, path.Generics, name.Span())
-			method, exists := a.State.GetStructMethod(st.Def, raw, st.Generics.Params)
+			method, exists := a.getStructMethod(st, raw)
 			if !exists {
 				return nil
 			}
-			method = a.HandleStructMethod(st, method, false)
 			val := ast.NewValue(method)
 			sym := ast.NewSymbol(raw, &val, method.Def.Name.Span(), method.Def.Public)
 			path.ResolvedSymbol = &sym
@@ -141,4 +140,12 @@ func (a *Analysis) resolvePathSymbol(scope *Scope, path *ast.Path) Symbol {
 		a.Panic(fmt.Sprintf("Symbol `%s` not found", path.String()), path.Span())
 	}
 	return *t
+}
+
+func (a *Analysis) resolvePathTrait(scope *Scope, path *ast.Path) *ast.SemTrait {
+	sym := a.resolvePathSymbol(scope, path)
+	if !sym.IsTrait() {
+		a.Panic(fmt.Sprintf("trait `%s` not found", path.String()), path.Span())
+	}
+	return sym.Trait()
 }

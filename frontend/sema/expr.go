@@ -509,15 +509,13 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 
 	st := toCallTy.Struct()
 
-	method, exists := a.State.GetStructMethod(st.Def, call.Method.Raw, st.Generics.Params)
+	method, exists := a.getStructMethod(st, call.Method.Raw)
 	if !exists {
 		a.Panic(
 			fmt.Sprintf("no method named `%s` in `%s`", call.Method.Raw, st.String()),
 			call.Method.Span(),
 		)
 	}
-
-	method = a.HandleStructMethod(st, method, false)
 
 	if len(method.Params) < 1 || !ast.IsSelf(method.Def.Params[0].Type) {
 		a.Panic(

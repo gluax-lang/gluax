@@ -114,10 +114,7 @@ func (a *Analysis) handleItems(items []ast.Item) {
 			for _, method := range it.Methods {
 				funcTy := a.handleFunctionSignature(genericsScope, &method)
 				funcTy.ImplStruct = it
-				if err := a.State.AddStructMethod(st.Def, method.Name.Raw, funcTy, st.Generics.Params); err != nil {
-					a.Error(err.Error(), method.Name.Span())
-				}
-				st.Methods[method.Name.Raw] = funcTy
+				a.addStructMethod(st, funcTy)
 			}
 			it.GenericsScope = genericsScope
 		case *ast.Trait:
@@ -132,12 +129,8 @@ func (a *Analysis) handleItems(items []ast.Item) {
 
 	for _, item := range items {
 		switch it := item.(type) {
-		case *ast.ImplTrait:
-			// check that it.Trait is a path
-			if _, ok := it.Trait.(*ast.Path); !ok {
-				a.Panic("invalid trait", it.Trait.Span())
-			}
-			traitPath := a.resolvePathSymbol(a.Scope, it.Trait.(*ast.Path))
+		case *ast.ImplTraitForStruct:
+			traitPath := a.resolvePathSymbol(a.Scope, &it.Trait)
 			if !traitPath.IsTrait() {
 				a.Panic("expected trait", it.Trait.Span())
 			}
@@ -153,13 +146,15 @@ func (a *Analysis) handleItems(items []ast.Item) {
 				a.Panic(fmt.Sprintf("struct `%s` must have a metatable to implement trait `%s`", st.Def.Name.Raw, trait.Def.Name.Raw), it.Span())
 			}
 
-			// make sure all methods in the trait exist in the struct
 			for name, method := range trait.Methods {
-				stMethod, exists := a.State.GetStructMethod(st.Def, name, st.Generics.Params)
+				stMethod, exists := a.getStructMethod(st, name)
 				if !exists {
-					a.Panic(fmt.Sprintf("struct `%s` does not implement trait `%s` method `%s`", st.Def.Name.Raw, trait.Def.Name.Raw, name), it.Span())
+					if method.Def.Body != nil {
+
+					} else {
+						a.Panic(fmt.Sprintf("struct `%s` does not implement trait `%s` method `%s`", st.Def.Name.Raw, trait.Def.Name.Raw, name), it.Span())
+					}
 				}
-				stMethod = a.HandleStructMethod(st, stMethod, false)
 				stMethodTy := ast.NewSemType(stMethod, st.Def.Name.Span())
 				if !method.StrictMatches(stMethodTy) {
 					a.Panic(fmt.Sprintf("method `%s` doesn't match trait `%s`: expected %s, got %s", name, trait.Def.Name.Raw, method.String(), stMethodTy.String()), it.Span())
