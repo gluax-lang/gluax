@@ -161,12 +161,14 @@ func (p *parser) parseStructMethod(bodyOptional bool) ast.Function {
 			FlagFuncParamNamed,
 	)
 
-	var body ast.Block
+	var body *ast.Block
 	if !bodyOptional {
-		body = p.parseBlock()
+		b := p.parseBlock()
+		body = &b
 	} else {
 		if p.Token.Is("{") {
-			body = p.parseBlock()
+			b := p.parseBlock()
+			body = &b
 		} else {
 			p.expect(";")
 		}
@@ -174,7 +176,7 @@ func (p *parser) parseStructMethod(bodyOptional bool) ast.Function {
 
 	span := SpanFrom(spanStart, p.prevSpan())
 
-	return *ast.NewFunction(&name, sig, &body, nil, span)
+	return *ast.NewFunction(&name, sig, body, nil, span)
 }
 
 func (p *parser) parseTrait() ast.Item {
