@@ -208,26 +208,31 @@ func (cg *Codegen) emitTempLocals() {
 }
 
 func (cg *Codegen) generate() {
-	for _, item := range cg.Ast.Items {
-		switch it := item.(type) {
-		case *ast.Import:
-			cg.genImport(it)
-		}
+	for _, imp := range cg.Ast.Imports {
+		cg.genImport(imp)
 	}
 
 	cg.ln("")
 
-	for _, item := range cg.Ast.Items {
-		switch st := item.(type) {
-		case *ast.Struct:
-			for _, inst := range cg.Analysis.State.GetStructStack(st) {
-				cg.generateStruct(inst.Type)
-			}
+	for _, st := range cg.Ast.Structs {
+		for _, inst := range cg.Analysis.State.GetStructStack(st) {
+			cg.generateStruct(inst.Type)
 		}
 	}
 
-	for _, item := range cg.Ast.Items {
-		cg.genItem(item)
+	for _, let := range cg.Ast.Lets {
+		cg.genLet(let)
+		cg.ln("")
+	}
+
+	for _, funDef := range cg.Ast.Funcs {
+		fun := funDef.Sem()
+		name := cg.decorateFuncName(fun)
+		if !funDef.Public {
+			cg.currentTempScope().all = append(cg.currentTempScope().all, name)
+		}
+		cg.ln("%s = %s;", name, cg.genFunction(funDef.Sem()))
+		cg.ln("")
 	}
 }
 

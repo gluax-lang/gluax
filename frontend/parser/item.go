@@ -111,10 +111,6 @@ func (p *parser) parseImpl() ast.Item {
 	ty := p.parseType()
 
 	if p.tryConsume("for") {
-		if len(generics.Params) > 0 {
-			common.PanicDiag("generics not supported for impl trait yet", generics.Span)
-		}
-
 		trait, ok := ty.(*ast.Path)
 		if !ok {
 			common.PanicDiag("invalid trait", ty.Span())
@@ -125,7 +121,7 @@ func (p *parser) parseImpl() ast.Item {
 		p.expect(";")
 
 		span := SpanFrom(spanStart, p.prevSpan())
-		return ast.NewImplTraitForStruct(*trait, st, span)
+		return ast.NewImplTraitForStruct(generics, *trait, st, span)
 	}
 
 	p.expect("{")
@@ -186,6 +182,17 @@ func (p *parser) parseTrait() ast.Item {
 
 	name := p.expectIdentMsg("expected trait name")
 
+	var superTraits []ast.Path
+	if p.tryConsume(":") {
+		for {
+			superTrait := p.parsePath()
+			superTraits = append(superTraits, superTrait)
+			if !p.tryConsume("+") {
+				break
+			}
+		}
+	}
+
 	p.expect("{")
 
 	var methods []ast.Function
@@ -199,7 +206,7 @@ func (p *parser) parseTrait() ast.Item {
 
 	span := SpanFrom(spanStart, p.prevSpan())
 
-	return ast.NewTrait(name, methods, span)
+	return ast.NewTrait(name, superTraits, methods, span)
 }
 
 func (p *parser) parseImport() ast.Item {

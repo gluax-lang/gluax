@@ -2,62 +2,62 @@ import "../math";
 
 impl number {
     #[inline]
-    func to_string(n: Self) -> string {
-        globals::base::tostring(n)
+    func to_string(self) -> string {
+        globals::base::tostring(self)
     }
 
     #[inline]
-    func is_nan(n: Self) -> bool { n != n }
+    func is_nan(self) -> bool { self != self }
 
     #[inline]
-    func is_inf(n: Self) -> bool { n == math::HUGE || n == -math::HUGE }
+    func is_inf(self) -> bool { self == math::HUGE || self == -math::HUGE }
 
     #[inline]
-    func is_int(n: Self) -> bool { n == n.floor() }
+    func is_int(self) -> bool { self == self.floor() }
 
     #[inline]
-    func clamp(n: Self, mi: number, ma: number) -> number { math::clamp(n, mi, ma) }
+    func clamp(self, mi: number, ma: number) -> number { math::clamp(self, mi, ma) }
 
     #[inline]
-    func abs(n: Self) -> number { math::abs(n) }
+    func abs(self) -> number { math::abs(self) }
 
     #[inline]
-    func acos(n: Self) -> number { math::acos(n) }
+    func acos(self) -> number { math::acos(self) }
 
     #[inline]
-    func asin(n: Self) -> number { math::asin(n) }
+    func asin(self) -> number { math::asin(self) }
 
     #[inline]
-    func atan(n: Self) -> number { math::atan(n) }
+    func atan(self) -> number { math::atan(self) }
 
     #[inline]
-    func ceil(n: Self) -> number { math::ceil(n) }
+    func ceil(self) -> number { math::ceil(self) }
 
     #[inline]
-    func cos(n: Self) -> number { math::cos(n) }
+    func cos(self) -> number { math::cos(self) }
 
     #[inline]
-    func cosh(n: Self) -> number { math::cosh(n) }
+    func cosh(self) -> number { math::cosh(self) }
 
     #[inline]
-    func deg(n: Self) -> number { math::deg(n) }
+    func deg(self) -> number { math::deg(self) }
 
     #[inline]
-    func exp(n: Self) -> number { math::exp(n) }
+    func exp(self) -> number { math::exp(self) }
 
     #[inline]
-    func floor(n: Self) -> number { math::floor(n) }
+    func floor(self) -> number { math::floor(self) }
 
     #[inline]
-    func frexp(n: Self) -> (number, number) { math::frexp(n) }
+    func frexp(self) -> (number, number) { math::frexp(self) }
 
     #[inline]
-    func log(n: Self, base: ?number) -> number { math::log(n, base) }
+    func log(self, base: ?number) -> number { math::log(self, base) }
 
     #[inline]
-    func log10(n: Self) -> number { math::log10(n) }
+    func log10(self) -> number { math::log10(self) }
 
-    func max(n: Self, mi: number, ma: number, ...number) -> number { math::max(n, mi, ma, ...) }
+    func max(self, mi: number, ma: number, ...number) -> number { math::max(self, mi, ma, ...) }
 
-    func min(n: Self, mi: number, ma: number, ...number) -> number { math::min(n, mi, ma, ...) }
+    func min(self, mi: number, ma: number, ...number) -> number { math::min(self, mi, ma, ...) }
 }

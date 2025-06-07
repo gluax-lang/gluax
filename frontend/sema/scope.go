@@ -153,8 +153,8 @@ func (s *Scope) GetImport(name string) *ast.SemImport {
 	return imp
 }
 
-func (s *Scope) AddTrait(name string, trait ast.SemTrait, span Span, public bool) error {
-	symbol := ast.NewSymbol(name, &trait, span, public)
+func (s *Scope) AddTrait(name string, trait *ast.SemTrait, span Span, public bool) error {
+	symbol := ast.NewSymbol(name, trait, span, public)
 	return s.AddSymbol(name, symbol)
 }
 

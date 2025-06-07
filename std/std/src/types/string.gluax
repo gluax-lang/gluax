@@ -4,46 +4,46 @@ impl string {
     func char(...number) -> string { str::char(...) }
 
     #[inline]
-    func to_number(s: Self) -> ?number {
-        globals::base::tonumber(s)
+    func to_number(self) -> ?number {
+        globals::base::tonumber(self)
     }
 
     #[inline]
-    func len(s: Self) -> number {
-        @raw("{@RETURN #{@1@} @}", s) -> number
+    func len(self) -> number {
+        @raw("{@RETURN #{@1@} @}", self) -> number
     }
 
     #[inline]
-    func is_empty(s: Self) -> bool { s == "" }
+    func is_empty(self) -> bool { self == "" }
 
     #[inline]
-    func sub(s: Self, s_pos: number, e_pos: ?number) -> string {
-        str::sub(s, s_pos, e_pos)
+    func sub(self, s_pos: number, e_pos: ?number) -> string {
+        str::sub(self, s_pos, e_pos)
     }
 
     // can't be inlined yet, because of the variadic return type and uses `return` statement
-    func byte(s: Self, s_pos: number, e_pos: number) -> ...string {
-        return str::byte(s, s_pos, e_pos);
+    func byte(self, s_pos: number, e_pos: number) -> ...string {
+        return str::byte(self, s_pos, e_pos);
     }
 
     #[inline]
-    func starts_with(s: Self, prefix: string) -> bool {
-        s.sub(1, #prefix) == prefix
+    func starts_with(self, prefix: string) -> bool {
+        self.sub(1, #prefix) == prefix
     }
 
     #[inline]
-    func ends_with(s: Self, suffix: string) -> bool {
-        suffix == "" || s.sub(-#suffix, nil) == suffix
+    func ends_with(self, suffix: string) -> bool {
+        suffix == "" || self.sub(-#suffix, nil) == suffix
     }
 
-    func format(fmt: Self, ...any) -> string { str::format(fmt, ...) }
+    func format(self, ...any) -> string { str::format(self, ...) }
 
     #[inline]
-    func rep(s: Self, n: number, sep: ?string) -> string { str::rep(s, n, sep) }
+    func rep(self, n: number, sep: ?string) -> string { str::rep(self, n, sep) }
 
     #[inline]
-    func upper(s: Self) -> string { str::upper(s) }
+    func upper(self) -> string { str::upper(self) }
 
     #[inline]
-    func lower(s: Self) -> string { str::lower(s) }
+    func lower(self) -> string { str::lower(self) }
 }

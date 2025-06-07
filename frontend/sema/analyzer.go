@@ -68,7 +68,7 @@ func (a *Analysis) GetStructSetupSpan(def Span) Span {
 
 func (a *Analysis) handleAst(ast *ast.Ast) {
 	a.Ast = ast
-	a.handleItems(ast.Items)
+	a.handleItems(ast)
 }
 
 func (a *Analysis) Error(msg string, span Span) {

@@ -99,16 +99,18 @@ func (is *ImplStruct) Span() common.Span {
 /* Trait */
 
 type Trait struct {
-	Public     bool
-	Name       lexer.TokIdent
-	Methods    []Function
-	Scope      any
-	Attributes Attributes
-	span       common.Span
+	Public      bool
+	Name        lexer.TokIdent
+	SuperTraits []Path // traits that this trait extends
+	Methods     []Function
+	Scope       any
+	Attributes  Attributes
+	Sem         *SemTrait // semantic information, if available
+	span        common.Span
 }
 
-func NewTrait(name lexer.TokIdent, methods []Function, span common.Span) *Trait {
-	return &Trait{Name: name, Methods: methods, span: span}
+func NewTrait(name lexer.TokIdent, superTraits []Path, methods []Function, span common.Span) *Trait {
+	return &Trait{Name: name, SuperTraits: superTraits, Methods: methods, span: span}
 }
 
 func (t *Trait) isItem() {}
@@ -121,13 +123,14 @@ func (t Trait) Span() common.Span {
 
 /* Impl Trait for Struct */
 type ImplTraitForStruct struct {
-	Trait  Path
-	Struct Type // the type this trait is implemented for
-	span   common.Span
+	Generics Generics
+	Trait    Path
+	Struct   Type // the type this trait is implemented for
+	span     common.Span
 }
 
-func NewImplTraitForStruct(trait Path, st Type, span common.Span) *ImplTraitForStruct {
-	return &ImplTraitForStruct{Trait: trait, Struct: st, span: span}
+func NewImplTraitForStruct(g Generics, trait Path, st Type, span common.Span) *ImplTraitForStruct {
+	return &ImplTraitForStruct{Generics: g, Trait: trait, Struct: st, span: span}
 }
 
 func (it *ImplTraitForStruct) isItem() {}

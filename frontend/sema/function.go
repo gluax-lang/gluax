@@ -46,9 +46,11 @@ func (a *Analysis) handleFunctionImpl(scope *Scope, it *ast.Function, withBody b
 		}
 	}
 
-	if withBody && it.Body != nil && !a.Project.processingGlobals {
-		_ = a.handleBlock(child, it.Body)
-		a.Matches(returnType, it.Body.Type(), it.Body.Span())
+	if it.Body != nil && !a.Project.processingGlobals {
+		if withBody {
+			_ = a.handleBlock(child, it.Body)
+			a.Matches(returnType, it.Body.Type(), it.Body.Span())
+		}
 	}
 
 	if funcType.HasVarargReturn() && it.Errorable {

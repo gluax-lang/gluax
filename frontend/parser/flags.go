@@ -12,7 +12,7 @@ const (
 
 	FlagTypeTuple
 	FlagTypeVarArg
-	FlagTypeImplTrait
+	FlagTypeDynTrait
 
 	FlagAllowUnderscore
 )
@@ -60,8 +60,8 @@ func (f Flags) String() string {
 	if f.Has(FlagFuncReturnUnreachable) {
 		parts = append(parts, "FuncReturnUnreachable")
 	}
-	if f.Has(FlagTypeImplTrait) {
-		parts = append(parts, "TypeImplTrait")
+	if f.Has(FlagTypeDynTrait) {
+		parts = append(parts, "TypeDynTrait")
 	}
 	return strings.Join(parts, "|")
 }

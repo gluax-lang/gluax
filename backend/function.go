@@ -133,6 +133,16 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 		if fun.HasVarargParam() || fun.HasVarargReturn() {
 			return false
 		}
+		if fun.Def.IsGlobalDef {
+			return false
+		}
+		if fun.Def.Body == nil {
+			return false
+		}
+		if fun.Def.Errorable {
+			// TODO: handle errorable functions
+			return false
+		}
 		if !fun.Def.Attributes.Has("inline") {
 			return false
 		}

@@ -45,9 +45,9 @@ func (a *Analysis) resolveType(scope *Scope, ty ast.Type) Type {
 		return ast.NewSemType(fun, t.Span())
 	case *ast.Unreachable:
 		return ast.NewSemType(ast.SemUnreachable{}, t.Span())
-	case *ast.ImplTrait:
+	case *ast.DynTrait:
 		trait := a.resolvePathTrait(a.Scope, &t.Trait)
-		return ast.NewSemImplTrait(t, trait)
+		return ast.NewSemDynTrait(trait, t.Span())
 	default:
 		panic("TODO TYPE")
 	}

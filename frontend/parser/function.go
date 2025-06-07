@@ -2,6 +2,7 @@ package parser
 
 import (
 	"github.com/gluax-lang/gluax/frontend/ast"
+	"github.com/gluax-lang/gluax/frontend/common"
 	"github.com/gluax-lang/gluax/frontend/lexer"
 )
 
@@ -12,7 +13,7 @@ func (p *parser) parseFunctionSignature(paramFlags Flags) ast.FunctionSignature 
 
 	errorable := p.tryConsume("!")
 
-	returnType := p.parseFunctionReturnType(FlagTypeTuple|FlagTypeVarArg|FlagFuncReturnUnreachable|FlagTypeImplTrait, SpanFrom(spanStart, p.prevSpan()))
+	returnType := p.parseFunctionReturnType(FlagTypeTuple|FlagTypeVarArg|FlagFuncReturnUnreachable|FlagTypeDynTrait, SpanFrom(spanStart, p.prevSpan()))
 
 	return ast.FunctionSignature{
 		Params:     params,
@@ -21,7 +22,7 @@ func (p *parser) parseFunctionSignature(paramFlags Flags) ast.FunctionSignature 
 	}
 }
 
-func (p *parser) parseFunctionParam(flags Flags) ast.FunctionParam {
+func (p *parser) parseFunctionParam(flags Flags, isFirst bool) ast.FunctionParam {
 	if flags.Has(FlagFuncParamVarArg) && p.tryConsume("...") {
 		varargSpan := p.prevSpan()
 		varargTy := p.parseType()
@@ -38,11 +39,19 @@ func (p *parser) parseFunctionParam(flags Flags) ast.FunctionParam {
 	var name *lexer.TokIdent
 	if flags.Has(FlagFuncParamNamed) {
 		ident := p.expectIdentMsgX("expected parameter name", FlagAllowUnderscore)
-		p.expect(":")
 		name = &ident
+		if flags.Has(FlagFuncParamSelf) && ident.Raw == "self" {
+			if isFirst {
+				SelfPath := ast.NewPath([]ast.Ident{lexer.NewTokIdent("Self", ident.Span())})
+				return ast.NewFunctionParam(name, &SelfPath, SpanFrom(spanStart, p.prevSpan()))
+			} else {
+				common.PanicDiag("`self` can only be used as the first parameter in this context", ident.Span())
+			}
+		}
+		p.expect(":")
 	}
 
-	ty := p.parseTypeX(FlagTypeImplTrait)
+	ty := p.parseTypeX(FlagTypeDynTrait)
 	span := SpanFrom(spanStart, p.prevSpan())
 	return ast.NewFunctionParam(name, ty, span)
 }
@@ -50,8 +59,10 @@ func (p *parser) parseFunctionParam(flags Flags) ast.FunctionParam {
 func (p *parser) parseFunctionParams(flags Flags) []ast.FunctionParam {
 	p.expect("(")
 	var params []ast.FunctionParam
+	isFirst := true
 	p.parseCommaSeparatedDelimited(")", func(p *parser) {
-		params = append(params, p.parseFunctionParam(flags))
+		params = append(params, p.parseFunctionParam(flags, isFirst))
+		isFirst = false
 	})
 	return params
 }

@@ -141,9 +141,10 @@ func (i SemImport) AstString() string {
 }
 
 type SemTrait struct {
-	Def     *Trait
-	Methods map[string]SemFunction
-	Scope   any
+	Def         *Trait
+	SuperTraits []*SemTrait // traits that this trait extends
+	Methods     map[string]SemFunction
+	Scope       any
 }
 
 func NewSemTrait(def *Trait) SemTrait {

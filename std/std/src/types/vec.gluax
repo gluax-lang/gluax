@@ -5,37 +5,37 @@ impl<T> vec<T> {
     }
 
     #[inline]
-    func len(s: Self) -> number {
-        @raw("{@RETURN #{@1@} @}", s) -> number
+    func len(self) -> number {
+        @raw("{@RETURN #{@1@} @}", self) -> number
     }
 
     #[inline]
-    func push(s: Self, v: T) {
-        @raw("{@1@}[#{@1@}+1]={@2@}", s, v);
+    func push(self, v: T) {
+        @raw("{@1@}[#{@1@}+1]={@2@}", self, v);
     }
 
     #[inline]
-    func pop(s: Self) -> ?T {
-        @raw("do local len = #{@1@}; {@TEMP1@}, {@1@}[len] = {@1@}[len], nil; {@RETURN {@TEMP1@} @} end;", s) -> ?T
+    func pop(self) -> ?T {
+        @raw("do local len = #{@1@}; {@TEMP1@}, {@1@}[len] = {@1@}[len], nil; {@RETURN {@TEMP1@} @} end;", self) -> ?T
     }
 
     #[inline]
-    func is_empty(s: Self) -> bool {
-        @raw("{@RETURN #{@1@} == 0 @}", s) -> bool
+    func is_empty(self) -> bool {
+        @raw("{@RETURN #{@1@} == 0 @}", self) -> bool
     }
 
     #[inline]
-    func remove(s: Self, index: number) -> ?T {
-        @raw("{@RETURN table.remove({@1@}, {@2@}) @}", s, index) -> ?T
+    func remove(self, index: number) -> ?T {
+        @raw("{@RETURN table.remove({@1@}, {@2@}) @}", self, index) -> ?T
     }
 
     #[inline]
-    func get(s: Self, index: number) -> ?T {
-        @raw("{@RETURN {@1@}[{@2@}] @}", s, index) -> ?T
+    func get(self, index: number) -> ?T {
+        @raw("{@RETURN {@1@}[{@2@}] @}", self, index) -> ?T
     }
 
     #[inline]
-    func reverse(s: Self) {
-        @raw("local len = #{@1@}; for i = 1, math.floor(len / 2) do {@1@}[i], {@1@}[len - i + 1] = {@1@}[len - i + 1], {@1@}[i] end", s);
+    func reverse(self) {
+        @raw("local len = #{@1@}; for i = 1, math.floor(len / 2) do {@1@}[i], {@1@}[len - i + 1] = {@1@}[len - i + 1], {@1@}[i] end", self);
     }
 }

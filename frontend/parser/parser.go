@@ -45,14 +45,30 @@ func Parse(tkS []lexer.Token, processingGlobals bool) (astRet *ast.Ast, err *dia
 		}
 	}()
 
-	var items []ast.Item
-	for !lexer.IsEOF(p.Token) {
-		items = append(items, p.parseItem())
+	astRet = &ast.Ast{
+		TokenStream: p.TokenStream,
 	}
 
-	astRet = &ast.Ast{
-		Items:       items,
-		TokenStream: p.TokenStream,
+	for !lexer.IsEOF(p.Token) {
+		item := p.parseItem()
+		switch item := item.(type) {
+		case *ast.Import:
+			astRet.Imports = append(astRet.Imports, item)
+		case *ast.Use:
+			astRet.Uses = append(astRet.Uses, item)
+		case *ast.Function:
+			astRet.Funcs = append(astRet.Funcs, item)
+		case *ast.ImplStruct:
+			astRet.ImplStructs = append(astRet.ImplStructs, item)
+		case *ast.ImplTraitForStruct:
+			astRet.ImplTraits = append(astRet.ImplTraits, item)
+		case *ast.Let:
+			astRet.Lets = append(astRet.Lets, item)
+		case *ast.Struct:
+			astRet.Structs = append(astRet.Structs, item)
+		case *ast.Trait:
+			astRet.Traits = append(astRet.Traits, item)
+		}
 	}
 
 	return

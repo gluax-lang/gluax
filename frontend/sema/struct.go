@@ -6,6 +6,20 @@ import (
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
+func (a *Analysis) setupTypeGenerics(scope *Scope, generics ast.Generics, concrete []Type) *Scope {
+	scope = NewScope(scope)
+	for i, g := range generics.Params {
+		var binding Type
+		if concrete == nil {
+			binding = ast.NewSemGenericType(g.Name, true)
+		} else {
+			binding = concrete[i]
+		}
+		a.AddType(scope, g.Name.Raw, binding)
+	}
+	return scope
+}
+
 func (a *Analysis) setupStruct(def *ast.Struct, concrete []Type) *SemStruct {
 	for _, ty := range concrete {
 		if !isInnerTypeRuleCompliant(ty) {
@@ -26,12 +40,7 @@ func (a *Analysis) setupStruct(def *ast.Struct, concrete []Type) *SemStruct {
 }
 
 func (a *Analysis) HandleStructMethod(st *ast.SemStruct, method ast.SemFunction, withBody bool) ast.SemFunction {
-	impl := method.ImplStruct
-	genericsScope := NewScope(impl.Scope.(*Scope))
-	for i, g := range impl.Generics.Params {
-		stGTy := st.Generics.Params[i]
-		a.AddType(genericsScope, g.Name.Raw, stGTy)
-	}
+	genericsScope := a.setupTypeGenerics(method.Scope.(*Scope), method.Generics, st.Generics.Params)
 	{
 		stTy := ast.NewSemType(st, st.Def.Name.Span())
 		if err := genericsScope.AddType("Self", stTy); err != nil {
@@ -44,8 +53,8 @@ func (a *Analysis) HandleStructMethod(st *ast.SemStruct, method ast.SemFunction,
 	} else {
 		funcTy = a.handleFunctionSignature(genericsScope, &method.Def)
 	}
+	funcTy.Scope = method.Scope
 	funcTy.Struct = st
-	funcTy.ImplStruct = impl
 	st.Methods[method.Def.Name.Raw] = funcTy
 	return funcTy
 }
@@ -142,12 +151,45 @@ var getImplType = func(sI StructInstance, idx int) (Type, bool) {
 	return ty, true
 }
 
+// Helper to search struct stack for a matching item (method or trait)
+func findInStructStack[T any](
+	a *Analysis,
+	st *ast.SemStruct,
+	getItem func(inst StructInstance) (T, bool),
+	match func(item T) bool,
+) (T, bool) {
+	stack := a.State.GetStructStack(st.Def)
+	for _, inst := range stack {
+		item, ok := getItem(inst)
+		if !ok {
+			continue
+		}
+		this := true
+		for i, t := range st.Generics.Params {
+			ty, ok := getImplType(inst, i)
+			if !ok {
+				continue
+			}
+			if !t.StrictMatches(ty) {
+				this = false
+				break
+			}
+		}
+		if this && match(item) {
+			return item, true
+		}
+	}
+	var zero T
+	return zero, false
+}
+
 func (a *Analysis) addStructMethod(st *ast.SemStruct, method ast.SemFunction) {
 	methodName := method.Def.Name.Raw
 	if _, exists := a.getStructMethod(st, methodName); exists {
 		a.Error(fmt.Sprintf("method '%s' already exists for these concrete types", methodName), method.Def.Name.Span())
 		return
 	}
+	method.Struct = st
 	st.Methods[methodName] = method
 }
 
@@ -155,27 +197,44 @@ func (a *Analysis) getStructMethod(st *ast.SemStruct, methodName string) (ast.Se
 	if method, ok := st.Methods[methodName]; ok {
 		return method, true
 	}
-	stack := a.State.GetStructStack(st.Def)
-	for _, inst := range stack {
-		if method, ok := inst.Type.Methods[methodName]; ok {
-			this := true
-			for i, t := range st.Generics.Params {
-				ty, ok := getImplType(inst, i)
-				if !ok {
-					continue
-				}
-				if !t.StrictMatches(ty) {
-					this = false
-					break
-				}
-			}
-			if this {
-				method = a.HandleStructMethod(st, method, false) // handle it without body
-				return method, true
-			}
-		}
+	getMethod := func(inst StructInstance) (ast.SemFunction, bool) {
+		m, ok := inst.Type.Methods[methodName]
+		return m, ok
+	}
+	match := func(_ ast.SemFunction) bool { return true }
+	if method, ok := findInStructStack(a, st, getMethod, match); ok {
+		method = a.HandleStructMethod(st, method, false)
+		return method, true
 	}
 	return ast.SemFunction{}, false
+}
+
+func (a *Analysis) addStructTrait(st *ast.SemStruct, trait *ast.SemTrait, span Span) {
+	if a.structHasTrait(st, trait) {
+		a.Error(fmt.Sprintf("trait `%s` already exists for this struct", trait.Def.Name.Raw), span)
+		return
+	}
+	st.Traits[trait] = struct{}{}
+}
+
+func (a *Analysis) structHasTrait(st *ast.SemStruct, trait *ast.SemTrait) bool {
+	if _, ok := st.Traits[trait]; ok {
+		return true
+	}
+	getTrait := func(inst StructInstance) (*ast.SemTrait, bool) {
+		for tr := range inst.Type.Traits {
+			if tr == trait {
+				return tr, true
+			}
+		}
+		return nil, false
+	}
+	match := func(_ *ast.SemTrait) bool { return true }
+	if _, ok := findInStructStack(a, st, getTrait, match); ok {
+		st.Traits[trait] = struct{}{}
+		return true
+	}
+	return false
 }
 
 func (a *Analysis) unify(

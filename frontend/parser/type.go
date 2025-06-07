@@ -44,8 +44,8 @@ func (p *parser) parseTypeX(flags Flags) ast.Type {
 		return ast.NewVararg(p.parseType(), SpanFrom(spanStart, p.prevSpan()))
 	}
 
-	if flags.Has(FlagTypeImplTrait) && p.Token.Is("impl") {
-		return p.parseImplTraitType()
+	if flags.Has(FlagTypeDynTrait) && p.Token.Is("dyn") {
+		return p.parseDynTraitType()
 	}
 
 	return p.parsePathType(spanStart, nil)
@@ -109,12 +109,12 @@ func (p *parser) parsePathType(spanStart common.Span, path *ast.Path) ast.Type {
 	return path
 }
 
-func (p *parser) parseImplTraitType() ast.Type {
+func (p *parser) parseDynTraitType() ast.Type {
 	spanStart := p.span()
-	p.advance() // consume `impl`
+	p.advance() // consume `dyn`
 
 	trait := p.parsePath()
 	span := SpanFrom(spanStart, p.prevSpan())
 
-	return ast.NewImplTrait(trait, span)
+	return ast.NewDynTrait(trait, span)
 }

@@ -517,7 +517,7 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 		)
 	}
 
-	if len(method.Params) < 1 || !ast.IsSelf(method.Def.Params[0].Type) {
+	if len(method.Params) < 1 || method.Def.Params[0].Name.Raw != "self" {
 		a.Panic(
 			fmt.Sprintf("no method named `%s` in `%s`", call.Method.Raw, st.String()),
 			call.Method.Span(),

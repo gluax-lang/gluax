@@ -26,8 +26,8 @@ func (k SemTypeKind) String() string {
 		return "unreachable"
 	case SemErrorKind:
 		return "error"
-	case SemImplTraitKind:
-		return "impl_trait"
+	case SemDynTraitKind:
+		return "dyn_trait"
 	default:
 		panic("unreachable")
 	}
@@ -42,7 +42,7 @@ const (
 	SemGenericKind
 	SemUnreachableKind
 	SemErrorKind
-	SemImplTraitKind
+	SemDynTraitKind
 )
 
 type semTypeData interface {
@@ -235,6 +235,7 @@ type SemStruct struct {
 	Generics SemGenerics
 	Fields   map[string]SemStructField
 	Methods  map[string]SemFunction // Methods defined on this struct
+	Traits   map[*SemTrait]struct{} // Traits implemented by this struct
 	Scope    any
 }
 
@@ -242,11 +243,13 @@ func NewSemStruct(def *Struct) *SemStruct {
 	generics := SemGenerics{}
 	fields := map[string]SemStructField{}
 	methods := map[string]SemFunction{}
+	traits := map[*SemTrait]struct{}{}
 	return &SemStruct{
 		Def:      def,
 		Generics: generics,
 		Fields:   fields,
 		Methods:  methods,
+		Traits:   traits,
 	}
 }
 
@@ -393,8 +396,9 @@ type SemFunction struct {
 	Params []SemType
 	Return SemType
 
-	Struct     *SemStruct
-	ImplStruct *ImplStruct
+	Struct   *SemStruct
+	Scope    any // Scope for this function, used for generics resolution and other shit
+	Generics Generics
 }
 
 func (t SemFunction) TypeKind() SemTypeKind { return SemFunctionKind }
@@ -631,35 +635,34 @@ func (t SemError) TypeKind() SemTypeKind { return SemErrorKind }
 func (t SemError) String() string    { return "error" }
 func (t SemError) AstString() string { return t.String() }
 
-/* SemImplTrait */
+/* SemDynTrait */
 
-type SemImplTrait struct {
-	Def   *ImplTrait
+type SemDynTrait struct {
 	Trait *SemTrait
 }
 
-func NewSemImplTrait(def *ImplTrait, trait *SemTrait) SemType {
+func NewSemDynTrait(trait *SemTrait, span common.Span) SemType {
 	return SemType{
-		data: SemImplTrait{Def: def, Trait: trait},
-		span: def.Span(),
+		data: SemDynTrait{trait},
+		span: span,
 	}
 }
 
-func (t SemImplTrait) TypeKind() SemTypeKind { return SemImplTraitKind }
+func (t SemDynTrait) TypeKind() SemTypeKind { return SemDynTraitKind }
 
-func (t SemImplTrait) Matches(other SemType) bool {
+func (t SemDynTrait) Matches(other SemType) bool {
 	return false
 }
 
-func (t SemImplTrait) StrictMatches(other SemType) bool {
+func (t SemDynTrait) StrictMatches(other SemType) bool {
 	return false
 }
 
-func (t SemImplTrait) String() string {
+func (t SemDynTrait) String() string {
 	return "todo"
 }
 
-func (t SemImplTrait) AstString() string {
+func (t SemDynTrait) AstString() string {
 	return "todo"
 }
 

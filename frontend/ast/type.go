@@ -110,19 +110,19 @@ func (u *Unreachable) Span() common.Span {
 	return u.span
 }
 
-/* Impl Trait */
+/* Dyn Trait */
 
-type ImplTrait struct {
+type DynTrait struct {
 	Trait Path
 	span  common.Span
 }
 
-func NewImplTrait(trait Path, span common.Span) *ImplTrait {
-	return &ImplTrait{Trait: trait, span: span}
+func NewDynTrait(trait Path, span common.Span) *DynTrait {
+	return &DynTrait{Trait: trait, span: span}
 }
 
-func (it *ImplTrait) isType() {}
+func (it *DynTrait) isType() {}
 
-func (it *ImplTrait) Span() common.Span {
+func (it *DynTrait) Span() common.Span {
 	return it.span
 }

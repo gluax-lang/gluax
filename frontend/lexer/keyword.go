@@ -21,7 +21,6 @@ const (
 	KwContinue
 	KwLoop
 	KwImport
-	Kwself
 	KwSelf
 	KwPub
 	KwAs
@@ -34,6 +33,7 @@ const (
 	KwTrait
 	KwUnreachable
 	KwUnderscore
+	KwDyn
 	KwAnd // Lua-reserved below
 	KwLocal
 	KwDo
@@ -63,7 +63,6 @@ var keywordTable = map[string]Keyword{
 	"continue":       KwContinue,
 	"loop":           KwLoop,
 	"import":         KwImport,
-	"self":           Kwself,
 	"Self":           KwSelf,
 	"pub":            KwPub,
 	"as":             KwAs,
@@ -76,6 +75,7 @@ var keywordTable = map[string]Keyword{
 	"trait":          KwTrait,
 	"unreachable":    KwUnreachable,
 	"_":              KwUnderscore,
+	"dyn":            KwDyn,
 	// Lua reserved
 	"and":      KwAnd,
 	"local":    KwLocal,
