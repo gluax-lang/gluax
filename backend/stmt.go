@@ -75,6 +75,18 @@ func (cg *Codegen) genStmtAssignment(stmt *ast.StmtAssignment) {
 }
 
 func (cg *Codegen) genStmtReturn(stmt *ast.StmtReturn) {
+	funcScope := cg.currentFuncScope()
+	if funcScope.inlining {
+		toReturn := cg.genExprsLeftToRight(stmt.Exprs)
+		if toReturn == "" {
+			toReturn = "nil"
+		}
+		cg.ln("%s = %s;", strings.Join(funcScope.returnVars, ", "), toReturn)
+		funcScope.usedLabel = true
+		cg.ln("goto %s;", funcScope.returnLabel)
+		return
+	}
+
 	if stmt.Exprs == nil {
 		cg.ln("do return nil; end;")
 		return
@@ -90,6 +102,14 @@ func (cg *Codegen) genStmtReturn(stmt *ast.StmtReturn) {
 }
 
 func (cg *Codegen) genStmtThrow(stmt *ast.StmtThrow) {
+	funcScope := cg.currentFuncScope()
+	if funcScope.inlining {
+		value := cg.genExpr(stmt.Value)
+		cg.ln("%s = %s;", funcScope.errorVar, value)
+		cg.ln("goto %s;", funcScope.returnLabel)
+		funcScope.usedLabel = true
+		return
+	}
 	value := cg.genExpr(stmt.Value)
 	cg.ln("do return %s; end;", value)
 }

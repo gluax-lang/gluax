@@ -72,6 +72,10 @@ func (a *Analysis) handleAst(ast *ast.Ast) {
 }
 
 func (a *Analysis) Error(msg string, span Span) {
+	// println("\n-------------------------------------")
+	// println(msg)
+	// debug.PrintStack()
+	// println("-------------------------------------\n")
 	a.Diags = append(a.Diags, *common.ErrorDiag(msg, span))
 }
 

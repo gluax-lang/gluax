@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/gluax-lang/gluax/frontend/ast"
@@ -19,6 +20,14 @@ type tempScope struct {
 	all       []string // ALL temp vars created in this scope (for emitTempLocals)
 	available []string // temp vars that can be reused
 	allocated []string // temp vars currently allocated (not available)
+}
+
+type funcScope struct {
+	inlining    bool
+	returnLabel string   // label to jump to for returning from this function
+	errorVar    string   // variable to hold the error value (if any)
+	returnVars  []string // variables to return from this function
+	usedLabel   bool     // whether the return label has been used in the function
 }
 
 type Codegen struct {
@@ -39,6 +48,8 @@ type Codegen struct {
 	generatedStructs map[string]struct{} // from decorated struct name -> struct
 
 	tempVarStack []tempScope
+
+	funcScopeStack []*funcScope
 }
 
 type loopLabel struct{ cont, brk string }
@@ -107,6 +118,12 @@ func (cg *Codegen) temp() string {
 	name := fmt.Sprintf(TEMP_PREFIX, cg.tempIdx)
 	cg.tempIdx++
 	return name
+}
+
+func (cg *Codegen) namedTemp(name string) string {
+	idx := strconv.Itoa(cg.tempIdx)
+	cg.tempIdx++
+	return name + idx
 }
 
 func (cg *Codegen) getPublic(symName string) string {
@@ -205,6 +222,27 @@ func (cg *Codegen) emitTempLocals() {
 	if len(vars) > 0 {
 		cg.ln("local %s;", strings.Join(vars, ", "))
 	}
+}
+
+// Push a new function scope onto the stack
+func (cg *Codegen) pushFuncScope(scope *funcScope) {
+	cg.funcScopeStack = append(cg.funcScopeStack, scope)
+}
+
+// Pop the current function scope
+func (cg *Codegen) popFuncScope() {
+	if len(cg.funcScopeStack) == 0 {
+		panic("codegen: popFuncScope underflow")
+	}
+	cg.funcScopeStack = cg.funcScopeStack[:len(cg.funcScopeStack)-1]
+}
+
+// Get the current function scope
+func (cg *Codegen) currentFuncScope() *funcScope {
+	if len(cg.funcScopeStack) == 0 {
+		return nil
+	}
+	return cg.funcScopeStack[len(cg.funcScopeStack)-1]
 }
 
 func (cg *Codegen) generate() {

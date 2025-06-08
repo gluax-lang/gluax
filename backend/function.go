@@ -36,6 +36,8 @@ func (cg *Codegen) decorateFuncName(f *ast.SemFunction) string {
 func (cg *Codegen) genFunction(f *ast.SemFunction) string {
 	def := f.Def
 	oldBuf := cg.newBuf()
+
+	// Generate function signature
 	cg.writeString("function(")
 	for i, p := range def.Params {
 		if i > 0 {
@@ -47,10 +49,14 @@ func (cg *Codegen) genFunction(f *ast.SemFunction) string {
 	cg.writeByte('\n')
 	cg.pushIndent()
 
+	// Setup scopes for function body
 	cg.pushTempScope()
+	cg.pushFuncScope(&funcScope{})
 
-	// make another buffer for the body, so we can use it for the return value
+	// Prepare buffer for function body
 	bodyBuf := cg.newBuf()
+
+	// Generate function body and return statement
 	if f.HasVarargReturn() {
 		cg.genBlockX(def.Body, BlockNone)
 	} else {
@@ -61,14 +67,21 @@ func (cg *Codegen) genFunction(f *ast.SemFunction) string {
 			cg.ln("return %s;", value)
 		}
 	}
+
+	cg.popFuncScope()
+
+	// Emit locals and body
 	bodySnippet := cg.restoreBuf(bodyBuf)
 	cg.emitTempLocals()
 	cg.writeString(bodySnippet)
+
+	// Close function
 	cg.popIndent()
 	cg.writeIndent()
 	cg.writeString("end")
-	snippet := cg.restoreBuf(oldBuf)
-	return snippet
+
+	// Restore and return the generated function code
+	return cg.restoreBuf(oldBuf)
 }
 
 func (cg *Codegen) getCallArgs(call *ast.Call, toCall string) string {
@@ -97,6 +110,8 @@ func (cg *Codegen) genInlineCall(call *ast.Call, fun ast.SemFunction, toCall str
 		cg.ln("local %s = %s;", strings.Join(params, ", "), cg.getCallArgs(call, toCall))
 	}
 
+	returnLabel := cg.namedTemp(RETURN_PREFIX)
+
 	// Generate return locals
 	returnCount := fun.ReturnCount()
 	returnLocals := make([]string, returnCount)
@@ -104,14 +119,35 @@ func (cg *Codegen) genInlineCall(call *ast.Call, fun ast.SemFunction, toCall str
 		returnLocals[i] = cg.getTempVar()
 	}
 
-	bodyResult := cg.genBlockX(fun.Def.Body, BlockNone)
+	var errTemp string
+	if fun.Def.Errorable {
+		errTemp = cg.getTempVar()
+		cg.ln("%s = nil;", errTemp) // make sure that if it's a reused temp, it starts as nil
+	}
 
-	// Assign body result to return locals
+	funcScope := funcScope{
+		inlining:    true,
+		returnLabel: returnLabel,
+		returnVars:  returnLocals,
+		errorVar:    errTemp,
+	}
+
+	cg.pushFuncScope(&funcScope)
+	bodyResult := cg.genBlockX(fun.Def.Body, BlockNone)
+	cg.popFuncScope()
+
 	cg.ln("%s = %s;", strings.Join(returnLocals, ", "), bodyResult)
+
+	if funcScope.usedLabel {
+		cg.ln("::%s::", returnLabel)
+	}
 
 	cg.popIndent()
 	cg.ln("end")
 
+	if fun.Def.Errorable {
+		return errTemp + ", " + strings.Join(returnLocals, ", ")
+	}
 	return strings.Join(returnLocals, ", ")
 }
 
@@ -143,10 +179,6 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 			return false
 		}
 		if fun.Def.Body == nil {
-			return false
-		}
-		if fun.Def.Errorable {
-			// TODO: handle errorable functions
 			return false
 		}
 		if !fun.Def.Attributes.Has("inline") {
@@ -195,11 +227,12 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 		return strings.Join(locals, ", ")
 	}
 
+	var callExpr string
 	if canInline() {
-		return cg.genInlineCall(call, fun, toCall)
+		callExpr = cg.genInlineCall(call, fun, toCall)
+	} else {
+		callExpr = buildCallExpr()
 	}
-
-	callExpr := buildCallExpr()
 
 	if fun.HasVarargReturn() || (!call.IsTryCall && call.Catch == nil) {
 		return callExpr

@@ -8,6 +8,7 @@ const PREFIX = frontend.PreservedPrefix
 const TEMP_PREFIX = PREFIX + "t_%d"
 const CONTINUE_PREFIX = PREFIX + "continue_"
 const BREAK_PREFIX = PREFIX + "break_"
+const RETURN_PREFIX = PREFIX + "return_"
 const FUNC_PREFIX = PREFIX + "func_"
 const STRUCT_PREFIX = PREFIX + "struct_"
 const UNREACHABLE_PREFIX = PREFIX + "unreachable_"
