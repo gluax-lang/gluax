@@ -118,8 +118,14 @@ func (cg *Codegen) genInlineCall(call *ast.Call, fun ast.SemFunction, toCall str
 func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) string {
 	var fun ast.SemFunction
 	if call.Method != nil {
-		st := toCallTy.Struct()
-		fun = st.Methods[call.Method.Raw]
+		switch {
+		case toCallTy.IsStruct():
+			st := toCallTy.Struct()
+			fun = st.Methods[call.Method.Raw]
+		case toCallTy.IsDynTrait():
+			dt := toCallTy.DynTrait()
+			fun, _ = cg.Analysis.GetTraitMethod(dt.Trait, call.Method.Raw)
+		}
 	} else {
 		fun = toCallTy.Function()
 	}
@@ -129,7 +135,7 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 		return "nil"
 	}
 
-	var canInline = func() bool {
+	canInline := func() bool {
 		if fun.HasVarargParam() || fun.HasVarargReturn() {
 			return false
 		}
@@ -149,57 +155,55 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 		return true
 	}
 
+	buildCallExpr := func() string {
+		if call.Method != nil {
+			if toCallTy.IsStruct() && toCallTy.Struct().Def.Attributes.Has("no_metatable") {
+				stName := cg.decorateStName(toCallTy.Struct())
+				args := cg.getCallArgs(call, toCall)
+				return fmt.Sprintf("%s.%s(%s)", stName, call.Method.Raw, args)
+			}
+			args := cg.genExprsLeftToRight(call.Args)
+			return fmt.Sprintf("%s:%s(%s)", toCall, call.Method.Raw, args)
+		}
+		args := cg.genExprsLeftToRight(call.Args)
+		return fmt.Sprintf("%s(%s)", toCall, args)
+	}
+
+	handleErrorable := func(callExpr string) string {
+		locals := make([]string, fun.ReturnCount())
+		for i := range locals {
+			locals[i] = cg.getTempVar()
+		}
+		errorTemp := cg.getTempVar()
+		cg.ln("do")
+		cg.pushIndent()
+		cg.ln("%s, %s = %s;", errorTemp, strings.Join(locals, ", "), callExpr)
+		cg.ln("if %s ~= nil then", errorTemp)
+		cg.pushIndent()
+		if call.IsTryCall {
+			cg.ln("return %s;", errorTemp)
+		} else {
+			catch := call.Catch
+			cg.ln("local %s = %s;", catch.Name.Raw, errorTemp)
+			blockExpr := ast.NewExpr(&catch.Block)
+			cg.ln("%s = %s;", strings.Join(locals, ", "), cg.genExprX(blockExpr))
+		}
+		cg.popIndent()
+		cg.ln("end")
+		cg.popIndent()
+		cg.ln("end")
+		return strings.Join(locals, ", ")
+	}
+
 	if canInline() {
 		return cg.genInlineCall(call, fun, toCall)
 	}
 
-	var callExpr string
-	if call.Method != nil {
-		st := toCallTy.Struct()
-		if st.Def.Attributes.Has("no_metatable") {
-			st := toCallTy.Struct()
-			stName := cg.decorateStName(st)
-			args := cg.getCallArgs(call, toCall)
-			callExpr = fmt.Sprintf("%s.%s(%s)", stName, call.Method.Raw, args)
-		} else {
-			args := cg.genExprsLeftToRight(call.Args)
-			callExpr = fmt.Sprintf("%s:%s(%s)", toCall, call.Method.Raw, args)
-		}
-	} else {
-		args := cg.genExprsLeftToRight(call.Args)
-		callExpr = fmt.Sprintf("%s(%s)", toCall, args)
-	}
-	if fun.HasVarargReturn() {
-		return callExpr
-	}
-	if !call.IsTryCall && call.Catch == nil {
-		return callExpr
-	}
-	locals := make([]string, fun.ReturnCount())
-	for i := range locals {
-		locals[i] = cg.getTempVar()
-	}
-	errorTemp := cg.getTempVar()
-	cg.ln("do")
-	cg.pushIndent()
-	cg.ln("%s, %s = %s;", errorTemp, strings.Join(locals, ", "), callExpr)
-	cg.ln("if %s ~= nil then", errorTemp)
-	cg.pushIndent()
-	if call.IsTryCall {
-		cg.ln("return %s;", errorTemp)
-	} else {
-		catch := call.Catch
-		cg.ln("local %s = %s;", catch.Name.Raw, errorTemp)
-		blockExpr := ast.NewExpr(&catch.Block)
-		cg.ln("%s = %s;", strings.Join(locals, ", "), cg.genExprX(blockExpr))
-	}
-	cg.popIndent()
-	cg.ln("end")
-	cg.popIndent()
-	cg.ln("end")
-	return strings.Join(locals, ", ")
-}
+	callExpr := buildCallExpr()
 
-func (cg *Codegen) genMethodCall(call *ast.Call, toCall string, toCallTy ast.SemType) string {
-	return cg.genCall(call, toCall, toCallTy)
+	if fun.HasVarargReturn() || (!call.IsTryCall && call.Catch == nil) {
+		return callExpr
+	}
+
+	return handleErrorable(callExpr)
 }

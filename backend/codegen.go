@@ -215,7 +215,7 @@ func (cg *Codegen) generate() {
 	cg.ln("")
 
 	for _, st := range cg.Ast.Structs {
-		for _, inst := range cg.Analysis.State.GetStructStack(st) {
+		for _, inst := range st.GetStructStack() {
 			cg.generateStruct(inst.Type)
 		}
 	}

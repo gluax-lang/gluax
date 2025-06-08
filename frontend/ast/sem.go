@@ -47,8 +47,6 @@ const (
 
 type semTypeData interface {
 	TypeKind() SemTypeKind
-	Matches(SemType) bool
-	StrictMatches(SemType) bool
 	String() string
 	AstString() string
 }
@@ -96,35 +94,6 @@ func (t SemType) OptionInnerType() SemType {
 	return t.Struct().InnerType()
 }
 
-func (t SemType) Matches(other SemType) bool {
-	if t.IsError() || other.IsError() {
-		return false
-	}
-
-	if other.IsUnreachable() {
-		return true
-	}
-
-	if t.IsAny() {
-		if other.IsTuple() {
-			return false
-		}
-		if other.IsVararg() {
-			return false
-		}
-		return true
-	}
-
-	return t.data.Matches(other)
-}
-
-func (t SemType) StrictMatches(other SemType) bool {
-	if t.Kind() != other.Kind() {
-		return false
-	}
-	return t.data.StrictMatches(other)
-}
-
 func (t *SemType) Struct() *SemStruct {
 	if t.Kind() != SemStructKind {
 		panic("not a struct")
@@ -153,6 +122,13 @@ func (t SemType) Vararg() SemVararg {
 	return t.data.(SemVararg)
 }
 
+func (t SemType) DynTrait() SemDynTrait {
+	if t.Kind() != SemDynTraitKind {
+		panic("not a dyn trait")
+	}
+	return t.data.(SemDynTrait)
+}
+
 func (t SemType) Generic() SemGenericType {
 	if t.Kind() != SemGenericKind {
 		panic("not a generic")
@@ -174,6 +150,7 @@ func (t SemType) IsError() bool       { return t.Kind() == SemErrorKind }
 func (t SemType) IsGeneric() bool     { return t.Kind() == SemGenericKind }
 func (t SemType) IsTuple() bool       { return t.Kind() == SemTupleKind }
 func (t SemType) IsVararg() bool      { return t.Kind() == SemVarargKind }
+func (t SemType) IsDynTrait() bool    { return t.Kind() == SemDynTraitKind }
 
 func (t SemType) asStructName() *string {
 	// has to be a struct
@@ -271,80 +248,6 @@ func (t *SemStruct) InnerType2() (SemType, SemType) {
 	return t.Generics.Params[0], t.Generics.Params[1]
 }
 
-func (s SemStruct) Matches(other SemType) bool {
-	if s.IsAnyFunc() && (other.IsFunction() || other.IsAnyFunc()) {
-		return true
-	}
-
-	if s.IsTable() && (other.IsTable() || other.IsVec() || other.IsMap()) {
-		return true
-	}
-
-	if other.Kind() != SemStructKind {
-		return false
-	}
-
-	oS := other.Struct()
-
-	if s.IsOption() {
-		inner := s.InnerType()
-		if other.IsNil() {
-			return true
-		}
-		if other.IsOption() {
-			otherInner := oS.InnerType()
-			return inner.StrictMatches(otherInner)
-		}
-		return inner.StrictMatches(other)
-	}
-
-	if IsBuiltinType(s.Def.Name.Raw) && IsBuiltinType(oS.Def.Name.Raw) {
-		if s.Def.Name.Raw != oS.Def.Name.Raw {
-			return false
-		}
-	} else if s.Def.Span() != oS.Def.Span() {
-		return false
-	}
-
-	if len(s.Generics.Params) != len(oS.Generics.Params) {
-		return false
-	}
-
-	for i, sg := range s.Generics.Params {
-		og := oS.Generics.Params[i]
-		if !sg.IsAny() && !sg.StrictMatches(og) {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (s SemStruct) StrictMatches(other SemType) bool {
-	if other.Kind() != SemStructKind {
-		return false
-	}
-
-	oS := other.Struct()
-
-	if s.Def.Span() != oS.Def.Span() {
-		return false
-	}
-
-	if len(s.Generics.Params) != len(oS.Generics.Params) {
-		return false
-	}
-
-	for i, sg := range s.Generics.Params {
-		og := oS.Generics.Params[i]
-		if !sg.StrictMatches(og) {
-			return false
-		}
-	}
-
-	return true
-}
-
 func (s SemStruct) String() string {
 	if s.IsOption() {
 		return "?" + s.InnerType().String()
@@ -402,25 +305,6 @@ type SemFunction struct {
 }
 
 func (t SemFunction) TypeKind() SemTypeKind { return SemFunctionKind }
-
-func (t SemFunction) Matches(other SemType) bool {
-	if !other.IsFunction() {
-		return false
-	}
-	if len(t.Params) != len(other.Function().Params) {
-		return false
-	}
-	for i, p := range t.Params {
-		if !p.StrictMatches(other.Function().Params[i]) {
-			return false
-		}
-	}
-	return t.Return.StrictMatches(other.Function().Return)
-}
-
-func (t SemFunction) StrictMatches(other SemType) bool {
-	return t.Matches(other)
-}
 
 func (t SemFunction) String() string {
 	def := t.Def
@@ -521,36 +405,6 @@ type SemTuple struct{ Elems []SemType }
 
 func (t SemTuple) TypeKind() SemTypeKind { return SemTupleKind }
 
-func (t SemTuple) Matches(other SemType) bool {
-	if !other.IsTuple() {
-		return false
-	}
-	if len(t.Elems) != len(other.Tuple().Elems) {
-		return false
-	}
-	for i, elem := range t.Elems {
-		if !elem.Matches(other.Tuple().Elems[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-func (t SemTuple) StrictMatches(other SemType) bool {
-	if !other.IsTuple() {
-		return false
-	}
-	if len(t.Elems) != len(other.Tuple().Elems) {
-		return false
-	}
-	for i, elem := range t.Elems {
-		if !elem.StrictMatches(other.Tuple().Elems[i]) {
-			return false
-		}
-	}
-	return true
-}
-
 func (t SemTuple) String() string {
 	elems := make([]string, len(t.Elems))
 	for i, e := range t.Elems {
@@ -575,35 +429,11 @@ func NewSemVararg(ty SemType) SemVararg {
 	return SemVararg{Type: ty}
 }
 
-func (t SemVararg) Matches(other SemType) bool {
-	if other.IsVararg() {
-		return t.Type.Matches(other.Vararg().Type)
-	}
-	return t.Type.Matches(other)
-}
-
-func (t SemVararg) StrictMatches(other SemType) bool {
-	if !other.IsVararg() {
-		return false
-	}
-	return t.Type.StrictMatches(other.Vararg().Type)
-}
-
 func (t SemVararg) String() string    { return "..." + t.Type.String() }
 func (t SemVararg) AstString() string { return "..." + t.Type.AstString() }
 
 /* SemUnreachable */
 type SemUnreachable struct{}
-
-func (t SemUnreachable) Matches(other SemType) bool {
-	// Unreachable matches unreachable type only
-	return other.IsUnreachable()
-}
-
-func (t SemUnreachable) StrictMatches(other SemType) bool {
-	// Unreachable matches unreachable type only
-	return other.IsUnreachable()
-}
 
 func (t SemUnreachable) TypeKind() SemTypeKind { return SemUnreachableKind }
 
@@ -620,14 +450,6 @@ type SemError struct{}
 
 func NewErrorType(span common.Span) SemType {
 	return SemType{data: SemError{}, span: span}
-}
-
-func (t SemError) Matches(other SemType) bool {
-	return false
-}
-
-func (t SemError) StrictMatches(other SemType) bool {
-	return false
 }
 
 func (t SemError) TypeKind() SemTypeKind { return SemErrorKind }
@@ -650,14 +472,6 @@ func NewSemDynTrait(trait *SemTrait, span common.Span) SemType {
 
 func (t SemDynTrait) TypeKind() SemTypeKind { return SemDynTraitKind }
 
-func (t SemDynTrait) Matches(other SemType) bool {
-	return false
-}
-
-func (t SemDynTrait) StrictMatches(other SemType) bool {
-	return false
-}
-
 func (t SemDynTrait) String() string {
 	return "todo"
 }
@@ -678,19 +492,6 @@ func NewSemGenericType(ident lexer.TokIdent, bound bool) SemType {
 }
 
 func (t SemGenericType) TypeKind() SemTypeKind { return SemGenericKind }
-
-func (t SemGenericType) Matches(other SemType) bool {
-	if other.IsGeneric() {
-		return t.Ident.Raw == other.Generic().Ident.Raw
-	}
-	return false
-}
-
-func (t SemGenericType) StrictMatches(other SemType) bool {
-	// other is guaranteed to be a generic
-	otherG := other.Generic()
-	return t.Ident.Raw == otherG.Ident.Raw
-}
 
 func (gt SemGenericType) String() string    { return gt.Ident.Raw }
 func (gt SemGenericType) AstString() string { return gt.String() }

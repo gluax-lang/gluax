@@ -290,11 +290,7 @@ func (cg *Codegen) genPostfixExpr(p *ast.ExprPostfix) string {
 	case *ast.DotAccess:
 		return cg.genDotAccess(op, value, primaryTy)
 	case *ast.Call:
-		if op.Method == nil {
-			return cg.genCall(op, value, primaryTy)
-		} else {
-			return cg.genMethodCall(op, value, primaryTy)
-		}
+		return cg.genCall(op, value, primaryTy)
 	case *ast.Else:
 		temp := cg.getTempVar()
 		cg.ln("%s = %s;", temp, value)

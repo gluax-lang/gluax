@@ -44,7 +44,7 @@ func (p *parser) parseTypeX(flags Flags) ast.Type {
 		return ast.NewVararg(p.parseType(), SpanFrom(spanStart, p.prevSpan()))
 	}
 
-	if flags.Has(FlagTypeDynTrait) && p.Token.Is("dyn") {
+	if p.Token.Is("dyn") {
 		return p.parseDynTraitType()
 	}
 

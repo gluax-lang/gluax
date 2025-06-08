@@ -188,19 +188,19 @@ func (a *Analysis) optionType(t Type, span Span) Type {
 }
 
 func (a *Analysis) Matches(ty, other Type, span Span) {
-	if !ty.Matches(other) {
+	if !a.matchTypes(ty, other) {
 		a.Error(fmt.Sprintf("mismatched types, expected `%s`, got `%s`", ty.String(), other.String()), span)
 	}
 }
 
 func (a *Analysis) StrictMatches(ty, other Type, span Span) {
-	if !ty.StrictMatches(other) {
+	if !a.matchTypesStrict(ty, other) {
 		a.Error(fmt.Sprintf("mismatched types, expected `%s`, got `%s`", ty.String(), other.String()), span)
 	}
 }
 
 func (a *Analysis) MatchesPanic(ty, other Type, span Span) {
-	if !ty.Matches(other) {
+	if !a.matchTypes(ty, other) {
 		a.Panic(fmt.Sprintf("mismatched types, expected `%s`, got `%s`", ty.String(), other.String()), span)
 	}
 }

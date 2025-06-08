@@ -83,13 +83,15 @@ func (cg *Codegen) generateStruct(st *ast.SemStruct) {
 	}
 	cg.ln("%s = {", name)
 	cg.pushIndent()
-	for name, method := range cg.Analysis.State.GetStructMethods(st) {
+	cg.ln("%s = true,", STRUCT_MARKER_PREFIX)
+	for name, method := range cg.Analysis.GetStructMethods(st) {
 		// we need to handle it with body, to make sure body calls are generated correctly
 		method = cg.Analysis.HandleStructMethod(st, method, true)
 		cg.ln("%s = %s,", name, cg.genFunction(&method))
 	}
 	cg.popIndent()
-	cg.ln("}\n")
+	cg.ln("};")
+	cg.ln("%s.__index = %s;\n", name, name)
 }
 
 func (cg *Codegen) genStructInit(si *ast.ExprStructInit, st *ast.SemStruct) string {

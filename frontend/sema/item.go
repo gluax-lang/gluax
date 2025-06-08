@@ -62,7 +62,7 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 	}
 
 	for _, stDef := range astD.Structs {
-		st := a.State.GetStruct(stDef, nil)
+		st := a.GetStruct(stDef, nil)
 		stScope := st.Scope.(*Scope)
 		SelfSt := stScope.GetType("Self").Struct()
 		a.collectStructFields(SelfSt)
@@ -122,7 +122,7 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 		trait := traitDef.Sem
 		for name, method := range trait.Methods {
 			for _, superTrait := range trait.SuperTraits {
-				if _, exists := a.getTraitMethod(superTrait, name); exists {
+				if _, exists := a.GetTraitMethod(superTrait, name); exists {
 					a.Panic(fmt.Sprintf(
 						"cannot redefine method `%s`: already defined in supertrait `%s`",
 						name, superTrait.Def.Name.Raw,
@@ -182,7 +182,7 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 			stMethodCopy.Params = append([]Type{}, stMethod.Params[1:]...)
 
 			stMethodTy := ast.NewSemType(stMethodCopy, st.Def.Name.Span())
-			if !methodCopy.StrictMatches(stMethodTy) {
+			if !a.matchFunctionType(methodCopy, stMethodTy) {
 				a.Panic(fmt.Sprintf("method `%s` doesn't match trait `%s`: expected %s, got %s", name, trait.Def.Name.Raw, method.String(), stMethodTy.String()), implTrait.Span())
 			}
 		}
@@ -223,13 +223,13 @@ func (a *Analysis) handleUse(scope *Scope, it *ast.Use) {
 	}
 }
 
-func (a *Analysis) getTraitMethod(trait *ast.SemTrait, name string) (ast.SemFunction, bool) {
+func (a *Analysis) GetTraitMethod(trait *ast.SemTrait, name string) (ast.SemFunction, bool) {
 	method, exists := trait.Methods[name]
 	if exists {
 		return method, true
 	}
 	for _, super := range trait.SuperTraits {
-		if superMethod, exists := a.getTraitMethod(super, name); exists {
+		if superMethod, exists := a.GetTraitMethod(super, name); exists {
 			return superMethod, true
 		}
 	}
@@ -253,4 +253,16 @@ func causesTraitCycle(trait *ast.SemTrait, super *ast.SemTrait) bool {
 		return slices.ContainsFunc(t.SuperTraits, dfs)
 	}
 	return dfs(super)
+}
+
+func traitImplements(trait *ast.SemTrait, target *ast.SemTrait) bool {
+	if trait == target {
+		return true
+	}
+	for _, super := range trait.SuperTraits {
+		if traitImplements(super, target) {
+			return true
+		}
+	}
+	return false
 }

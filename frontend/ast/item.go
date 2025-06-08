@@ -52,19 +52,33 @@ type StructField struct {
 	Public bool
 }
 
+type StructInstance struct {
+	Args []SemType
+	Type *SemStruct
+}
+
+type StructsStack []StructInstance
+
 type Struct struct {
-	Public      bool
-	Name        lexer.TokIdent
-	Generics    Generics
-	Fields      []StructField
-	Attributes  Attributes
-	IsGlobalDef bool // true if this is a global definition
-	Scope       any
-	span        common.Span
+	Public         bool
+	Name           lexer.TokIdent
+	Generics       Generics
+	Fields         []StructField
+	Attributes     Attributes
+	IsGlobalDef    bool // true if this is a global definition
+	Scope          any
+	CreatedStructs StructsStack
+	span           common.Span
 }
 
 func NewStruct(name lexer.TokIdent, generics Generics, fields []StructField, span common.Span) *Struct {
-	return &Struct{Name: name, Generics: generics, Fields: fields, span: span}
+	return &Struct{
+		Name:           name,
+		Generics:       generics,
+		Fields:         fields,
+		CreatedStructs: make(StructsStack, 0, 4),
+		span:           span,
+	}
 }
 
 func (si *Struct) isItem() {}
@@ -73,6 +87,14 @@ func (si *Struct) SetPublic(b bool) { si.Public = b }
 
 func (si Struct) Span() common.Span {
 	return si.span
+}
+
+func (s *Struct) AddStruct(st *SemStruct, concrete []SemType) {
+	s.CreatedStructs = append(s.CreatedStructs, StructInstance{concrete, st})
+}
+
+func (s *Struct) GetStructStack() StructsStack {
+	return s.CreatedStructs
 }
 
 /* Impl Struct */

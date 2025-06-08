@@ -118,14 +118,6 @@ func NewSemImport(def Import, path string, analysis any) SemImport {
 	return SemImport{Def: def, Analysis: analysis, Path: path}
 }
 
-func (t SemImport) Matches(other SemType) bool {
-	return false
-}
-
-func (t SemImport) StrictMatches(other SemType) bool {
-	return false
-}
-
 func (t SemImport) String() string {
 	return t.Path
 }
@@ -153,14 +145,6 @@ func NewSemTrait(def *Trait) SemTrait {
 		Def:     def,
 		Methods: methodMap,
 	}
-}
-
-func (t SemTrait) Matches(other SemType) bool {
-	return false
-}
-
-func (t SemTrait) StrictMatches(other SemType) bool {
-	return false
 }
 
 func (t SemTrait) String() string {

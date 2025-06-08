@@ -13,7 +13,7 @@ func (p *parser) parseFunctionSignature(paramFlags Flags) ast.FunctionSignature 
 
 	errorable := p.tryConsume("!")
 
-	returnType := p.parseFunctionReturnType(FlagTypeTuple|FlagTypeVarArg|FlagFuncReturnUnreachable|FlagTypeDynTrait, SpanFrom(spanStart, p.prevSpan()))
+	returnType := p.parseFunctionReturnType(FlagTypeTuple|FlagTypeVarArg|FlagFuncReturnUnreachable, SpanFrom(spanStart, p.prevSpan()))
 
 	return ast.FunctionSignature{
 		Params:     params,
@@ -51,7 +51,7 @@ func (p *parser) parseFunctionParam(flags Flags, isFirst bool) ast.FunctionParam
 		p.expect(":")
 	}
 
-	ty := p.parseTypeX(FlagTypeDynTrait)
+	ty := p.parseType()
 	span := SpanFrom(spanStart, p.prevSpan())
 	return ast.NewFunctionParam(name, ty, span)
 }

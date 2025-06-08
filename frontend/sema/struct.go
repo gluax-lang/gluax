@@ -2,6 +2,7 @@ package sema
 
 import (
 	"fmt"
+	"maps"
 
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
@@ -32,8 +33,8 @@ func (a *Analysis) setupStruct(def *ast.Struct, concrete []Type) *SemStruct {
 	stScope := def.Scope.(*Scope).Child(false)
 	st := ast.NewSemStruct(def)
 	st.Scope = stScope
-	if a.State.GetStruct(def, concrete) == nil {
-		a.State.AddStruct(def, st, concrete)
+	if a.GetStruct(def, concrete) == nil {
+		def.AddStruct(st, concrete)
 	}
 	a.buildGenericsTable(stScope, st, concrete)
 	return st
@@ -53,6 +54,7 @@ func (a *Analysis) HandleStructMethod(st *ast.SemStruct, method ast.SemFunction,
 	} else {
 		funcTy = a.handleFunctionSignature(genericsScope, &method.Def)
 	}
+	funcTy.Generics = method.Generics
 	funcTy.Scope = method.Scope
 	funcTy.Struct = st
 	st.Methods[method.Def.Name.Raw] = funcTy
@@ -88,7 +90,7 @@ func (a *Analysis) collectStructFields(st *SemStruct) {
 }
 
 func (a *Analysis) instantiateStruct(def *ast.Struct, concrete []Type) *SemStruct {
-	if st := a.State.GetStruct(def, concrete); st != nil {
+	if st := a.GetStruct(def, concrete); st != nil {
 		return st
 	}
 
@@ -158,7 +160,7 @@ func findInStructStack[T any](
 	getItem func(inst StructInstance) (T, bool),
 	match func(item T) bool,
 ) (T, bool) {
-	stack := a.State.GetStructStack(st.Def)
+	stack := st.Def.GetStructStack()
 	for _, inst := range stack {
 		item, ok := getItem(inst)
 		if !ok {
@@ -170,7 +172,7 @@ func findInStructStack[T any](
 			if !ok {
 				continue
 			}
-			if !t.StrictMatches(ty) {
+			if !a.matchTypesStrict(t, ty) {
 				this = false
 				break
 			}
@@ -235,6 +237,56 @@ func (a *Analysis) structHasTrait(st *ast.SemStruct, trait *ast.SemTrait) bool {
 		return true
 	}
 	return false
+}
+
+func (a *Analysis) GetStruct(def *ast.Struct, concrete []Type) *SemStruct {
+	stack := def.GetStructStack()
+	for _, inst := range stack {
+		if len(inst.Args) != len(concrete) {
+			continue
+		}
+		same := true
+		for i, ty := range concrete {
+			o := inst.Args[i]
+			if !a.matchTypesStrict(ty, o) {
+				same = false
+				break
+			}
+		}
+		if same {
+			return inst.Type.Ref() // reuse cached *StructType
+		}
+	}
+	return nil
+}
+
+func (a *Analysis) GetStructMethods(st *ast.SemStruct) map[string]ast.SemFunction {
+	methods := make(map[string]ast.SemFunction, len(st.Methods))
+	maps.Copy(methods, st.Methods) // start with already cached methods
+
+	stack := st.Def.GetStructStack()
+	for _, inst := range stack {
+		this := true
+		for i, t := range st.Generics.Params {
+			ty, ok := getImplType(inst, i)
+			if !ok {
+				continue
+			}
+			if !a.matchTypesStrict(t, ty) {
+				this = false
+				break
+			}
+		}
+		if this {
+			for name, method := range inst.Type.Methods {
+				if _, exists := methods[name]; !exists {
+					methods[name] = method
+				}
+			}
+		}
+	}
+
+	return methods
 }
 
 func (a *Analysis) unify(
@@ -338,7 +390,7 @@ func (a *Analysis) unify(
 
 	// For everything else (e.g. base is a string/number/bool/nil literal struct),
 	// just see if they strictly match. If not, panic.
-	if !base.StrictMatches(actual) {
+	if !a.matchTypesStrict(base, actual) {
 		a.Panic(
 			fmt.Sprintf("mismatched types: expected `%s`, got `%s`",
 				base.String(), actual.String()),

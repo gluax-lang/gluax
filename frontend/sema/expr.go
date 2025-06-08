@@ -117,7 +117,7 @@ func (a *Analysis) handleBinaryExpr(scope *Scope, binE *ast.ExprBinary) Type {
 	case ast.BinaryOpEqual, ast.BinaryOpNotEqual:
 		// we need to compare from left and right
 		// Matches is built that if left side is not optional and right side is optional, it will not match, but works vice versa
-		if !lty.Matches(rty) && !rty.Matches(lty) {
+		if !a.matchTypes(lty, rty) && !a.matchTypes(rty, lty) {
 			a.Error(fmt.Sprintf("cannot `%s` with `%s`", lty.String(), rty.String()), binE.Span())
 		}
 		return a.boolType()
@@ -502,24 +502,34 @@ func (a *Analysis) handleDotAccess(expr *ast.DotAccess, toIndex *ast.Expr) Type 
 }
 
 func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Expr) Type {
+	var method ast.SemFunction
+	var exists bool
+	var toCallName string
+
 	toCallTy := toCall.Type()
-	if !toCallTy.IsStruct() {
-		a.Panic(fmt.Sprintf("cannot call method on non-struct type `%s`", toCallTy.String()), call.Span())
+	switch {
+	case toCallTy.IsStruct():
+		st := toCallTy.Struct()
+		toCallName = st.String()
+		method, exists = a.getStructMethod(st, call.Method.Raw)
+	case toCallTy.IsDynTrait():
+		dynTrait := toCallTy.DynTrait()
+		toCallName = dynTrait.String()
+		method, exists = a.GetTraitMethod(dynTrait.Trait, call.Method.Raw)
+	default:
+		a.Panic(fmt.Sprintf("cannot call method on non-struct/dyn-trait type `%s`", toCallTy.String()), call.Span())
 	}
 
-	st := toCallTy.Struct()
-
-	method, exists := a.getStructMethod(st, call.Method.Raw)
 	if !exists {
 		a.Panic(
-			fmt.Sprintf("no method named `%s` in `%s`", call.Method.Raw, st.String()),
+			fmt.Sprintf("no method named `%s` in `%s`", call.Method.Raw, toCallName),
 			call.Method.Span(),
 		)
 	}
 
 	if len(method.Params) < 1 || method.Def.Params[0].Name.Raw != "self" {
 		a.Panic(
-			fmt.Sprintf("no method named `%s` in `%s`", call.Method.Raw, st.String()),
+			fmt.Sprintf("no method named `%s` in `%s`", call.Method.Raw, toCallName),
 			call.Method.Span(),
 		)
 	}

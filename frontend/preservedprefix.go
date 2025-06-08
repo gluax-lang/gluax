@@ -1,3 +1,3 @@
 package frontend
 
-const PreservedPrefix = "__GLUAX"
+const PreservedPrefix = "__gluax_"
