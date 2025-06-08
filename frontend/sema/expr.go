@@ -585,6 +585,9 @@ func (a *Analysis) handleRunRaw(scope *Scope, runRaw *ast.ExprRunRaw) Type {
 		if argNum < 1 {
 			a.Panic("argument numbers must start from 1", runRaw.Span())
 		}
+		if usedArgs[argNum] {
+			a.Panic(fmt.Sprintf("argument {@%d@} is used more than once", argNum), runRaw.Span())
+		}
 		usedArgs[argNum] = true
 		if argNum > maxArgUsed {
 			maxArgUsed = argNum

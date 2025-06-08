@@ -11,12 +11,12 @@ impl<T> vec<T> {
 
     #[inline]
     func push(self, v: T) {
-        @raw("{@1@}[#{@1@}+1]={@2@}", self, v);
+        @raw("do local self = {@1@}; self[#self+1] = {@2@} end;", self, v);
     }
 
     #[inline]
     func pop(self) -> ?T {
-        @raw("do local len = #{@1@}; {@TEMP1@}, {@1@}[len] = {@1@}[len], nil; {@RETURN {@TEMP1@} @} end;", self) -> ?T
+        @raw("do local self = {@1@}; local len = #self; {@TEMP1@}, self[len] = self[len], nil; {@RETURN {@TEMP1@} @} end;", self) -> ?T
     }
 
     #[inline]
@@ -36,6 +36,6 @@ impl<T> vec<T> {
 
     #[inline]
     func reverse(self) {
-        @raw("local len = #{@1@}; for i = 1, math.floor(len / 2) do {@1@}[i], {@1@}[len - i + 1] = {@1@}[len - i + 1], {@1@}[i] end", self);
+        @raw("do local self = {@1@}; local len = #self; for i = 1, math.floor(len / 2) do self[i], self[len - i + 1] = self[len - i + 1], self[i] end end;", self);
     }
 }

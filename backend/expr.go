@@ -325,7 +325,7 @@ func (cg *Codegen) genTupleExpr(t *ast.ExprTuple) string {
 func (cg *Codegen) genRunRaw(run *ast.ExprRunRaw) string {
 	var tempVars []string
 	if len(run.Args) > 0 {
-		tempVars = cg.genExprsToTempVars(run.Args)
+		tempVars = cg.genExprsToStrings(run.Args)
 	}
 
 	code := run.Code.Raw

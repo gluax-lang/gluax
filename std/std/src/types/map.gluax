@@ -21,12 +21,12 @@ impl<K, V> map<K, V> {
 
     #[inline]
     func take(self, key: K) -> ?V {
-        @raw("do {@TEMP1@}, {@1@}[{@2@}] = {@1@}[{@2@}], nil; {@RETURN {@TEMP1@} @} end;", self, key) -> ?V
+        @raw("do local self, key = {@1@}, {@2@}; {@TEMP1@}, self[key] = self[key], nil; {@RETURN {@TEMP1@} @} end;", self, key) -> ?V
     }
 
     // Same as `set`, but returns the previous value if it exists
     #[inline]
     func insert(self, key: K, value: V) -> ?V {
-        @raw("do {@TEMP1@}, {@1@}[{@2@}] = {@1@}[{@2@}], {@3@}; {@RETURN {@TEMP1@} @} end;", self, key, value) -> ?V
+        @raw("do local self, key = {@1@}, {@2@}; {@TEMP1@}, self[key] = self[key], {@3@}; {@RETURN {@TEMP1@} @} end;", self, key, value) -> ?V
     }
 }
