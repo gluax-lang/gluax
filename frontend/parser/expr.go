@@ -82,6 +82,8 @@ func (p *parser) parsePrimaryExpr(ctx ExprCtx) ast.Expr {
 		return p.parseWhileExpr()
 	case "loop":
 		return p.parseLoopExpr()
+	case "for":
+		return p.parseForExpr()
 	case "{":
 		block := p.parseBlock()
 		blockExpr := ast.NewExpr(&block)
@@ -168,6 +170,62 @@ func (p *parser) parseLoopExpr() ast.Expr {
 	body := p.parseBlock()
 
 	return ast.NewLoopExpr(label, body, SpanFrom(spanStart, p.prevSpan()))
+}
+
+func (p *parser) parseForExpr() ast.Expr {
+	spanStart := p.span()
+
+	p.advance() // consume "for"
+
+	var label *ast.Ident
+	if p.tryConsume(":") {
+		ident := p.expectIdent()
+		label = &ident
+		p.expect(";")
+	}
+
+	variable := p.expectIdent()
+
+	if p.tryConsume("=") {
+		return p.parseForNumExpr(label, variable, spanStart)
+	} else if p.Token.Is("in") || p.Token.Is(",") {
+		return p.parseForInExpr(label, variable, spanStart)
+	} else {
+		common.PanicDiag("expected `=` or `in` after for variable", p.Token.Span())
+		panic("unreachable")
+	}
+}
+
+func (p *parser) parseForNumExpr(label *ast.Ident, variable lexer.TokIdent, spanStart Span) ast.Expr {
+	start := p.parseExpr(ExprCtxCondition)
+
+	p.expect(",")
+
+	end := p.parseExpr(ExprCtxCondition)
+
+	var step *ast.Expr
+	if p.tryConsume(",") {
+		stepExpr := p.parseExpr(ExprCtxCondition)
+		step = &stepExpr
+	}
+
+	body := p.parseBlock()
+	return ast.NewForNumExpr(label, variable, start, end, step, body, SpanFrom(spanStart, p.prevSpan()))
+}
+
+func (p *parser) parseForInExpr(label *ast.Ident, variable lexer.TokIdent, spanStart Span) ast.Expr {
+	vars := []lexer.TokIdent{variable}
+
+	for p.tryConsume(",") {
+		vars = append(vars, p.expectIdent())
+	}
+
+	p.expect("in")
+
+	inExpr := p.parseExpr(ExprCtxCondition)
+
+	body := p.parseBlock()
+	return ast.NewForInExpr(label, vars, inExpr, body, SpanFrom(spanStart, p.prevSpan()))
 }
 
 func (p *parser) parseParenthesizedExpr() ast.Expr {

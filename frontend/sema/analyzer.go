@@ -191,6 +191,13 @@ func (a *Analysis) optionType(t Type, span Span) Type {
 	return ast.NewSemType(newSt, span)
 }
 
+func (a *Analysis) tupleType(span Span, ty Type, other ...Type) Type {
+	return ast.NewSemType(
+		ast.SemTuple{Elems: append([]Type{ty}, other...)},
+		span,
+	)
+}
+
 func (a *Analysis) Matches(ty, other Type, span Span) {
 	if !a.matchTypes(ty, other) {
 		a.Error(fmt.Sprintf("mismatched types, expected `%s`, got `%s`", ty.String(), other.String()), span)

@@ -5,9 +5,7 @@ impl<T> vec<T> {
     }
 
     #[inline]
-    func len(self) -> number {
-        @raw("{@RETURN #{@1@} @}", self) -> number
-    }
+    func len(self) -> number { #self }
 
     #[inline]
     func push(self, v: T) {
@@ -20,22 +18,28 @@ impl<T> vec<T> {
     }
 
     #[inline]
-    func is_empty(self) -> bool {
-        @raw("{@RETURN #{@1@} == 0 @}", self) -> bool
+    func is_empty(self) -> bool { #self == 0 }
+
+    #[inline]
+    func remove(self, idx: number) -> ?T {
+        @raw("{@RETURN table.remove({@1@}, {@2@}) @}", self, idx) -> ?T
     }
 
     #[inline]
-    func remove(self, index: number) -> ?T {
-        @raw("{@RETURN table.remove({@1@}, {@2@}) @}", self, index) -> ?T
-    }
-
-    #[inline]
-    func get(self, index: number) -> ?T {
-        @raw("{@RETURN {@1@}[{@2@}] @}", self, index) -> ?T
+    func get(self, idx: number) -> ?T {
+        @raw("{@RETURN {@1@}[{@2@}] @}", self, idx) -> ?T
     }
 
     #[inline]
     func reverse(self) {
         @raw("do local self = {@1@}; local len = #self; for i = 1, math.floor(len / 2) do self[i], self[len - i + 1] = self[len - i + 1], self[i] end end;", self);
+    }
+
+    #[inline]
+    func __x_iter_range_bound(self) -> number { #self }
+
+    #[inline]
+    func __x_iter_range(self, idx: number) -> T {
+        @raw("{@RETURN {@1@}[{@2@}] @}", self, idx) -> T
     }
 }

@@ -25,6 +25,8 @@ const (
 	ExprKindIf
 	ExprKindWhile
 	ExprKindLoop
+	ExprKindForNum
+	ExprKindForIn
 	ExprKindParenthesized
 	ExprKindStructInit
 	ExprKindPathCall
@@ -53,6 +55,10 @@ func (k ExprKind) String() string {
 		return "while"
 	case ExprKindLoop:
 		return "loop"
+	case ExprKindForNum:
+		return "for num"
+	case ExprKindForIn:
+		return "for in"
 	case ExprKindBlock:
 		return "block"
 	case ExprKindParenthesized:
@@ -181,6 +187,20 @@ func (e *Expr) Loop() *ExprLoop {
 	return e.data.(*ExprLoop)
 }
 
+func (e *Expr) ForNum() *ExprForNum {
+	if e.Kind() != ExprKindForNum {
+		panic("not a for num")
+	}
+	return e.data.(*ExprForNum)
+}
+
+func (e *Expr) ForIn() *ExprForIn {
+	if e.Kind() != ExprKindForIn {
+		panic("not a for in")
+	}
+	return e.data.(*ExprForIn)
+}
+
 func (e *Expr) If() *ExprIf {
 	if e.Kind() != ExprKindIf {
 		panic("not an if")
@@ -239,7 +259,7 @@ func (e *Expr) String() lexer.TokString {
 
 func (e *Expr) IsBlock() bool {
 	switch e.Kind() {
-	case ExprKindBlock, ExprKindLoop, ExprKindWhile, ExprKindIf:
+	case ExprKindBlock, ExprKindLoop, ExprKindWhile, ExprKindIf, ExprKindForNum, ExprKindForIn:
 		return true
 	default:
 		return false
@@ -392,12 +412,47 @@ func (l *ExprLoop) Span() common.Span {
 	return l.span
 }
 
-func (l *ExprLoop) SetSem(bodySem SemType) {
-	l.bodySem = bodySem
+/* ForNum */
+
+type ExprForNum struct {
+	Label *Ident
+	Var   Ident
+	Start Expr
+	End   Expr
+	Step  *Expr
+	Body  Block
+	span  common.Span
 }
 
-func (l ExprLoop) SemBody() SemType {
-	return l.bodySem
+func NewForNumExpr(label *Ident, varIdent Ident, start, end Expr, step *Expr, body Block, span common.Span) Expr {
+	return NewExpr(&ExprForNum{Label: label, Var: varIdent, Start: start, End: end, Step: step, Body: body})
+}
+
+func (f *ExprForNum) ExprKind() ExprKind { return ExprKindForNum }
+
+func (f *ExprForNum) Span() common.Span {
+	return f.span
+}
+
+/* ForIn */
+
+type ExprForIn struct {
+	Label   *Ident
+	Vars    []Ident
+	InExpr  Expr
+	Body    Block
+	IsRange bool // true if the for loop is a range (e.g. for i in 1..10)
+	span    common.Span
+}
+
+func NewForInExpr(label *Ident, vars []Ident, inExpr Expr, body Block, span common.Span) Expr {
+	return NewExpr(&ExprForIn{Label: label, Vars: vars, InExpr: inExpr, Body: body, span: span})
+}
+
+func (f *ExprForIn) ExprKind() ExprKind { return ExprKindForIn }
+
+func (f *ExprForIn) Span() common.Span {
+	return f.span
 }
 
 /* Binary */

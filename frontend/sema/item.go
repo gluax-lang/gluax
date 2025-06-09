@@ -7,6 +7,114 @@ import (
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
+var toCheckFuncs = map[string]func(*Analysis, *ast.SemStruct, string){
+	"__x_iter_pairs": func(a *Analysis, st *ast.SemStruct, methodName string) {
+		fun, _ := a.getStructMethod(st, methodName)
+		if len(fun.Params) != 1 {
+			a.Error(fmt.Sprintf("method `%s` must have a single parameter", methodName), fun.Def.Name.Span())
+			return
+		}
+
+		if fun.Def.Params[0].Name.Raw != "self" {
+			a.Error("first parameter must be `self`", fun.Def.Params[0].Type.Span())
+			return
+		}
+
+		if fun.HasVarargReturn() {
+			a.Error(fmt.Sprintf("method `%s` cannot have vararg return", methodName), fun.Return.Span())
+			return
+		}
+
+		if fun.ReturnCount() > 3 {
+			a.Error(fmt.Sprintf("method `%s` cannot have more than 3 return values", methodName), fun.Return.Span())
+			return
+		}
+
+		firstReturn := fun.FirstReturnType()
+		if !firstReturn.IsFunction() {
+			a.Error("first return value must be a function type", firstReturn.Span())
+			return
+		}
+
+		iterFunc := firstReturn.Function()
+		if iterFunc.HasVarargReturn() {
+			a.Error(fmt.Sprintf("method `%s` iterator function cannot have vararg return", methodName), iterFunc.Return.Span())
+			return
+		}
+	},
+	"__x_iter_range": func(a *Analysis, st *ast.SemStruct, methodName string) {
+		fun, _ := a.getStructMethod(st, methodName)
+		if len(fun.Params) != 2 {
+			a.Error(fmt.Sprintf("method `%s` must have two parameters", methodName), fun.Def.Name.Span())
+			return
+		}
+
+		if _, exists := a.getStructMethod(st, "__x_iter_range_bound"); !exists {
+			a.Error(fmt.Sprintf("struct `%s` must implement method `__x_iter_range_bound` to use `%s`", st.Def.Name.Raw, methodName), fun.Def.Name.Span())
+			return
+		}
+
+		if fun.Def.Params[0].Name.Raw != "self" {
+			a.Error("first parameter must be `self`", fun.Def.Params[0].Type.Span())
+			return
+		}
+
+		if !fun.Params[1].IsNumber() {
+			a.Error("second parameter must be a number type", fun.Def.Params[1].Type.Span())
+			return
+		}
+
+		if fun.HasVarargReturn() {
+			a.Error(fmt.Sprintf("method `%s` cannot have vararg return", methodName), fun.Return.Span())
+			return
+		}
+
+		if fun.ReturnCount() != 1 {
+			a.Error(fmt.Sprintf("method `%s` must have exactly one return value", methodName), fun.Return.Span())
+			return
+		}
+	},
+	"__x_iter_range_bound": func(a *Analysis, st *ast.SemStruct, methodName string) {
+		fun, _ := a.getStructMethod(st, methodName)
+		if len(fun.Params) != 1 {
+			a.Error(fmt.Sprintf("method `%s` must have one parameter", methodName), fun.Def.Name.Span())
+			return
+		}
+
+		if _, exists := a.getStructMethod(st, "__x_iter_range"); !exists {
+			a.Error(fmt.Sprintf("struct `%s` must implement method `__x_iter_range` to use `%s`", st.Def.Name.Raw, methodName), fun.Def.Name.Span())
+			return
+		}
+
+		if fun.Def.Params[0].Name.Raw != "self" {
+			a.Error("first parameter must be `self`", fun.Def.Params[0].Type.Span())
+			return
+		}
+
+		if fun.HasVarargReturn() {
+			a.Error(fmt.Sprintf("method `%s` cannot have vararg return", methodName), fun.Return.Span())
+			return
+		}
+
+		if fun.ReturnCount() != 1 {
+			a.Error(fmt.Sprintf("method `%s` must have exactly one return value", methodName), fun.Return.Span())
+			return
+		}
+
+		firstReturn := fun.FirstReturnType()
+		if !firstReturn.IsNumber() {
+			a.Error("return value must be a number type", firstReturn.Span())
+			return
+		}
+	},
+}
+
+func (a *Analysis) checkStructMethods(st *ast.SemStruct, methodName string) {
+	if checkFunc, exists := toCheckFuncs[methodName]; exists {
+		checkFunc(a, st, methodName)
+	}
+}
+
 func (a *Analysis) handleItems(astD *ast.Ast) {
 	// TODO: handle recursion if a let statement calls a function that uses the let statement
 
@@ -75,6 +183,7 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 		a.AddValueVisibility(a.Scope, funcDef.Name.Raw, ast.NewValue(funcSem), funcDef.Name.Span(), funcDef.Public)
 	}
 
+	var implStructsChecks []func()
 	for _, impl := range astD.ImplStructs {
 		impl.Scope = a.Scope
 		genericsScope := a.setupTypeGenerics(a.Scope, impl.Generics, nil)
@@ -94,8 +203,15 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 			funcTy.Scope = a.Scope
 			funcTy.Generics = impl.Generics
 			a.addStructMethod(st, funcTy)
+			implStructsChecks = append(implStructsChecks, func() {
+				a.checkStructMethods(st, method.Name.Raw)
+			})
 		}
 		impl.GenericsScope = genericsScope
+	}
+
+	for _, runCheck := range implStructsChecks {
+		runCheck()
 	}
 
 	var traitsChecks []func()

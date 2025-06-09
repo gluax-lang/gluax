@@ -133,6 +133,10 @@ func (cg *Codegen) genExprX(e ast.Expr) string {
 		return cg.genWhileExpr(e.While())
 	case ast.ExprKindLoop:
 		return cg.genLoopExpr(e.Loop())
+	case ast.ExprKindForNum:
+		return cg.genForNumExpr(e.ForNum())
+	case ast.ExprKindForIn:
+		return cg.genForInExpr(e.ForIn())
 	case ast.ExprKindUnary:
 		return cg.genUnaryExpr(e.Unary())
 	case ast.ExprKindBinary:
@@ -453,5 +457,76 @@ func (cg *Codegen) genLoopExpr(l *ast.ExprLoop) string {
 	cg.ln("end")
 
 	// loop‐expressions don't produce a value, always return "nil"
+	return "nil"
+}
+
+func (cg *Codegen) genForNumExpr(e *ast.ExprForNum) string {
+	lopLbl := cg.tempLoop(e.Label)
+
+	cg.ln("do")
+	cg.pushIndent()
+
+	start := cg.genExpr(e.Start)
+	end := cg.genExpr(e.End)
+
+	var step string
+	if e.Step != nil {
+		step = cg.genExpr(*e.Step)
+	}
+
+	cg.ln("for %s = %s, %s%s do", e.Var.Raw, start, end, step)
+	cg.pushIndent()
+
+	cg.pushLoop(lopLbl)
+
+	cg.genBlockX(&e.Body, BlockDropValue)
+
+	cg.popLoop()
+	cg.ln("::%s::", lopLbl.cont)
+
+	cg.popIndent()
+	cg.ln("end")
+
+	cg.ln("::%s::", lopLbl.brk)
+
+	cg.popIndent()
+	cg.ln("end")
+
+	return "nil"
+}
+
+func (cg *Codegen) genForInExpr(e *ast.ExprForIn) string {
+	lopLbl := cg.tempLoop(e.Label)
+
+	isRange := e.IsRange
+
+	cg.ln("do")
+	cg.pushIndent()
+
+	call := ast.Call{}
+	if isRange {
+		rangeBound := cg.genCall()
+		cg.ln("for %s = 1, %s do", e.Vars[0].Raw, cg.genExpr(e.Iterable))
+		cg.pushIndent()
+	} else {
+		cg.ln("for %s in %s do", e.Var.Raw, iterExpr)
+		cg.pushIndent()
+	}
+
+	cg.pushLoop(lopLbl)
+
+	cg.genBlockX(&e.Body, BlockDropValue)
+
+	cg.popLoop()
+	cg.ln("::%s::", lopLbl.cont)
+
+	cg.popIndent()
+	cg.ln("end")
+
+	cg.ln("::%s::", lopLbl.brk)
+
+	cg.popIndent()
+	cg.ln("end")
+
 	return "nil"
 }

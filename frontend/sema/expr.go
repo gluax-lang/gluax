@@ -43,6 +43,12 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 	case ast.ExprKindLoop:
 		a.handleLoopExpr(scope, expr.Loop())
 		retTy = a.nilType()
+	case ast.ExprKindForNum:
+		a.handleForNumExpr(scope, expr.ForNum())
+		retTy = a.nilType()
+	case ast.ExprKindForIn:
+		a.handleForInExpr(scope, expr.ForIn())
+		retTy = a.nilType()
 	case ast.ExprKindPath:
 		valueTy := a.resolvePathValue(scope, expr.Path())
 		retTy = valueTy.Type()
@@ -329,6 +335,93 @@ func (a *Analysis) handleLoopExpr(scope *Scope, loopE *ast.ExprLoop) {
 
 	_ = a.handleBlock(child, &loopE.Body)
 	a.Matches(a.nilType(), loopE.Body.Type(), loopE.Body.Span())
+}
+
+func (a *Analysis) handleForNumExpr(scope *Scope, forE *ast.ExprForNum) {
+	a.handleExpr(scope, &forE.Start)
+	a.Matches(a.numberType(), forE.Start.Type(), forE.Start.Span())
+
+	a.handleExpr(scope, &forE.End)
+	a.Matches(a.numberType(), forE.End.Type(), forE.End.Span())
+
+	if forE.Step != nil {
+		a.handleExpr(scope, forE.Step)
+		a.Matches(a.numberType(), forE.Step.Type(), forE.Step.Span())
+	}
+
+	child := scope.Child(true)
+	child.InLoop = true
+
+	varName := forE.Var.Raw
+	idxVariable := ast.NewSingleVariable(varName, a.numberType())
+	a.AddValue(child, forE.Var.Raw, ast.NewValue(idxVariable), forE.Var.Span())
+
+	if forE.Label != nil {
+		a.AddLabel(child, forE.Label)
+	}
+
+	a.handleBlock(child, &forE.Body)
+	a.Matches(a.nilType(), forE.Body.Type(), forE.Body.Span())
+}
+
+func (a *Analysis) handleForInExpr(scope *Scope, forIn *ast.ExprForIn) {
+	inExpr := &forIn.InExpr
+	a.handleExpr(scope, inExpr)
+
+	inExprTy := inExpr.Type()
+	if !inExprTy.IsStruct() {
+		a.Panic(fmt.Sprintf("cannot iterate over non-struct type: %s", inExprTy.String()), inExpr.Span())
+	}
+
+	var iterReturn Type
+	var iterReturnCount int
+
+	st := inExprTy.Struct()
+	if method, ok := a.getStructMethod(st, "__x_iter_pairs"); ok {
+		firstReturn := method.FirstReturnType()
+		iterFunc := firstReturn.Function()
+		iterReturn = iterFunc.Return
+		iterReturnCount = iterFunc.ReturnCount()
+	} else if method, ok := a.getStructMethod(st, "__x_iter_range"); ok {
+		iterReturn = a.tupleType(inExpr.Span(), a.numberType(), method.FirstReturnType())
+		iterReturnCount = 2
+		forIn.IsRange = true
+	} else {
+		a.Panic("cannot iterate over struct without __x_iter_pairs method", inExpr.Span())
+	}
+
+	variableCount := len(forIn.Vars)
+	if variableCount > iterReturnCount {
+		a.Panic(fmt.Sprintf("for-in loop declares %d variables, but iterator returns %d value(s)", variableCount, iterReturnCount), forIn.Span())
+	}
+
+	varsTypes := make([]Type, variableCount)
+	if iterReturn.IsTuple() {
+		tuple := iterReturn.Tuple()
+		for i := range variableCount {
+			varsTypes[i] = tuple.Elems[i]
+		}
+	} else {
+		varsTypes[0] = iterReturn
+	}
+
+	child := scope.Child(true)
+	child.InLoop = true
+
+	for i, v := range forIn.Vars {
+		varName := v.Raw
+		varType := varsTypes[i]
+		idxVariable := ast.NewSingleVariable(varName, varType)
+		a.AddValue(child, varName, ast.NewValue(idxVariable), v.Span())
+		a.InlayHintType(varType.String(), v.Span())
+	}
+
+	if forIn.Label != nil {
+		a.AddLabel(child, forIn.Label)
+	}
+
+	a.handleBlock(child, &forIn.Body)
+	a.Matches(a.nilType(), forIn.Body.Type(), forIn.Body.Span())
 }
 
 func (a *Analysis) handlePostfixExpr(scope *Scope, e *ast.ExprPostfix) Type {

@@ -399,6 +399,19 @@ func (f SemFunction) AstString() string {
 	return f.String()
 }
 
+func (f SemFunction) FirstReturnType() SemType {
+	if f.HasVarargReturn() {
+		panic("can't get first return type when vararg return is present")
+	}
+	if f.Return.IsTuple() {
+		if len(f.Return.Tuple().Elems) == 0 {
+			panic("tuple return has no elements")
+		}
+		return f.Return.Tuple().Elems[0]
+	}
+	return f.Return
+}
+
 /* Tuple */
 
 type SemTuple struct{ Elems []SemType }

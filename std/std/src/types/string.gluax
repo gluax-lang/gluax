@@ -23,13 +23,13 @@ impl string {
         str::sub(self, s_pos, e_pos)
     }
 
+    #[inline]
     func byte(self, s_pos: number) -> ?number {
         debug::assert(s_pos > 0, "string.byte: position must be greater than 0, got %s", s_pos);
         debug::assert(s_pos <= #self, "string.byte: position out of bounds, got %s, string length is %s", s_pos, #self);
         str::byte(self, s_pos)
     }
 
-    // can't be inlined yet, because of the variadic return type and uses `return` statement
     func bytes(self, s_pos: number, e_pos: number) -> ...number {
         debug::assert(s_pos > 0, "string.bytes: start position must be greater than 0, got %s", s_pos);
         debug::assert(s_pos <= #self, "string.bytes: start position out of bounds, got %s, string length is %s", s_pos, #self);
@@ -58,4 +58,12 @@ impl string {
 
     #[inline]
     func lower(self) -> string { str::lower(self) }
+
+    #[inline]
+    func __x_iter_range_bound(self) -> number { #self }
+
+    #[inline]
+    func __x_iter_range(self, idx: number) -> string {
+        str::sub(self, idx, idx)
+    }
 }

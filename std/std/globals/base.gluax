@@ -25,3 +25,5 @@ pub func getfenv(v: any) -> map<any, any> {}
 pub func pcall(f: anyfunc, ...any) -> (bool, ...any) {}
 
 pub func tostring(v: any) -> string {}
+
+pub func next(t: table, prev_k: any) -> (any, any) {}
