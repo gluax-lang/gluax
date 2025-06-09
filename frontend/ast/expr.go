@@ -358,12 +358,10 @@ func (i *ExprIf) Span() common.Span {
 /* While */
 
 type ExprWhile struct {
-	Label   *Ident
-	Cond    Expr
-	condSem SemType
-	Body    Block
-	bodySem SemType
-	span    common.Span
+	Label *Ident
+	Cond  Expr
+	Body  Block
+	span  common.Span
 }
 
 func NewWhileExpr(label *Ident, cond Expr, body Block, span common.Span) Expr {
@@ -374,19 +372,6 @@ func (w *ExprWhile) ExprKind() ExprKind { return ExprKindWhile }
 
 func (w *ExprWhile) Span() common.Span {
 	return w.span
-}
-
-func (w *ExprWhile) SetSem(condSem, bodySem SemType) {
-	w.condSem = condSem
-	w.bodySem = bodySem
-}
-
-func (w ExprWhile) SemCond() SemType {
-	return w.condSem
-}
-
-func (w ExprWhile) SemBody() SemType {
-	return w.bodySem
 }
 
 /* Loop */
