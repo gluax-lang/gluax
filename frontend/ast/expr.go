@@ -377,10 +377,9 @@ func (w *ExprWhile) Span() common.Span {
 /* Loop */
 
 type ExprLoop struct {
-	Label   *Ident
-	Body    Block
-	bodySem SemType
-	span    common.Span
+	Label *Ident
+	Body  Block
+	span  common.Span
 }
 
 func NewLoopExpr(label *Ident, body Block, span common.Span) Expr {
@@ -404,12 +403,10 @@ func (l ExprLoop) SemBody() SemType {
 /* Binary */
 
 type ExprBinary struct {
-	Op       BinaryOp
-	Left     Expr
-	leftSem  SemType
-	Right    Expr
-	rightSem SemType
-	span     common.Span
+	Op    BinaryOp
+	Left  Expr
+	Right Expr
+	span  common.Span
 }
 
 func (b ExprBinary) IsShortCircuit() bool {
@@ -429,19 +426,6 @@ func (b *ExprBinary) ExprKind() ExprKind { return ExprKindBinary }
 
 func (b *ExprBinary) Span() common.Span {
 	return b.span
-}
-
-func (b *ExprBinary) SetSem(leftSem, rightSem SemType) {
-	b.leftSem = leftSem
-	b.rightSem = rightSem
-}
-
-func (b ExprBinary) SemLeft() SemType {
-	return b.leftSem
-}
-
-func (b ExprBinary) SemRight() SemType {
-	return b.rightSem
 }
 
 /* Unary */
