@@ -107,7 +107,7 @@ func (p *parser) expectString() lexer.TokString {
 		p.advance()
 		return s
 	}
-	common.PanicDiag("expected string", p.span())
+	common.PanicDiag("expected string literal", p.span())
 	panic("unreachable") // love go
 }
 
@@ -116,7 +116,7 @@ func (p *parser) expectNumber() lexer.TokNumber {
 		p.advance()
 		return n
 	}
-	common.PanicDiag("expected number", p.span())
+	common.PanicDiag("expected number literal", p.span())
 	panic("unreachable") // love go
 }
 
