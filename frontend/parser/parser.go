@@ -49,25 +49,46 @@ func Parse(tkS []lexer.Token, processingGlobals bool) (astRet *ast.Ast, err *dia
 		TokenStream: p.TokenStream,
 	}
 
+	const (
+		sectionImports = iota
+		sectionUses
+		sectionOther
+	)
+	section := sectionImports
+
 	for !lexer.IsEOF(p.Token) {
 		item := p.parseItem()
 		switch item := item.(type) {
 		case *ast.Import:
+			if section != sectionImports {
+				common.PanicDiag("import statements must appear before any other items", item.Span())
+			}
 			astRet.Imports = append(astRet.Imports, item)
 		case *ast.Use:
+			if section == sectionOther {
+				common.PanicDiag(
+					`"use" statements must appear before any item (only comments and imports may precede them).`,
+					item.Span(),
+				)
+			}
+			section = sectionUses
 			astRet.Uses = append(astRet.Uses, item)
-		case *ast.Function:
-			astRet.Funcs = append(astRet.Funcs, item)
-		case *ast.ImplStruct:
-			astRet.ImplStructs = append(astRet.ImplStructs, item)
-		case *ast.ImplTraitForStruct:
-			astRet.ImplTraits = append(astRet.ImplTraits, item)
-		case *ast.Let:
-			astRet.Lets = append(astRet.Lets, item)
-		case *ast.Struct:
-			astRet.Structs = append(astRet.Structs, item)
-		case *ast.Trait:
-			astRet.Traits = append(astRet.Traits, item)
+		default:
+			section = sectionOther
+			switch item := item.(type) {
+			case *ast.Function:
+				astRet.Funcs = append(astRet.Funcs, item)
+			case *ast.ImplStruct:
+				astRet.ImplStructs = append(astRet.ImplStructs, item)
+			case *ast.ImplTraitForStruct:
+				astRet.ImplTraits = append(astRet.ImplTraits, item)
+			case *ast.Let:
+				astRet.Lets = append(astRet.Lets, item)
+			case *ast.Struct:
+				astRet.Structs = append(astRet.Structs, item)
+			case *ast.Trait:
+				astRet.Traits = append(astRet.Traits, item)
+			}
 		}
 	}
 
