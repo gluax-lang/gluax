@@ -1,3 +1,5 @@
+import "../debug";
+
 use globals::str;
 
 impl string {
@@ -21,9 +23,19 @@ impl string {
         str::sub(self, s_pos, e_pos)
     }
 
+    func byte(self, s_pos: number) -> ?number {
+        debug::assert(s_pos > 0, "string.byte: position must be greater than 0, got %s", s_pos);
+        debug::assert(s_pos <= #self, "string.byte: position out of bounds, got %s, string length is %s", s_pos, #self);
+        str::byte(self, s_pos)
+    }
+
     // can't be inlined yet, because of the variadic return type and uses `return` statement
-    func byte(self, s_pos: number, e_pos: number) -> ...string {
-        return str::byte(self, s_pos, e_pos);
+    func bytes(self, s_pos: number, e_pos: number) -> ...number {
+        debug::assert(s_pos > 0, "string.bytes: start position must be greater than 0, got %s", s_pos);
+        debug::assert(s_pos <= #self, "string.bytes: start position out of bounds, got %s, string length is %s", s_pos, #self);
+        debug::assert(e_pos >= s_pos, "string.bytes: end position must be greater than or equal to start position, got %s and %s", e_pos, s_pos);
+        debug::assert(e_pos <= #self, "string.bytes: end position out of bounds, got %s, string length is %s", e_pos, #self);
+        return str::bytes(self, s_pos, e_pos);
     }
 
     #[inline]

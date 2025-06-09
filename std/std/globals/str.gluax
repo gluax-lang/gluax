@@ -1,11 +1,14 @@
 #[rename_to = "string.sub"]
-pub func sub(s: string, s_pos: number, e_pos: ?number) -> string {}
+pub func sub(s: string, s_p: number, e_p: ?number) -> string {}
 
 #[rename_to = "string.char"]
 pub func char(...number) -> string {}
 
 #[rename_to = "string.byte"]
-pub func byte(s: string, s_pos: number, e_pos: number) -> ...string {}
+pub func byte(s: string, p: number) -> ?number {}
+
+#[rename_to = "string.byte"]
+pub func bytes(s: string, s_p: number, e_p: number) -> ...number {}
 
 #[rename_to = "string.format"]
 pub func format(fmt: string, ...any) -> string {}

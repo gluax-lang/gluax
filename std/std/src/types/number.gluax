@@ -1,9 +1,16 @@
 import "../math";
+import "../debug";
 
 impl number {
     #[inline]
     func to_string(self) -> string {
         globals::base::tostring(self)
+    }
+
+    #[inline]
+    func to_char(self) -> string {
+        debug::assert(self >= 0 && self <= 255, "number.to_char: value must be in range [0, 255], got %s", self);
+        globals::str::char(self)
     }
 
     #[inline]

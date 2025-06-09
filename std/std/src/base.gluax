@@ -1,4 +1,5 @@
 use globals::base;
+use globals::str;
 
 pub use base::_VERSION;
 
@@ -15,9 +16,9 @@ pub func getfenv_l(level: number) ! -> map<any, any> {
 }
 
 pub func printf(fmt: string, ...any) {
-    base::print(fmt.format(...));
+    base::print(str::format(fmt, ...));
 }
 
 pub func errorf(msg: string, ...any) -> unreachable {
-    base::error(msg.format(...))
+    base::error(str::format(msg, ...))
 }
