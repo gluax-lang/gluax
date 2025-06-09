@@ -441,7 +441,8 @@ type ExprForIn struct {
 	Vars    []Ident
 	InExpr  Expr
 	Body    Block
-	IsRange bool // true if the for loop is a range (e.g. for i in 1..10)
+	IsRange bool  // true if the for loop is a range (e.g. for i in 1..10)
+	IdxPath *Path // the path to the index variable, if any
 	span    common.Span
 }
 

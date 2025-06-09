@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gluax-lang/gluax/frontend/ast"
+	"github.com/gluax-lang/gluax/frontend/lexer"
 )
 
 func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
@@ -377,12 +378,12 @@ func (a *Analysis) handleForInExpr(scope *Scope, forIn *ast.ExprForIn) {
 	var iterReturnCount int
 
 	st := inExprTy.Struct()
-	if method, ok := a.getStructMethod(st, "__x_iter_pairs"); ok {
+	if method, ok := a.GetStructMethod(st, "__x_iter_pairs"); ok {
 		firstReturn := method.FirstReturnType()
 		iterFunc := firstReturn.Function()
 		iterReturn = iterFunc.Return
 		iterReturnCount = iterFunc.ReturnCount()
-	} else if method, ok := a.getStructMethod(st, "__x_iter_range"); ok {
+	} else if method, ok := a.GetStructMethod(st, "__x_iter_range"); ok {
 		iterReturn = a.tupleType(inExpr.Span(), a.numberType(), method.FirstReturnType())
 		iterReturnCount = 2
 		forIn.IsRange = true
@@ -413,6 +414,11 @@ func (a *Analysis) handleForInExpr(scope *Scope, forIn *ast.ExprForIn) {
 		varType := varsTypes[i]
 		idxVariable := ast.NewSingleVariable(varName, varType)
 		a.AddValue(child, varName, ast.NewValue(idxVariable), v.Span())
+		if i == 0 && forIn.IsRange {
+			idxPath := ast.NewPath([]ast.Ident{lexer.NewTokIdent(varName, v.Span())})
+			idxPath.ResolvedSymbol = child.GetSymbol(varName)
+			forIn.IdxPath = &idxPath
+		}
 		a.InlayHintType(varType.String(), v.Span())
 	}
 
@@ -604,7 +610,7 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 	case toCallTy.IsStruct():
 		st := toCallTy.Struct()
 		toCallName = st.String()
-		method, exists = a.getStructMethod(st, call.Method.Raw)
+		method, exists = a.GetStructMethod(st, call.Method.Raw)
 	case toCallTy.IsDynTrait():
 		dynTrait := toCallTy.DynTrait()
 		toCallName = dynTrait.String()

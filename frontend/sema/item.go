@@ -9,7 +9,7 @@ import (
 
 var toCheckFuncs = map[string]func(*Analysis, *ast.SemStruct, string){
 	"__x_iter_pairs": func(a *Analysis, st *ast.SemStruct, methodName string) {
-		fun, _ := a.getStructMethod(st, methodName)
+		fun, _ := a.GetStructMethod(st, methodName)
 		if len(fun.Params) != 1 {
 			a.Error(fmt.Sprintf("method `%s` must have a single parameter", methodName), fun.Def.Name.Span())
 			return
@@ -43,13 +43,13 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemStruct, string){
 		}
 	},
 	"__x_iter_range": func(a *Analysis, st *ast.SemStruct, methodName string) {
-		fun, _ := a.getStructMethod(st, methodName)
+		fun, _ := a.GetStructMethod(st, methodName)
 		if len(fun.Params) != 2 {
 			a.Error(fmt.Sprintf("method `%s` must have two parameters", methodName), fun.Def.Name.Span())
 			return
 		}
 
-		if _, exists := a.getStructMethod(st, "__x_iter_range_bound"); !exists {
+		if _, exists := a.GetStructMethod(st, "__x_iter_range_bound"); !exists {
 			a.Error(fmt.Sprintf("struct `%s` must implement method `__x_iter_range_bound` to use `%s`", st.Def.Name.Raw, methodName), fun.Def.Name.Span())
 			return
 		}
@@ -75,13 +75,13 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemStruct, string){
 		}
 	},
 	"__x_iter_range_bound": func(a *Analysis, st *ast.SemStruct, methodName string) {
-		fun, _ := a.getStructMethod(st, methodName)
+		fun, _ := a.GetStructMethod(st, methodName)
 		if len(fun.Params) != 1 {
 			a.Error(fmt.Sprintf("method `%s` must have one parameter", methodName), fun.Def.Name.Span())
 			return
 		}
 
-		if _, exists := a.getStructMethod(st, "__x_iter_range"); !exists {
+		if _, exists := a.GetStructMethod(st, "__x_iter_range"); !exists {
 			a.Error(fmt.Sprintf("struct `%s` must implement method `__x_iter_range` to use `%s`", st.Def.Name.Raw, methodName), fun.Def.Name.Span())
 			return
 		}
@@ -277,7 +277,7 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 		})
 
 		for name, method := range trait.Methods {
-			stMethod, exists := a.getStructMethod(st, name)
+			stMethod, exists := a.GetStructMethod(st, name)
 			if !exists {
 				if method.Def.Body != nil {
 					a.addStructMethod(st, method)

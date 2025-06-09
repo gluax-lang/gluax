@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gluax-lang/gluax/frontend/ast"
+	"github.com/gluax-lang/gluax/frontend/lexer"
 )
 
 func (cg *Codegen) tempLoop(name *ast.Ident) loopLabel {
@@ -479,7 +480,7 @@ func (cg *Codegen) genForNumExpr(e *ast.ExprForNum) string {
 
 	cg.pushLoop(lopLbl)
 
-	cg.genBlockX(&e.Body, BlockDropValue)
+	cg.genBlockX(&e.Body, BlockWrap|BlockDropValue)
 
 	cg.popLoop()
 	cg.ln("::%s::", lopLbl.cont)
@@ -503,19 +504,34 @@ func (cg *Codegen) genForInExpr(e *ast.ExprForIn) string {
 	cg.ln("do")
 	cg.pushIndent()
 
-	call := ast.Call{}
+	names := make([]string, len(e.Vars))
+	for i, v := range e.Vars {
+		names[i] = v.Raw
+	}
+
 	if isRange {
-		rangeBound := cg.genCall()
-		cg.ln("for %s = 1, %s do", e.Vars[0].Raw, cg.genExpr(e.Iterable))
+		boundMethod := lexer.NewTokIdent("__x_iter_range_bound", e.InExpr.Span())
+		toCall := cg.getTempVar()
+		cg.ln("%s = %s;", toCall, cg.genExpr(e.InExpr))
+		boundCall := ast.Call{Method: &boundMethod}
+		cg.ln("for %s = 1, %s do", names[0], cg.genCall(&boundCall, toCall, e.InExpr.Type()))
 		cg.pushIndent()
+		if len(names) > 1 {
+			rangeMethod := lexer.NewTokIdent("__x_iter_range", e.InExpr.Span())
+			rangeCall := ast.Call{Method: &rangeMethod, Args: []ast.Expr{ast.NewExpr(e.IdxPath)}}
+			cg.ln("local %s = %s;", names[1], cg.genCall(&rangeCall, toCall, e.InExpr.Type()))
+		}
 	} else {
-		cg.ln("for %s in %s do", e.Var.Raw, iterExpr)
+		method := lexer.NewTokIdent("__x_iter_pairs", e.InExpr.Span())
+		toCall := cg.genExpr(e.InExpr)
+		call := ast.Call{Method: &method}
+		cg.ln("for %s in %s do", strings.Join(names, ", "), cg.genCall(&call, toCall, e.InExpr.Type()))
 		cg.pushIndent()
 	}
 
 	cg.pushLoop(lopLbl)
 
-	cg.genBlockX(&e.Body, BlockDropValue)
+	cg.genBlockX(&e.Body, BlockWrap|BlockDropValue)
 
 	cg.popLoop()
 	cg.ln("::%s::", lopLbl.cont)
