@@ -16,7 +16,7 @@ impl<T> vec<T> {
 
     #[inline]
     func pop(self) -> ?T {
-        @raw("do local self = {@1@}; local len = #self; {@TEMP1@}, self[len] = self[len], nil; {@RETURN {@TEMP1@} @} end;", self) -> ?T
+        @raw("do local self = {@1@}; local len = #self; if len == 0 then {@TEMP1@} = nil else {@TEMP1@}, self[len] = self[len], nil; end {@RETURN {@TEMP1@} @} end;", self) -> ?T
     }
 
     #[inline]
