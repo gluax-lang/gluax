@@ -208,10 +208,6 @@ func findInStructStack[T any](
 
 func (a *Analysis) addStructMethod(st *ast.SemStruct, method ast.SemFunction) {
 	methodName := method.Def.Name.Raw
-	if _, exists := a.GetStructMethod(st, methodName); exists {
-		a.Error(fmt.Sprintf("method '%s' already exists for these concrete types", methodName), method.Def.Name.Span())
-		return
-	}
 	method.Struct = st
 	st.Methods[methodName] = method
 }
@@ -230,14 +226,6 @@ func (a *Analysis) GetStructMethod(st *ast.SemStruct, methodName string) (ast.Se
 		return method, true
 	}
 	return ast.SemFunction{}, false
-}
-
-func (a *Analysis) addStructTrait(st *ast.SemStruct, trait *ast.SemTrait, span Span) {
-	if a.structHasTrait(st, trait) {
-		a.Error(fmt.Sprintf("trait `%s` already exists for this struct", trait.Def.Name.Raw), span)
-		return
-	}
-	st.Traits[trait] = struct{}{}
 }
 
 func (a *Analysis) structHasTrait(st *ast.SemStruct, trait *ast.SemTrait) bool {

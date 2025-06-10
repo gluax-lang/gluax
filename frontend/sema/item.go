@@ -202,9 +202,21 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 			funcTy := a.handleFunctionSignature(genericsScope, &method)
 			funcTy.Scope = a.Scope
 			funcTy.Generics = impl.Generics
+			methodName := method.Name.Raw
+			if _, exists := a.GetStructMethod(st, methodName); exists {
+				a.Panic(fmt.Sprintf("method '%s' already exists for these concrete types", methodName), funcTy.Def.Name.Span())
+			}
 			a.addStructMethod(st, funcTy)
 			implStructsChecks = append(implStructsChecks, func() {
-				a.checkStructMethods(st, method.Name.Raw)
+				// this hack needs to be done to check if a method was implemented or not
+				// without caring for order of implementation
+				delete(st.Methods, methodName)
+				if _, exists := a.GetStructMethod(st, methodName); exists {
+					a.Panic(fmt.Sprintf("method '%s' already exists for these concrete types", methodName), funcTy.Def.Name.Span())
+				}
+				st.Methods[methodName] = funcTy
+				// this hack is also needed, so something like `__x_iter_range` can check if `__x_iter_range_bound` exists or not
+				a.checkStructMethods(st, methodName)
 			})
 		}
 		impl.GenericsScope = genericsScope
@@ -303,7 +315,18 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 			}
 		}
 
-		a.addStructTrait(st, trait, implTrait.Span())
+		if a.structHasTrait(st, trait) {
+			a.Panic(fmt.Sprintf("trait `%s` already exists for this struct", trait.Def.Name.Raw), implTrait.Span())
+		}
+
+		st.Traits[trait] = struct{}{}
+		checks = append(checks, func() {
+			delete(st.Traits, trait)
+			if a.structHasTrait(st, trait) {
+				a.Panic(fmt.Sprintf("trait `%s` already exists for this struct", trait.Def.Name.Raw), implTrait.Span())
+			}
+			st.Traits[trait] = struct{}{}
+		})
 	}
 
 	for _, check := range checks {
