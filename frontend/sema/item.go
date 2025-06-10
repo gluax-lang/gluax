@@ -282,7 +282,7 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 
 		checks = append(checks, func() {
 			for _, superTrait := range trait.SuperTraits {
-				if !a.structHasTrait(st, superTrait) {
+				if !a.StructHasTrait(st, superTrait) {
 					a.Panic(fmt.Sprintf("struct `%s` must implement supertrait `%s`", st.Def.Name.Raw, superTrait.Def.Name.Raw), implTrait.Span())
 				}
 			}
@@ -315,14 +315,14 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 			}
 		}
 
-		if a.structHasTrait(st, trait) {
+		if a.StructHasTrait(st, trait) {
 			a.Panic(fmt.Sprintf("trait `%s` already exists for this struct", trait.Def.Name.Raw), implTrait.Span())
 		}
 
 		st.Traits[trait] = struct{}{}
 		checks = append(checks, func() {
 			delete(st.Traits, trait)
-			if a.structHasTrait(st, trait) {
+			if a.StructHasTrait(st, trait) {
 				a.Panic(fmt.Sprintf("trait `%s` already exists for this struct", trait.Def.Name.Raw), implTrait.Span())
 			}
 			st.Traits[trait] = struct{}{}

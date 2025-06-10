@@ -44,7 +44,7 @@ func (a *Analysis) matchTypes(t Type, other Type) bool {
 	}
 }
 
-func (a *Analysis) matchTypesStrict(t Type, other Type) bool {
+func (a *Analysis) MatchTypesStrict(t Type, other Type) bool {
 	if t.Kind() != other.Kind() {
 		return false
 	}
@@ -94,9 +94,9 @@ func (a *Analysis) matchStructType(s *SemStruct, other Type) bool {
 		}
 		if other.IsOption() {
 			otherInner := oS.InnerType()
-			return a.matchTypesStrict(inner, otherInner)
+			return a.MatchTypesStrict(inner, otherInner)
 		}
-		return a.matchTypesStrict(inner, other)
+		return a.MatchTypesStrict(inner, other)
 	}
 
 	if ast.IsBuiltinType(s.Def.Name.Raw) && ast.IsBuiltinType(oS.Def.Name.Raw) {
@@ -113,7 +113,7 @@ func (a *Analysis) matchStructType(s *SemStruct, other Type) bool {
 
 	for i, sg := range s.Generics.Params {
 		og := oS.Generics.Params[i]
-		if !sg.IsAny() && !a.matchTypesStrict(sg, og) {
+		if !sg.IsAny() && !a.MatchTypesStrict(sg, og) {
 			return false
 		}
 	}
@@ -138,7 +138,7 @@ func (a *Analysis) matchStructTypeStrict(s *SemStruct, other Type) bool {
 
 	for i, sg := range s.Generics.Params {
 		og := oS.Generics.Params[i]
-		if !a.matchTypesStrict(sg, og) {
+		if !a.MatchTypesStrict(sg, og) {
 			return false
 		}
 	}
@@ -156,11 +156,11 @@ func (a *Analysis) matchFunctionType(f SemFunction, other Type) bool {
 		return false
 	}
 	for i, p := range f.Params {
-		if !a.matchTypesStrict(p, other.Function().Params[i]) {
+		if !a.MatchTypesStrict(p, other.Function().Params[i]) {
 			return false
 		}
 	}
-	return a.matchTypesStrict(f.Return, other.Function().Return)
+	return a.MatchTypesStrict(f.Return, other.Function().Return)
 }
 
 /* Tuple */
@@ -188,7 +188,7 @@ func (a *Analysis) matchTupleTypeStrict(t SemTuple, other Type) bool {
 		return false
 	}
 	for i, elem := range t.Elems {
-		if !a.matchTypesStrict(elem, other.Tuple().Elems[i]) {
+		if !a.MatchTypesStrict(elem, other.Tuple().Elems[i]) {
 			return false
 		}
 	}
@@ -208,7 +208,7 @@ func (a *Analysis) matchVarargTypeStrict(v SemVararg, other Type) bool {
 	if !other.IsVararg() {
 		return false
 	}
-	return a.matchTypesStrict(v.Type, other.Vararg().Type)
+	return a.MatchTypesStrict(v.Type, other.Vararg().Type)
 }
 
 /* DynTrait */
@@ -217,7 +217,7 @@ func (a *Analysis) matchDynTraitType(dt SemDynTrait, other Type) bool {
 	trait := dt.Trait
 	if other.IsStruct() {
 		st := other.Struct()
-		return a.structHasTrait(st, trait)
+		return a.StructHasTrait(st, trait)
 	}
 	if other.IsDynTrait() {
 		otherTrait := other.DynTrait().Trait

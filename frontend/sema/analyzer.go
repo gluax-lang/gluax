@@ -205,7 +205,7 @@ func (a *Analysis) Matches(ty, other Type, span Span) {
 }
 
 func (a *Analysis) StrictMatches(ty, other Type, span Span) {
-	if !a.matchTypesStrict(ty, other) {
+	if !a.MatchTypesStrict(ty, other) {
 		a.Error(fmt.Sprintf("mismatched types, expected `%s`, got `%s`", ty.String(), other.String()), span)
 	}
 }

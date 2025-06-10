@@ -163,7 +163,7 @@ func implMatchesStruct(a *Analysis, inst StructInstance, st *ast.SemStruct) bool
 					// Both are generic - they can potentially match
 					continue
 				}
-				if !a.matchTypesStrict(existingBinding, targetType) {
+				if !a.MatchTypesStrict(existingBinding, targetType) {
 					return false
 				}
 			} else {
@@ -177,7 +177,7 @@ func implMatchesStruct(a *Analysis, inst StructInstance, st *ast.SemStruct) bool
 				return false
 			}
 			// both concrete - must match exactly
-			if !a.matchTypesStrict(implType, targetType) {
+			if !a.MatchTypesStrict(implType, targetType) {
 				return false
 			}
 		}
@@ -228,7 +228,7 @@ func (a *Analysis) GetStructMethod(st *ast.SemStruct, methodName string) (ast.Se
 	return ast.SemFunction{}, false
 }
 
-func (a *Analysis) structHasTrait(st *ast.SemStruct, trait *ast.SemTrait) bool {
+func (a *Analysis) StructHasTrait(st *ast.SemStruct, trait *ast.SemTrait) bool {
 	if _, ok := st.Traits[trait]; ok {
 		return true
 	}
@@ -257,7 +257,7 @@ func (a *Analysis) GetStruct(def *ast.Struct, concrete []Type) *SemStruct {
 		same := true
 		for i, ty := range concrete {
 			o := inst.Args[i]
-			if !a.matchTypesStrict(ty, o) {
+			if !a.MatchTypesStrict(ty, o) {
 				same = false
 				break
 			}
@@ -368,11 +368,13 @@ func (a *Analysis) unify(
 			newParams[i] = specialized
 		}
 		// after unifying all generics, reconstruct the struct type with the specialized generics
-		specializedStruct := ast.NewSemStruct(bs.Def)
-		specializedStruct.Generics = ast.SemGenerics{Params: newParams}
-		// We won't re-check fields immediately here;
-		// a.instantiateStruct does that anyway
-		// Return a new Type with that specialized struct.
+		// specializedStruct := ast.NewSemStruct(bs.Def)
+		// specializedStruct.Generics = ast.SemGenerics{Params: newParams}
+		// // We won't re-check fields immediately here;
+		// // a.instantiateStruct does that anyway
+		// // Return a new Type with that specialized struct.
+		// return ast.NewSemType(specializedStruct, base.Span())
+		specializedStruct := a.instantiateStruct(bs.Def, newParams)
 		return ast.NewSemType(specializedStruct, base.Span())
 	}
 
@@ -386,7 +388,7 @@ func (a *Analysis) unify(
 
 	// For everything else (e.g. base is a string/number/bool/nil literal struct),
 	// just see if they strictly match. If not, panic.
-	if !a.matchTypesStrict(base, actual) {
+	if !a.MatchTypesStrict(base, actual) {
 		a.Panic(
 			fmt.Sprintf("mismatched types: expected `%s`, got `%s`",
 				base.String(), actual.String()),
