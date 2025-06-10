@@ -142,18 +142,50 @@ func (a *Analysis) resolveStruct(scope *Scope, st *ast.SemStruct, generics []ast
 	return st
 }
 
-var getImplType = func(sI StructInstance, idx int) (Type, bool) {
-	if idx < 0 || idx >= len(sI.Args) {
-		return Type{}, false
+// Helper function to check if an impl pattern matches a concrete struct
+func implMatchesStruct(a *Analysis, inst StructInstance, st *ast.SemStruct) bool {
+	if len(inst.Args) != len(st.Generics.Params) {
+		return false
 	}
-	ty := sI.Args[idx]
-	if ty.IsGeneric() {
-		return Type{}, false
+
+	// Build a mapping from impl's generic parameter names to types
+	genericBindings := make(map[string]Type)
+
+	for i, implType := range inst.Args {
+		targetType := st.Generics.Params[i]
+
+		if implType.IsGeneric() {
+			// impl has a generic parameter at this position
+			genericName := implType.Generic().Ident.Raw
+			if existingBinding, exists := genericBindings[genericName]; exists {
+				// This generic was already bound to a type, check consistency
+				if targetType.IsGeneric() {
+					// Both are generic - they can potentially match
+					continue
+				}
+				if !a.matchTypesStrict(existingBinding, targetType) {
+					return false
+				}
+			} else {
+				// First time seeing this generic, bind it
+				genericBindings[genericName] = targetType
+			}
+		} else {
+			// impl has a concrete type at this position
+			if targetType.IsGeneric() {
+				// impl is concrete, target is generic - no match
+				return false
+			}
+			// both concrete - must match exactly
+			if !a.matchTypesStrict(implType, targetType) {
+				return false
+			}
+		}
 	}
-	return ty, true
+
+	return true
 }
 
-// Helper to search struct stack for a matching item (method or trait)
 func findInStructStack[T any](
 	a *Analysis,
 	st *ast.SemStruct,
@@ -166,18 +198,7 @@ func findInStructStack[T any](
 		if !ok {
 			continue
 		}
-		this := true
-		for i, t := range st.Generics.Params {
-			ty, ok := getImplType(inst, i)
-			if !ok {
-				continue
-			}
-			if !a.matchTypesStrict(t, ty) {
-				this = false
-				break
-			}
-		}
-		if this && match(item) {
+		if implMatchesStruct(a, inst, st) && match(item) {
 			return item, true
 		}
 	}
@@ -263,21 +284,9 @@ func (a *Analysis) GetStruct(def *ast.Struct, concrete []Type) *SemStruct {
 func (a *Analysis) GetStructMethods(st *ast.SemStruct) map[string]ast.SemFunction {
 	methods := make(map[string]ast.SemFunction, len(st.Methods))
 	maps.Copy(methods, st.Methods) // start with already cached methods
-
 	stack := st.Def.GetStructStack()
 	for _, inst := range stack {
-		this := true
-		for i, t := range st.Generics.Params {
-			ty, ok := getImplType(inst, i)
-			if !ok {
-				continue
-			}
-			if !a.matchTypesStrict(t, ty) {
-				this = false
-				break
-			}
-		}
-		if this {
+		if implMatchesStruct(a, inst, st) {
 			for name, method := range inst.Type.Methods {
 				if _, exists := methods[name]; !exists {
 					methods[name] = method
@@ -285,7 +294,6 @@ func (a *Analysis) GetStructMethods(st *ast.SemStruct) map[string]ast.SemFunctio
 			}
 		}
 	}
-
 	return methods
 }
 
