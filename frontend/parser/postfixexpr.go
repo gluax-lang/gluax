@@ -41,7 +41,7 @@ func (p *parser) parsePostfixExpr(ctx ExprCtx, left ast.Expr) ast.Expr {
 func (p *parser) parseCatch() *ast.Catch {
 	spanStart := p.span()
 	p.advance() // consume 'catch'
-	name := p.expectIdent()
+	name := p.expectIdentMsgX("expected catch variable name", FlagAllowUnderscore)
 	block := p.parseBlock()
 	span := SpanFrom(spanStart, p.prevSpan())
 	return ast.NewCatch(name, block, span)
