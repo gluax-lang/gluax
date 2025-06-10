@@ -295,34 +295,26 @@ func (a *Analysis) unify(
 		a.Panic("type cannot be used here", span)
 	}
 
-	// If base is already bound to something in placeholders, unify that again:
 	if base.IsGeneric() {
-		gname := base.Generic().Ident.Raw
-		// If we've already bound T => Something, unify that "Something" with actual
-		if existing, ok := placeholders[gname]; ok {
-			return a.unify(existing, actual, placeholders, span)
+		baseName := base.Generic().Ident.Raw
+
+		// (a) Already bound?  Just return it — no more recursion.
+		if bound, ok := placeholders[baseName]; ok {
+			return bound
 		}
 
-		// If 'actual' is also a generic that was previously bound, unify that.
+		// (b) If actual is also a generic that’s already bound,
+		//     bind base → that same concrete, and return.
 		if actual.IsGeneric() {
-			otherG := actual.Generic().Ident.Raw
-			if existingOther, ok := placeholders[otherG]; ok {
-				// unify base => existingOther
-				return a.unify(base, existingOther, placeholders, span)
+			otherName := actual.Generic().Ident.Raw
+			if otherBound, ok := placeholders[otherName]; ok {
+				placeholders[baseName] = otherBound
+				return otherBound
 			}
-			placeholders[gname] = ast.NewSemType(
-				ast.SemGenericType{
-					Ident: actual.Generic().Ident,
-					Bound: true, // force "Bound" = true
-				},
-				actual.Span(),
-			)
 		}
 
-		// If no existing binding, bind T => actual and return the actual type.
-		// But first, check if actual is also an unbound generic => pick whichever name
-		// we prefer. For simplicity, just bind base => actual.
-		placeholders[gname] = actual
+		// (c) Otherwise bind base → actual (whatever it is) and return.
+		placeholders[baseName] = actual
 		return actual
 	}
 
@@ -368,12 +360,6 @@ func (a *Analysis) unify(
 			newParams[i] = specialized
 		}
 		// after unifying all generics, reconstruct the struct type with the specialized generics
-		// specializedStruct := ast.NewSemStruct(bs.Def)
-		// specializedStruct.Generics = ast.SemGenerics{Params: newParams}
-		// // We won't re-check fields immediately here;
-		// // a.instantiateStruct does that anyway
-		// // Return a new Type with that specialized struct.
-		// return ast.NewSemType(specializedStruct, base.Span())
 		specializedStruct := a.instantiateStruct(bs.Def, newParams)
 		return ast.NewSemType(specializedStruct, base.Span())
 	}
