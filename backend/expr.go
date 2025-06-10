@@ -127,9 +127,9 @@ func (cg *Codegen) genExprX(e ast.Expr) string {
 	case ast.ExprKindTuple:
 		return cg.genTupleExpr(e.Tuple())
 	case ast.ExprKindBlock:
-		return cg.genBlockDest(e.Block())
+		return cg.genBlockX(e.Block(), BlockNone)
 	case ast.ExprKindIf:
-		return cg.genIfExpr(e.If())
+		return cg.genIfExpr(e.If(), e.Type())
 	case ast.ExprKindWhile:
 		return cg.genWhileExpr(e.While())
 	case ast.ExprKindLoop:
@@ -257,14 +257,23 @@ func (cg *Codegen) genUnaryExpr(unE *ast.ExprUnary) string {
 	panic("unreachable")
 }
 
-func (cg *Codegen) genIfExpr(i *ast.ExprIf) string {
-	toReturn := cg.getTempVar()
+func (cg *Codegen) genIfExpr(i *ast.ExprIf, outputTy ast.SemType) string {
+	count := 1
+	if outputTy.IsTuple() {
+		count = len(outputTy.Tuple().Elems)
+	}
+	temps := make([]string, count)
+	for j := range temps {
+		temps[j] = cg.getTempVar()
+	}
+	returnList := strings.Join(temps, ", ")
+
 	var nested func(cond ast.Expr, thenBlk ast.Block, branches []ast.GuardedBlock, elseBlk *ast.Block)
 	nested = func(cond ast.Expr, thenBlk ast.Block, branches []ast.GuardedBlock, elseBlk *ast.Block) {
 		cg.ln("if %s then", cg.genExprX(cond))
 		cg.pushIndent()
 
-		cg.ln("%s = %s;", toReturn, cg.genBlockX(&thenBlk, BlockNone))
+		cg.ln("%s = %s;", returnList, cg.genBlockX(&thenBlk, BlockNone))
 
 		cg.popIndent()
 
@@ -277,7 +286,7 @@ func (cg *Codegen) genIfExpr(i *ast.ExprIf) string {
 		} else if elseBlk != nil {
 			cg.ln("else")
 			cg.pushIndent()
-			cg.ln("%s = %s;", toReturn, cg.genBlockX(elseBlk, BlockNone))
+			cg.ln("%s = %s;", returnList, cg.genBlockX(elseBlk, BlockNone))
 			cg.popIndent()
 		}
 
@@ -285,7 +294,7 @@ func (cg *Codegen) genIfExpr(i *ast.ExprIf) string {
 	}
 
 	nested(i.Main.Cond, i.Main.Then, i.Branches, i.Else)
-	return toReturn
+	return returnList
 }
 
 func (cg *Codegen) genPostfixExpr(p *ast.ExprPostfix) string {
@@ -320,11 +329,7 @@ func (cg *Codegen) genPostfixExpr(p *ast.ExprPostfix) string {
 }
 
 func (cg *Codegen) genTupleExpr(t *ast.ExprTuple) string {
-	exprs := make([]string, len(t.Values))
-	for i, arg := range t.Values {
-		exprs[i] = cg.genExpr(arg)
-	}
-	return strings.Join(exprs, ", ")
+	return cg.genExprsLeftToRight(t.Values)
 }
 
 func (cg *Codegen) genRunRaw(run *ast.ExprRunRaw) string {
@@ -467,15 +472,12 @@ func (cg *Codegen) genForNumExpr(e *ast.ExprForNum) string {
 	cg.ln("do")
 	cg.pushIndent()
 
-	start := cg.genExpr(e.Start)
-	end := cg.genExpr(e.End)
-
-	var step string
+	exprs := []ast.Expr{e.Start, e.End}
 	if e.Step != nil {
-		step = cg.genExpr(*e.Step)
+		exprs = append(exprs, *e.Step)
 	}
 
-	cg.ln("for %s = %s, %s%s do", e.Var.Raw, start, end, step)
+	cg.ln("for %s = %s do", e.Var.Raw, cg.genExprsLeftToRight(exprs))
 	cg.pushIndent()
 
 	cg.pushLoop(lopLbl)

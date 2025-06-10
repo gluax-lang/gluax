@@ -63,15 +63,11 @@ func (cg *Codegen) genStmtBreak(stmt *ast.StmtBreak) {
 }
 
 func (cg *Codegen) genStmtAssignment(stmt *ast.StmtAssignment) {
-	rhs := make([]string, len(stmt.RhsExpr))
-	for i, rhsExpr := range stmt.RhsExpr {
-		rhs[i] = cg.genExpr(rhsExpr)
-	}
 	lhs := make([]string, len(stmt.LhsExprs))
 	for i, lhsExpr := range stmt.LhsExprs {
 		lhs[i] = cg.genExpr(lhsExpr)
 	}
-	cg.ln("%s = %s;", strings.Join(lhs, ", "), strings.Join(rhs, ", "))
+	cg.ln("%s = %s;", strings.Join(lhs, ", "), cg.genExprsLeftToRight(stmt.RhsExpr))
 }
 
 func (cg *Codegen) genStmtReturn(stmt *ast.StmtReturn) {
@@ -91,14 +87,14 @@ func (cg *Codegen) genStmtReturn(stmt *ast.StmtReturn) {
 		cg.ln("do return nil; end;")
 		return
 	}
-	var rhs []string
+
+	retVals := cg.genExprsToStrings(stmt.Exprs)
+
 	if stmt.IsFuncErroable {
-		rhs = append(rhs, "nil")
+		retVals = append([]string{"nil"}, retVals...)
 	}
-	for _, expr := range stmt.Exprs {
-		rhs = append(rhs, cg.genExpr(expr))
-	}
-	cg.ln("do return %s; end;", strings.Join(rhs, ", "))
+
+	cg.ln("do return %s; end;", strings.Join(retVals, ", "))
 }
 
 func (cg *Codegen) genStmtThrow(stmt *ast.StmtThrow) {
