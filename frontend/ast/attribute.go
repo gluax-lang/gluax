@@ -91,3 +91,32 @@ func (attrs Attributes) GetString(key string) *string {
 	}
 	return nil
 }
+
+// HasTokenTreeArgs returns true if there is an attribute #[key(args...)]
+// where all args are present as identifier tokens in the token tree (order-insensitive).
+func (attrs Attributes) HasTokenTreeArgs(key string, args ...string) bool {
+	for _, attr := range attrs {
+		if attr.Key.Raw == key && attr.IsInputTokenTree() {
+			found := make(map[string]bool)
+			for _, tok := range attr.TokenTree {
+				switch t := tok.(type) {
+				case lexer.TokIdent:
+					found[t.Raw] = true
+				case lexer.TokKeyword:
+					found[t.String()] = true
+				case lexer.TokString:
+					found[t.Raw] = true
+				case lexer.TokNumber:
+					found[t.Raw] = true
+				}
+			}
+			for _, arg := range args {
+				if !found[arg] {
+					return false
+				}
+			}
+			return true
+		}
+	}
+	return false
+}
