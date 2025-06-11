@@ -1,13 +1,14 @@
 package sema
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	file_path "github.com/gluax-lang/gluax/filepath"
 	"github.com/gluax-lang/gluax/frontend/ast"
-	"github.com/gluax-lang/gluax/frontend/common"
 	"github.com/gluax-lang/gluax/frontend/lexer"
 )
 
@@ -17,12 +18,12 @@ func (a *Analysis) resolveImportPath(currentFile, relative string) (string, erro
 	if filepath.Ext(resolved) == "" {
 		resolved += ".gluax"
 	}
-	resolved = common.FilePathClean(resolved)
+	resolved = file_path.Clean(resolved)
 
 	// Ensure inside <workspace>/src
 	wsSrc := filepath.Join(a.Workspace, "src") + string(os.PathSeparator)
-	if !strings.HasPrefix(resolved, common.FilePathClean(wsSrc)) {
-		return "", fmt.Errorf("import path cannot be outside of `src` directory (got %s)", resolved)
+	if !strings.HasPrefix(resolved+"/", file_path.Clean(wsSrc)+"/") {
+		return "", errors.New("import path cannot be outside of `src` directory")
 	}
 
 	// Must end with .gluax
@@ -31,9 +32,11 @@ func (a *Analysis) resolveImportPath(currentFile, relative string) (string, erro
 	}
 
 	// if it's not inside overrides, then make sure file exists on disk
+	// even though it's not possible to escape the workspace, we just want to have nice error messages
 	if _, ok := a.Project.overrides[resolved]; !ok {
-		if _, err := os.Stat(resolved); os.IsNotExist(err) {
-			return "", fmt.Errorf("file does not exist: %s", resolved)
+		shortPath := a.Project.StripWorkspace(resolved)
+		if _, err := a.Project.OsRoot.Stat(shortPath); os.IsNotExist(err) {
+			return "", fmt.Errorf("file does not exist: %s", shortPath)
 		}
 	}
 
@@ -69,7 +72,7 @@ func (a *Analysis) handleImport(scope *Scope, it *ast.Import) {
 	}
 
 	importInfo := ast.NewSemImport(*it, resolved, importedAnalysis)
-	it.SafePath = a.Project.StripWorkspace(resolved)
+	it.SafePath = a.Project.PathRelativeToWorkspace(resolved)
 	if err := scope.AddImport(it.As.Raw, importInfo, it.As.Span(), it.Public); err != nil {
 		a.Error(err.Error(), it.As.Span())
 	}

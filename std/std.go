@@ -5,7 +5,7 @@ import (
 	"io/fs"
 	"strings"
 
-	"github.com/gluax-lang/gluax/frontend/common"
+	file_path "github.com/gluax-lang/gluax/filepath"
 )
 
 //go:embed std
@@ -26,7 +26,7 @@ var Files map[string]string = func() map[string]string {
 		if err != nil {
 			return err
 		}
-		name := common.FilePathClean(strings.TrimPrefix(p, "./"))
+		name := file_path.Clean(strings.TrimPrefix(p, "./"))
 		out[name] = string(data)
 		return nil
 	})

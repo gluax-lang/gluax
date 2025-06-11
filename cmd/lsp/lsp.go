@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	file_path "github.com/gluax-lang/gluax/filepath"
 	"github.com/gluax-lang/gluax/frontend/sema"
 	protocol "github.com/gluax-lang/lsp"
 )
@@ -110,7 +111,7 @@ func (h *Handler) InlayHint(p *protocol.InlayHintParams) ([]protocol.InlayHint, 
 	if pAnalysis == nil {
 		return nil, nil
 	}
-	analysis := pAnalysis.Files()[pAnalysis.StripWorkspace(path)]
+	analysis := pAnalysis.Files()[pAnalysis.PathRelativeToWorkspace(path)]
 	if analysis == nil {
 		return nil, nil
 	}
@@ -172,21 +173,21 @@ func (h *Handler) compileProject(uri, code string) (*string, *sema.ProjectAnalys
 	return &relPath, pAnalysis
 }
 
-func (h *Handler) getFileAnalysis(uri, code string) *sema.Analysis {
-	relPath, pAnalysis := h.compileProject(uri, code)
-	if relPath == nil || pAnalysis == nil {
-		return nil
-	}
-	analysis := pAnalysis.Files()[pAnalysis.StripWorkspace(*relPath)]
-	return analysis
-}
+// func (h *Handler) getFileAnalysis(uri, code string) *sema.Analysis {
+// 	relPath, pAnalysis := h.compileProject(uri, code)
+// 	if relPath == nil || pAnalysis == nil {
+// 		return nil
+// 	}
+// 	analysis := pAnalysis.Files()[pAnalysis.PathRelativeToWorkspace(*relPath)]
+// 	return analysis
+// }
 
 func (h *Handler) getServerFileAnalysis(uri, code string) *sema.Analysis {
 	relPath, pAnalysis := h.compileProject(uri, code)
 	if relPath == nil || pAnalysis == nil {
 		return nil
 	}
-	analysis := pAnalysis.ServerFiles()[pAnalysis.StripWorkspace(*relPath)]
+	analysis := pAnalysis.ServerFiles()[pAnalysis.PathRelativeToWorkspace(*relPath)]
 	return analysis
 }
 
@@ -195,17 +196,28 @@ func (h *Handler) getClientFileAnalysis(uri, code string) *sema.Analysis {
 	if relPath == nil || pAnalysis == nil {
 		return nil
 	}
-	analysis := pAnalysis.ClientFiles()[pAnalysis.StripWorkspace(*relPath)]
+	analysis := pAnalysis.ClientFiles()[pAnalysis.PathRelativeToWorkspace(*relPath)]
 	return analysis
 }
 
 func (h *Handler) handleDiagnostics(uri, code string) {
-	analysis := h.getFileAnalysis(uri, code)
-	if analysis == nil {
+	relPath, pAnalysis := h.compileProject(uri, code)
+	if relPath == nil || pAnalysis == nil {
 		return
 	}
-	h.PublishDiagnostics(uri, analysis.Diags)
+	for _, analysis := range pAnalysis.Files() {
+		fileURI := file_path.ToURI(analysis.Src)
+		h.PublishDiagnostics(fileURI, analysis.Diags)
+	}
 }
+
+// func (h *Handler) handleDiagnostics(uri, code string) {
+// 	analysis := h.getFileAnalysis(uri, code)
+// 	if analysis == nil {
+// 		return
+// 	}
+// 	h.PublishDiagnostics(uri, analysis.Diags)
+// }
 
 func (h *Handler) Definition(p *protocol.DefinitionParams) ([]protocol.Location, error) {
 	h.mu.Lock()

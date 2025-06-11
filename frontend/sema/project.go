@@ -2,6 +2,7 @@ package sema
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 
 	"slices"
 
+	file_path "github.com/gluax-lang/gluax/filepath"
 	"github.com/gluax-lang/gluax/frontend"
 	"github.com/gluax-lang/gluax/frontend/ast"
 	"github.com/gluax-lang/gluax/frontend/common"
@@ -36,6 +38,8 @@ type ProjectAnalysis struct {
 	// Processing Globals declarations or not?
 	processingGlobals bool
 
+	OsRoot *os.Root
+
 	// Either "SERVER" or "CLIENT"; used inside AnalyzeFile
 	serverState  *State
 	clientState  *State
@@ -61,7 +65,7 @@ func NewProjectAnalysis(workspace string, overrides map[string]string) *ProjectA
 
 	for p, c := range overrides {
 		if p != "" {
-			pa.overrides[common.FilePathClean(p)] = c
+			pa.overrides[file_path.Clean(p)] = c
 		}
 	}
 
@@ -76,17 +80,17 @@ func (pa *ProjectAnalysis) globalsList() []string {
 	out := make([]string, 0, 60)
 	if pa.Config.Std && pa.workspace == std.Workspace {
 		const (
-			prefix = "std/globals/"
+			prefix = "std/src/@globals/"
 			suffix = ".gluax"
 		)
 		for p := range pa.overrides {
 			if strings.HasPrefix(p, prefix) && strings.HasSuffix(p, suffix) {
 				out = append(out, p)
-				pa.allGlobals = append(pa.allGlobals, pa.StripWorkspace(p)) // keep for later
+				pa.allGlobals = append(pa.allGlobals, pa.PathRelativeToWorkspace(p)) // keep for later
 			}
 		}
 	} else {
-		globalsDir := filepath.Join(pa.workspace, "globals")
+		globalsDir := filepath.Join(pa.workspace, "src", "@globals")
 		entries, err := os.ReadDir(globalsDir)
 		if err != nil {
 			return out
@@ -96,9 +100,9 @@ func (pa *ProjectAnalysis) globalsList() []string {
 				continue
 			}
 			if strings.HasSuffix(e.Name(), ".gluax") {
-				name := common.FilePathClean(filepath.Join(globalsDir, e.Name()))
-				out = append(out, name)                                        // full absolute path
-				pa.allGlobals = append(pa.allGlobals, pa.StripWorkspace(name)) // keep for later
+				name := file_path.Clean(filepath.Join(globalsDir, e.Name()))
+				out = append(out, name)                                                 // full absolute path
+				pa.allGlobals = append(pa.allGlobals, pa.PathRelativeToWorkspace(name)) // keep for later
 			}
 		}
 	}
@@ -120,7 +124,7 @@ func (pa *ProjectAnalysis) newAnalysis(path string) *Analysis {
 }
 
 func (pa *ProjectAnalysis) AnalyzeFile(path string) (analysis *Analysis, hardError bool) {
-	path = common.FilePathClean(path)
+	path = file_path.Clean(path)
 	m := pa.getStateFiles()
 
 	// println(false, path)
@@ -134,7 +138,7 @@ func (pa *ProjectAnalysis) AnalyzeFile(path string) (analysis *Analysis, hardErr
 	m[path] = analysis // store it so we don't re-analyze under same state
 
 	// Load file content (override or from disk)
-	code, err := pa.loadFileContent(path)
+	code, err := pa.ReadFile(path)
 	if err != nil {
 		hardError = true
 		analysis.Error(fmt.Sprintf("Failed to load file: %v", err), common.SpanDefault())
@@ -185,17 +189,25 @@ func (pa *ProjectAnalysis) AnalyzeFile(path string) (analysis *Analysis, hardErr
 	return
 }
 
-// loadFileContent checks if path is overridePath; else read from disk
-func (pa *ProjectAnalysis) loadFileContent(path string) (string, error) {
-	path = common.FilePathClean(path)
+func (pa *ProjectAnalysis) ReadFile(path string) (string, error) {
+	path = file_path.Clean(path)
 	if content, ok := pa.overrides[path]; ok {
 		return content, nil
 	}
-	data, err := os.ReadFile(path)
+
+	path = pa.StripWorkspace(path)
+
+	f, err := pa.OsRoot.Open(path)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to open file %s: %w", path, err)
 	}
-	return string(data), nil
+	defer f.Close()
+
+	content, err := io.ReadAll(f)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file %s: %w", path, err)
+	}
+	return string(content), nil
 }
 
 func (pa *ProjectAnalysis) Files() map[string]*Analysis {
@@ -247,7 +259,7 @@ func (pa *ProjectAnalysis) importGlobals() {
 
 func (pa *ProjectAnalysis) getProjectConfig(workspace string) (frontend.GluaxToml, error) {
 	config := frontend.GluaxToml{}
-	tomlContent, err := pa.loadFileContent(filepath.Join(workspace, "gluax.toml"))
+	tomlContent, err := pa.ReadFile(filepath.Join(workspace, "gluax.toml"))
 	if err != nil {
 		return config, fmt.Errorf("failed to load gluax.toml: %w", err)
 	}
@@ -258,7 +270,20 @@ func (pa *ProjectAnalysis) getProjectConfig(workspace string) (frontend.GluaxTom
 	return gluaxToml, nil
 }
 
-func (pa *ProjectAnalysis) processPackage(pkgPath string) error {
+func (pa *ProjectAnalysis) SetRoot(workspace string) (func(), error) {
+	root, err := os.OpenRoot(workspace)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open workspace root: %w", err)
+	}
+	oldRoot := pa.OsRoot
+	pa.OsRoot = root
+	return func() {
+		root.Close()
+		pa.OsRoot = oldRoot
+	}, nil
+}
+
+func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
 	oldWs, oldConfig, oldRootScope := pa.workspace, pa.Config, pa.currentState.RootScope
 	pa.workspace = pkgPath
 
@@ -267,6 +292,14 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string) error {
 	isMain := pa.workspace == oldWs
 
 	if !isMain {
+		if realPath {
+			restoreRoot, err := pa.SetRoot(pkgPath)
+			if err != nil {
+				return fmt.Errorf("failed to set root: %w", err)
+			}
+			defer restoreRoot()
+		}
+
 		var err error
 		pa.Config, err = pa.getProjectConfig(pkgPath)
 		if err != nil {
@@ -278,8 +311,8 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string) error {
 		mainPath = filepath.Join(pkgPath, "src", "lib.gluax")
 	}
 
-	mainPath = common.FilePathClean(mainPath)
-	pa.Main = pa.StripWorkspace(mainPath)
+	mainPath = file_path.Clean(mainPath)
+	pa.Main = pa.PathRelativeToWorkspace(mainPath)
 
 	pa.importGlobals()
 
@@ -292,7 +325,7 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string) error {
 			continue
 		}
 		delete(state.Files, p)
-		state.Files[pa.StripWorkspace(p)] = a
+		state.Files[pa.PathRelativeToWorkspace(p)] = a
 	}
 
 	packageName := pa.CurrentPackage()
@@ -320,11 +353,11 @@ func (pa *ProjectAnalysis) processState(state *State, workspace string) error {
 		// stdPath = common.FilePathClean(stdPath)
 		oldOverrides := pa.overrides
 		pa.overrides = std.Files
-		if err := pa.processPackage(std.Workspace); err != nil {
+		if err := pa.processPackage(std.Workspace, false); err != nil {
 			return err
 		}
 		pa.overrides = oldOverrides
-		publicPath := common.FilePathClean(filepath.Join("std", "src", "public.gluax"))
+		publicPath := file_path.Clean(filepath.Join("std", "src", "public.gluax"))
 		publicAnalysis := pa.currentState.Files[publicPath]
 		for name, sym := range publicAnalysis.Scope.Symbols {
 			if sym.IsPublic() {
@@ -332,7 +365,7 @@ func (pa *ProjectAnalysis) processState(state *State, workspace string) error {
 			}
 		}
 	}
-	if err := pa.processPackage(workspace); err != nil {
+	if err := pa.processPackage(workspace, true); err != nil {
 		return err
 	}
 	return nil
@@ -342,7 +375,12 @@ func AnalyzeProject(workspace string, overrides map[string]string) (*ProjectAnal
 	overrides["types"] = ast.BuiltinTypes
 	pa := NewProjectAnalysis(workspace, overrides)
 
-	var err error
+	restoreRoot, err := pa.SetRoot(workspace)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set root: %w", err)
+	}
+	defer restoreRoot()
+
 	pa.Config, err = pa.getProjectConfig(workspace)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load project config: %w", err)
@@ -417,6 +455,11 @@ func annotateSingleState(src *Analysis, pfx, glyph string) *Analysis {
 
 func mergeAnalysisResults(srvA, cliA *Analysis) *Analysis {
 	merged := &Analysis{}
+	if srvA.Src != "" {
+		merged.Src = srvA.Src
+	} else {
+		merged.Src = cliA.Src
+	}
 
 	// Diagnostics
 	merged.Diags = append(merged.Diags, addPrefix("(SERVER) ", srvA.Diags)...)

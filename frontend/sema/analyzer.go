@@ -5,22 +5,30 @@ import (
 	"path/filepath"
 	"strings"
 
+	file_path "github.com/gluax-lang/gluax/filepath"
 	"github.com/gluax-lang/gluax/frontend/ast"
 	"github.com/gluax-lang/gluax/frontend/common"
 	protocol "github.com/gluax-lang/lsp"
 )
 
 // don't expose actual paths to the code generation :]
-func (pa *ProjectAnalysis) StripWorkspace(path string) string {
+func (pa *ProjectAnalysis) PathRelativeToWorkspace(path string) string {
 	ws := pa.workspace
-	ws, path = common.FilePathClean(ws), common.FilePathClean(path)
-	return common.FilePathClean(filepath.Join(pa.CurrentPackage(), strings.TrimPrefix(path, ws)))
+	ws, path = file_path.Clean(ws), file_path.Clean(path)
+	return file_path.Clean(filepath.Join(pa.CurrentPackage(), strings.TrimPrefix(path, ws)))
 }
 
 func (pa *ProjectAnalysis) StartsWithWorkspace(path string) bool {
-	ws := common.FilePathClean(pa.workspace)
-	path = common.FilePathClean(path)
+	ws := file_path.Clean(pa.workspace)
+	path = file_path.Clean(path)
 	return strings.HasPrefix(path, ws)
+}
+
+func (pa *ProjectAnalysis) StripWorkspace(path string) string {
+	ws := file_path.Clean(pa.workspace) + "/"
+	path = file_path.Clean(path)
+	rel := strings.TrimPrefix(path, ws)
+	return rel
 }
 
 type Analysis struct {
