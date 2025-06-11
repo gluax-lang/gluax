@@ -1,6 +1,8 @@
 package ast
 
 import (
+	"slices"
+
 	"github.com/gluax-lang/gluax/common"
 	"github.com/gluax-lang/gluax/frontend/lexer"
 )
@@ -52,10 +54,14 @@ func (a Attribute) IsInputString() bool {
 
 type Attributes []Attribute
 
-// Has returns true if an attribute with the given key exists.
-func (attrs Attributes) Has(key string) bool {
+// Has returns true if an attribute with any of the given keys exists.
+// Panics if called with zero arguments.
+func (attrs Attributes) Has(keys ...string) bool {
+	if len(keys) == 0 {
+		panic("Attributes.Has: at least one key must be provided")
+	}
 	for _, attr := range attrs {
-		if attr.Key.Raw == key {
+		if slices.Contains(keys, attr.Key.Raw) {
 			return true
 		}
 	}
