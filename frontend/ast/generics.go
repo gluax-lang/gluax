@@ -8,7 +8,9 @@ import (
 )
 
 type GenericParam struct {
-	Name lexer.TokIdent
+	Name        lexer.TokIdent
+	Constraints []Path
+	Span        common.Span
 }
 
 type Generics struct {

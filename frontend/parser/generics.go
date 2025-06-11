@@ -18,11 +18,28 @@ func (p *parser) parseGenerics() ast.Generics {
 
 	// Collect identifiers until '>'.
 	p.parseCommaSeparatedDelimited(">", func(p *parser) {
-		ident := p.expectIdent()
-		param := ast.GenericParam{Name: ident}
-		g.Params = append(g.Params, param)
+		g.Params = append(g.Params, p.parseGenericParam())
 	})
 
 	g.Span = SpanFrom(spanStart, p.prevSpan())
 	return g
+}
+
+func (p *parser) parseGenericParam() ast.GenericParam {
+	spanStart := p.span()
+	ident := p.expectIdent()
+	var constraints []ast.Path
+	if p.tryConsume(":") {
+		for {
+			constraints = append(constraints, p.parsePath())
+			if !p.tryConsume("+") {
+				break
+			}
+		}
+	}
+	return ast.GenericParam{
+		Name:        ident,
+		Constraints: constraints,
+		Span:        SpanFrom(spanStart, p.prevSpan()),
+	}
 }
