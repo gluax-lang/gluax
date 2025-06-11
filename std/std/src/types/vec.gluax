@@ -1,10 +1,5 @@
 impl<T> vec<T> {
     #[inline]
-    func new() -> Self {
-        @raw("{@RETURN {} @}") -> Self
-    }
-
-    #[inline]
     func len(self) -> number { #self }
 
     #[inline]

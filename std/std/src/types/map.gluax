@@ -1,10 +1,5 @@
 impl<K, V> map<K, V> {
     #[inline]
-    func new() -> Self {
-        @raw("{@RETURN {} @}") -> Self
-    }
-
-    #[inline]
     func get(self, key: K) -> ?V {
         @raw("{@RETURN {@1@}[{@2@}] @}", self, key) -> ?V
     }

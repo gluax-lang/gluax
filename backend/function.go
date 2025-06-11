@@ -189,7 +189,7 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 
 	buildCallExpr := func() string {
 		if call.Method != nil {
-			if toCallTy.IsStruct() && toCallTy.Struct().Def.Attributes.Has("no_metatable") {
+			if toCallTy.IsStruct() && toCallTy.Struct().Def.Attributes.Has("no_metatable", "no__index") {
 				stName := cg.decorateStName(toCallTy.Struct())
 				args := cg.getCallArgs(call, toCall)
 				return fmt.Sprintf("%s.%s(%s)", stName, call.Method.Raw, args)

@@ -91,7 +91,9 @@ func (cg *Codegen) generateStruct(st *ast.SemStruct) {
 	}
 	cg.popIndent()
 	cg.ln("};")
-	cg.ln("%s.__index = %s;\n", name, name)
+	if !st.Def.Attributes.Has("no__index") {
+		cg.ln("%s.__index = %s;\n", name, name)
+	}
 }
 
 func (cg *Codegen) genStructInit(si *ast.ExprStructInit, st *ast.SemStruct) string {

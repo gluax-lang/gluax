@@ -17,10 +17,10 @@ pub struct number { _priv: nil }
 #[no_metatable]
 pub struct string { _priv: nil }
 
-#[no_metatable]
+#[no__index]
 pub struct vec<T> { _priv: nil }
 
-#[no_metatable]
+#[no__index]
 pub struct map<K, V> { _priv: nil }
 
 #[no_metatable]

@@ -155,9 +155,9 @@ func (cg *Codegen) genExprX(e ast.Expr) string {
 	case ast.ExprKindRunRaw:
 		return cg.genRunRaw(e.RunRaw())
 	case ast.ExprKindVecInit:
-		return cg.genVecInit(e.VecInit())
+		return cg.genVecInit(e.VecInit(), e.Type())
 	case ast.ExprKindMapInit:
-		return cg.genMapInit(e.MapInit())
+		return cg.genMapInit(e.MapInit(), e.Type())
 	default:
 		panic("unreachable; unhandled expression type")
 	}
@@ -380,12 +380,12 @@ func (cg *Codegen) genRunRaw(run *ast.ExprRunRaw) string {
 	return returnExpr
 }
 
-func (cg *Codegen) genVecInit(v *ast.ExprVecInit) string {
+func (cg *Codegen) genVecInit(v *ast.ExprVecInit, ty ast.SemType) string {
 	values := cg.genExprsLeftToRight(v.Values)
-	return fmt.Sprintf("{%s}", values)
+	return fmt.Sprintf("setmetatable({%s}, %s)", values, cg.decorateStName(ty.Struct()))
 }
 
-func (cg *Codegen) genMapInit(m *ast.ExprMapInit) string {
+func (cg *Codegen) genMapInit(m *ast.ExprMapInit, ty ast.SemType) string {
 	pairs := make([]ast.Expr, 0, len(m.Entries)*2)
 	for _, entry := range m.Entries {
 		pairs = append(pairs, entry.Key, entry.Value)
@@ -400,7 +400,7 @@ func (cg *Codegen) genMapInit(m *ast.ExprMapInit) string {
 		sb.WriteString(fmt.Sprintf("[%s] = %s", all[i], all[i+1]))
 	}
 	sb.WriteString("}")
-	return sb.String()
+	return fmt.Sprintf("setmetatable(%s, %s)", sb.String(), cg.decorateStName(ty.Struct()))
 }
 
 /* Loops */
