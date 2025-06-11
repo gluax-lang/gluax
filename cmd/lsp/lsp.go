@@ -80,7 +80,7 @@ func (h *Handler) Hover(p *protocol.HoverParams) (*protocol.Hover, error) {
 	uri := p.TextDocument.URI
 	position := p.Position
 
-	sym := h.findSymAtPos(uri, h.fileCache[uri], position)
+	sym := h.findSymAtPos(uri, position)
 	if sym == nil {
 		return nil, nil
 	}
@@ -99,12 +99,12 @@ func (h *Handler) InlayHint(p *protocol.InlayHintParams) ([]protocol.InlayHint, 
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	uri := p.TextDocument.URI
-	text := h.fileCache[uri]
-	if text == "" {
-		return nil, nil
-	}
 	path, err := uriToFilePath(uri)
 	if err != nil {
+		return nil, nil
+	}
+	text := h.fileCache[path]
+	if text == "" {
 		return nil, nil
 	}
 	pAnalysis := h.lastProjAnalysis
@@ -121,20 +121,26 @@ func (h *Handler) InlayHint(p *protocol.InlayHintParams) ([]protocol.InlayHint, 
 func (h *Handler) DidOpen(p *protocol.DidOpenTextDocumentParams) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	uri := p.TextDocument.URI
+	path, err := uriToFilePath(p.TextDocument.URI)
+	if err != nil {
+		return nil
+	}
 	text := p.TextDocument.Text
-	h.fileCache[uri] = text
-	h.handleDiagnostics(uri, text)
+	h.fileCache[path] = text
+	h.handleDiagnostics()
 	return nil
 }
 
 func (h *Handler) DidChange(p *protocol.DidChangeTextDocumentParams) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	uri := p.TextDocument.URI
+	path, err := uriToFilePath(p.TextDocument.URI)
+	if err != nil {
+		return nil
+	}
 	text := p.ContentChanges[0].Text
-	h.fileCache[uri] = text
-	h.handleDiagnostics(uri, text)
+	h.fileCache[path] = text
+	h.handleDiagnostics()
 	return nil
 }
 
@@ -142,35 +148,36 @@ func (h *Handler) DidClose(p *protocol.DidCloseTextDocumentParams) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	uri := p.TextDocument.URI
-	delete(h.fileCache, uri)
+	path, err := uriToFilePath(uri)
+	if err != nil {
+		return nil
+	}
+	delete(h.fileCache, path)
 	return nil
 }
 
 func (h *Handler) DidSave(p *protocol.DidSaveTextDocumentParams) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	uri := p.TextDocument.URI
+	path, err := uriToFilePath(p.TextDocument.URI)
+	if err != nil {
+		return nil
+	}
 	text := *p.Text
-	h.fileCache[uri] = text
-	h.handleDiagnostics(uri, text)
+	h.fileCache[path] = text
+	h.handleDiagnostics()
 	return nil
 }
 
-func (h *Handler) compileProject(uri, code string) (*string, *sema.ProjectAnalysis) {
-	relPath, err := uriToFilePath(uri)
-	if err != nil {
-		return nil, nil
-	}
-	overrides := map[string]string{
-		relPath: code,
-	}
+func (h *Handler) compileProject() *sema.ProjectAnalysis {
+	overrides := h.fileCache
 	pAnalysis, err := sema.AnalyzeProject(h.workspace, overrides)
 	if err != nil {
 		fmt.Printf("error analyzing project: %v", err)
-		return nil, nil
+		return nil
 	}
 	h.lastProjAnalysis = pAnalysis
-	return &relPath, pAnalysis
+	return pAnalysis
 }
 
 // func (h *Handler) getFileAnalysis(uri, code string) *sema.Analysis {
@@ -182,27 +189,35 @@ func (h *Handler) compileProject(uri, code string) (*string, *sema.ProjectAnalys
 // 	return analysis
 // }
 
-func (h *Handler) getServerFileAnalysis(uri, code string) *sema.Analysis {
-	relPath, pAnalysis := h.compileProject(uri, code)
-	if relPath == nil || pAnalysis == nil {
+func (h *Handler) getServerFileAnalysis(uri string) *sema.Analysis {
+	pAnalysis := h.compileProject()
+	if pAnalysis == nil {
 		return nil
 	}
-	analysis := pAnalysis.ServerFiles()[pAnalysis.PathRelativeToWorkspace(*relPath)]
+	relPath, err := uriToFilePath(uri)
+	if err != nil {
+		return nil
+	}
+	analysis := pAnalysis.ServerFiles()[pAnalysis.PathRelativeToWorkspace(relPath)]
 	return analysis
 }
 
-func (h *Handler) getClientFileAnalysis(uri, code string) *sema.Analysis {
-	relPath, pAnalysis := h.compileProject(uri, code)
-	if relPath == nil || pAnalysis == nil {
+func (h *Handler) getClientFileAnalysis(uri string) *sema.Analysis {
+	pAnalysis := h.compileProject()
+	if pAnalysis == nil {
 		return nil
 	}
-	analysis := pAnalysis.ClientFiles()[pAnalysis.PathRelativeToWorkspace(*relPath)]
+	relPath, err := uriToFilePath(uri)
+	if err != nil {
+		return nil
+	}
+	analysis := pAnalysis.ClientFiles()[pAnalysis.PathRelativeToWorkspace(relPath)]
 	return analysis
 }
 
-func (h *Handler) handleDiagnostics(uri, code string) {
-	relPath, pAnalysis := h.compileProject(uri, code)
-	if relPath == nil || pAnalysis == nil {
+func (h *Handler) handleDiagnostics() {
+	pAnalysis := h.compileProject()
+	if pAnalysis == nil {
 		return
 	}
 	for _, analysis := range pAnalysis.Files() {
@@ -227,13 +242,13 @@ func (h *Handler) Definition(p *protocol.DefinitionParams) ([]protocol.Location,
 	position := p.Position
 
 	// Get the file analysis
-	analysis := h.getServerFileAnalysis(uri, h.fileCache[uri])
+	analysis := h.getServerFileAnalysis(uri)
 	if analysis == nil {
 		return nil, nil
 	}
 
 	// Find symbol at position using scopes
-	symbol := h.findSymAtPos(uri, h.fileCache[uri], position)
+	symbol := h.findSymAtPos(uri, position)
 	if symbol == nil {
 		return nil, nil
 	}
@@ -241,7 +256,7 @@ func (h *Handler) Definition(p *protocol.DefinitionParams) ([]protocol.Location,
 	return []protocol.Location{symbol.Span.ToLocation()}, nil
 }
 
-func (h *Handler) findSymAtPos(uri, code string, pos protocol.Position) *sema.Symbol {
+func (h *Handler) findSymAtPos(uri string, pos protocol.Position) *sema.Symbol {
 	find := func(analysis *sema.Analysis) *sema.Symbol {
 		for span, sym := range analysis.SpanSymbols {
 			rng := span.ToRange()
@@ -252,12 +267,12 @@ func (h *Handler) findSymAtPos(uri, code string, pos protocol.Position) *sema.Sy
 		}
 		return nil
 	}
-	if serverAnalysis := h.getServerFileAnalysis(uri, code); serverAnalysis != nil {
+	if serverAnalysis := h.getServerFileAnalysis(uri); serverAnalysis != nil {
 		if symbol := find(serverAnalysis); symbol != nil {
 			return symbol
 		}
 	}
-	if clientAnalysis := h.getClientFileAnalysis(uri, code); clientAnalysis != nil {
+	if clientAnalysis := h.getClientFileAnalysis(uri); clientAnalysis != nil {
 		if symbol := find(clientAnalysis); symbol != nil {
 			return symbol
 		}
