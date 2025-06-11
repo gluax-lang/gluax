@@ -156,8 +156,9 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 		st := a.setupStruct(stDef, nil)
 
 		SelfSt := a.setupStruct(stDef, nil)
-		for i, g := range SelfSt.Generics.Params {
-			SelfSt.Generics.Params[i] = ast.NewSemGenericType(g.Generic().Ident, true)
+		for i, g := range SelfSt.Def.Generics.Params {
+			traits := getGenericParamTraits(g)
+			SelfSt.Generics.Params[i] = ast.NewSemGenericType(g.Name, traits, true)
 		}
 		SelfStTy := ast.NewSemType(SelfSt, stDef.Span())
 		SelfStScope := SelfSt.Scope.(*Scope)

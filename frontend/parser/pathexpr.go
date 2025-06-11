@@ -72,7 +72,6 @@ func (p *parser) parseStructInit(ty ast.Path, generics []ast.Type) ast.Expr {
 		return p.parseMapInit(generics)
 	}
 
-	spanStart := p.span()
 	p.expect("{")
 
 	var fields []ast.ExprStructField
@@ -81,7 +80,7 @@ func (p *parser) parseStructInit(ty ast.Path, generics []ast.Type) ast.Expr {
 	})
 
 	spanEnd := p.prevSpan()
-	span := SpanFrom(spanStart, spanEnd)
+	span := SpanFrom(ty.Span(), spanEnd)
 
 	return ast.NewStructInit(ty, generics, fields, span)
 }

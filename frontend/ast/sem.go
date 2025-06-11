@@ -496,17 +496,31 @@ func (t SemDynTrait) AstString() string {
 /* Generics */
 
 type SemGenericType struct {
-	Ident lexer.TokIdent // "T", "E"
-	Bound bool
+	Ident  lexer.TokIdent // "T", "E"
+	Traits []*SemTrait    // Traits that this generic type implements, e.g. "T: Eq + Ord"
+	Bound  bool
 }
 
-func NewSemGenericType(ident lexer.TokIdent, bound bool) SemType {
-	return NewSemType(SemGenericType{Ident: ident, Bound: bound}, ident.Span())
+func NewSemGenericType(ident lexer.TokIdent, traits []*SemTrait, bound bool) SemType {
+	return NewSemType(SemGenericType{Ident: ident, Traits: traits, Bound: bound}, ident.Span())
 }
 
 func (t SemGenericType) TypeKind() SemTypeKind { return SemGenericKind }
 
-func (gt SemGenericType) String() string    { return gt.Ident.Raw }
+func (gt SemGenericType) String() string {
+	var sb strings.Builder
+	sb.WriteString(gt.Ident.Raw)
+	if len(gt.Traits) > 0 {
+		sb.WriteString(": ")
+		for i, trait := range gt.Traits {
+			if i > 0 {
+				sb.WriteString(" + ")
+			}
+			sb.WriteString(trait.Def.Name.Raw)
+		}
+	}
+	return sb.String()
+}
 func (gt SemGenericType) AstString() string { return gt.String() }
 
 type SemGenerics struct {

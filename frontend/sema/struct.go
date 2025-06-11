@@ -7,12 +7,26 @@ import (
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
+func getGenericParamTraits(g ast.GenericParam) []*ast.SemTrait {
+	traits := make([]*ast.SemTrait, 0, len(g.Constraints))
+	for _, constraint := range g.Constraints {
+		trait := constraint.ResolvedSymbol.Trait()
+		traits = append(traits, trait)
+	}
+	return traits
+}
+
 func (a *Analysis) setupTypeGenerics(scope *Scope, generics ast.Generics, concrete []Type) *Scope {
 	scope = NewScope(scope)
 	for i, g := range generics.Params {
 		var binding Type
 		if concrete == nil {
-			binding = ast.NewSemGenericType(g.Name, true)
+			var traits []*ast.SemTrait
+			for _, constraint := range g.Constraints {
+				trait := a.resolvePathTrait(scope, &constraint)
+				traits = append(traits, trait)
+			}
+			binding = ast.NewSemGenericType(g.Name, traits, true)
 		} else {
 			binding = concrete[i]
 		}
@@ -64,13 +78,65 @@ func (a *Analysis) HandleStructMethod(st *ast.SemStruct, method ast.SemFunction,
 func (a *Analysis) buildGenericsTable(scope *Scope, st *SemStruct, concrete []Type) {
 	params := make([]Type, 0, len(st.Def.Generics.Params))
 	for i, g := range st.Def.Generics.Params {
+		if len(g.Constraints) > 0 {
+			for i := range g.Constraints {
+				constraint := &g.Constraints[i]
+				if constraint.ResolvedSymbol == nil {
+					a.resolvePathTrait(scope, constraint)
+				} else {
+					break // already resolved
+				}
+			}
+		}
 		var binding, param Type
 		if concrete == nil {
-			binding = ast.NewSemGenericType(g.Name, true)
-			param = ast.NewSemGenericType(g.Name, false)
+			traits := getGenericParamTraits(g)
+			binding = ast.NewSemGenericType(g.Name, traits, true)
+			param = ast.NewSemGenericType(g.Name, traits, false)
 		} else {
 			binding = concrete[i]
 			param = binding
+			if len(g.Constraints) > 0 {
+				if binding.IsStruct() {
+					st := binding.Struct()
+					for _, constraint := range g.Constraints {
+						// If the binding is a struct, we need to ensure it implements the trait
+						// specified in the constraint.
+						if !a.StructHasTrait(st, constraint.ResolvedSymbol.Trait()) {
+							a.Panic(
+								fmt.Sprintf("struct `%s` does not implement trait `%s`",
+									binding.String(), constraint.ResolvedSymbol.Trait().Def.Name),
+								a.GetStructSetupSpan(binding.Span()),
+							)
+						}
+					}
+				} else if binding.IsGeneric() {
+					generic := binding.Generic()
+					for _, constraint := range g.Constraints {
+						trait := constraint.ResolvedSymbol.Trait()
+						implements := false
+						for _, t := range generic.Traits {
+							if traitImplements(t, trait) {
+								implements = true
+								break
+							}
+						}
+						if !implements {
+							a.Panic(
+								fmt.Sprintf("generic `%s` does not implement trait `%s`",
+									generic.Ident.Raw, trait.Def.Name),
+								a.GetStructSetupSpan(binding.Span()),
+							)
+						}
+					}
+				} else {
+					a.Panic(
+						fmt.Sprintf("`%s` cannot be used as a generic type",
+							binding.String()),
+						a.GetStructSetupSpan(binding.Span()),
+					)
+				}
+			}
 		}
 		a.AddType(scope, g.Name.Raw, binding)
 		params = append(params, param)

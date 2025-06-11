@@ -611,6 +611,23 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 		st := toCallTy.Struct()
 		toCallName = st.String()
 		method, exists = a.GetStructMethod(st, call.Method.Raw)
+	case toCallTy.IsGeneric():
+		generic := toCallTy.Generic()
+		toCallName = generic.String()
+		found := false
+		for _, trait := range generic.Traits {
+			method, exists = a.GetTraitMethod(trait, call.Method.Raw)
+			if exists {
+				found = true
+				break
+			}
+		}
+		if !found {
+			a.Panic(
+				fmt.Sprintf("no method named `%s` in generic type `%s`", call.Method.Raw, toCallName),
+				call.Method.Span(),
+			)
+		}
 	case toCallTy.IsDynTrait():
 		dynTrait := toCallTy.DynTrait()
 		toCallName = dynTrait.String()
