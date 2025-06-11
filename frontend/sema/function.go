@@ -41,7 +41,7 @@ func (a *Analysis) handleFunctionImpl(scope *Scope, it *ast.Function, withBody b
 	if returnType.IsTuple() {
 		for _, elem := range returnType.Tuple().Elems {
 			if elem.IsUnreachable() {
-				a.Panic("cannot have unreachable type inside a tuple return type", it.ReturnType.Span())
+				a.panic(it.ReturnType.Span(), "cannot have unreachable type inside a tuple return type")
 			}
 		}
 	}
@@ -54,7 +54,7 @@ func (a *Analysis) handleFunctionImpl(scope *Scope, it *ast.Function, withBody b
 	}
 
 	if funcType.HasVarargReturn() && it.Errorable {
-		a.Panic("cannot have vararg return type in erroable function", it.Span())
+		a.panic(it.Span(), "cannot have vararg return type in erroable function")
 	}
 
 	return funcType

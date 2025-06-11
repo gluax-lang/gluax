@@ -140,7 +140,7 @@ func (pa *ProjectAnalysis) AnalyzeFile(path string) (analysis *Analysis, hardErr
 	code, err := pa.ReadFile(path)
 	if err != nil {
 		hardError = true
-		analysis.Error(fmt.Sprintf("Failed to load file: %v", err), common.SpanDefault())
+		analysis.Errorf(common.SpanDefault(), "Failed to load file: %v", err)
 		return
 	}
 
@@ -175,11 +175,11 @@ func (pa *ProjectAnalysis) AnalyzeFile(path string) (analysis *Analysis, hardErr
 			if errStr, ok := r.(string); ok {
 				if errStr != "" {
 					log.Printf("panic: %v\n%s", errStr, debug.Stack())
-					analysis.Error(errStr, common.SpanDefault())
+					analysis.Error(common.SpanDefault(), errStr)
 				}
 			} else {
 				log.Printf("panic: %v\n%s", r, debug.Stack())
-				analysis.Error(fmt.Sprintf("%v", r), common.SpanDefault())
+				analysis.Errorf(common.SpanDefault(), "%v", r)
 			}
 		}
 	}()
@@ -240,7 +240,7 @@ func (pa *ProjectAnalysis) importGlobals() {
 		analysis, _ := pa.AnalyzeFile(path)
 		inferredName := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 		if !lexer.IsValidIdent(inferredName) {
-			analysis.Error(fmt.Sprintf("`%s` is not a valid identifier to use, rename it", inferredName), common.SpanDefault())
+			analysis.Errorf(common.SpanDefault(), "`%s` is not a valid identifier to use, rename it", inferredName)
 			continue
 		}
 		createdImport := createImport(inferredName, analysis)

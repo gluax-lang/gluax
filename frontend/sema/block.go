@@ -18,7 +18,7 @@ func (a *Analysis) handleBlock(scope *Scope, block *ast.Block) FlowStatus {
 			if !exprStmt.HasSemicolon {
 				if !lastStmt {
 					if !exprStmt.Expr.IsBlock() {
-						a.Panic("expected `;` after expression statement", exprStmt.Expr.Span())
+						a.panic(exprStmt.Expr.Span(), "expected `;` after expression statement")
 					} else {
 						a.Matches(a.nilType(), stmtTy, exprStmt.Expr.Span())
 					}
@@ -50,10 +50,10 @@ func (a *Analysis) handleBlock(scope *Scope, block *ast.Block) FlowStatus {
 	if blockTy.IsTuple() {
 		elemTys := blockTy.Tuple().Elems
 		if len(elemTys) > 0 && elemTys[len(elemTys)-1].IsVararg() {
-			a.Error("cannot return vararg value", lastStmtSpan)
+			a.Error(lastStmtSpan, "cannot return vararg value")
 		}
 	} else if blockTy.IsVararg() {
-		a.Error("cannot return vararg value", lastStmtSpan)
+		a.Error(lastStmtSpan, "cannot return vararg value")
 	}
 
 	block.SetStopAt(-1)

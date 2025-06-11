@@ -1,8 +1,6 @@
 package sema
 
 import (
-	"fmt"
-
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
@@ -22,7 +20,7 @@ func (a *Analysis) resolveType(scope *Scope, ty ast.Type) Type {
 		}
 		ty := a.resolvePathType(scope, &t.Path)
 		if !ty.IsStruct() {
-			a.Panic(fmt.Sprintf("expected struct type, got: %s", ty.String()), t.Span())
+			a.panicf(t.Span(), "expected struct type, got: %s", ty.String())
 		}
 		st := ty.Struct()
 		st = a.resolveStruct(scope, st, t.Generics, t.Span())
@@ -37,7 +35,7 @@ func (a *Analysis) resolveType(scope *Scope, ty ast.Type) Type {
 	case *ast.Vararg:
 		ty := a.resolveType(scope, t.Type)
 		if !isInnerTypeRuleCompliant(ty) {
-			a.Panic(fmt.Sprintf("type `%s` is not a valid vararg type", ty.String()), ty.Span())
+			a.panicf(ty.Span(), "type `%s` is not a valid vararg type", ty.String())
 		}
 		return ast.NewSemType(ast.NewSemVararg(ty), t.Span())
 	case *ast.Function:

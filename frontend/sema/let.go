@@ -1,8 +1,6 @@
 package sema
 
 import (
-	"fmt"
-
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
@@ -14,7 +12,7 @@ func (a *Analysis) handleLet(scope *Scope, it *ast.Let) {
 	// For each LHS identifier, optionally match the explicit type, or add inlay-hint
 	for i, ident := range it.Names {
 		if it.IsItem && ident.Raw == "_" {
-			a.Panic("cannot use `_` in top-level", ident.Span())
+			a.panic(ident.Span(), "cannot use `_` in top-level")
 		}
 		ty := rhsTypes[i]
 		exprSpan := rhsSpans[i]
@@ -57,18 +55,18 @@ func (a *Analysis) resolveRHS(
 		exprSp := expr.Span()
 
 		if exprTy.IsError() {
-			a.Panic("error cannot be assigned to a variable", exprSp)
+			a.panic(exprSp, "error cannot be assigned to a variable")
 		}
 
 		switch {
 		case exprTy.IsTuple():
 			if i != lastIdx {
-				a.Panic("tuple value is only permitted as the last expression", exprSp)
+				a.panic(exprSp, "tuple value is only permitted as the last expression")
 			}
 			for _, elem := range exprTy.Tuple().Elems {
 				if elem.IsVararg() {
 					if len(types) >= lhsCount {
-						a.Panic("unexpected vararg value - all identifiers already bound", exprSp)
+						a.panic(exprSp, "unexpected vararg value - all identifiers already bound")
 					}
 					for len(types) < lhsCount {
 						types = append(types, a.optionType(elem.Vararg().Type, elem.Span()))
@@ -82,10 +80,10 @@ func (a *Analysis) resolveRHS(
 
 		case exprTy.IsVararg():
 			if i != lastIdx {
-				a.Panic("vararg value is only permitted as the last expression", exprSp)
+				a.panic(exprSp, "vararg value is only permitted as the last expression")
 			}
 			if len(types) >= lhsCount {
-				a.Panic("unexpected vararg value - all identifiers already bound", exprSp)
+				a.panic(exprSp, "unexpected vararg value - all identifiers already bound")
 			}
 			for len(types) < lhsCount {
 				types = append(types, a.optionType(exprTy.Vararg().Type, exprSp))
@@ -100,11 +98,7 @@ func (a *Analysis) resolveRHS(
 	}
 
 	if len(types) != lhsCount {
-		a.Panic(
-			fmt.Sprintf("mismatched arity: %d target(s) on the left, %d value(s) on the right",
-				lhsCount, len(types)),
-			ctxSpan,
-		)
+		a.panicf(ctxSpan, "mismatched arity: %d target(s) on the left, %d value(s) on the right", lhsCount, len(types))
 	}
 
 	return

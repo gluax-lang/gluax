@@ -9,11 +9,7 @@ import (
 func (a *Analysis) handleStructInit(scope *Scope, si *ast.ExprStructInit) Type {
 	baseTy := a.resolvePathType(scope, &si.Name)
 	if baseTy.Kind() != ast.SemStructKind {
-		a.Panic(
-			fmt.Sprintf("expected struct type for `%s`, found `%s`",
-				si.Name.String(), baseTy.String()),
-			si.Name.Span(),
-		)
+		a.panic(si.Name.Span(), fmt.Sprintf("expected struct type for `%s`, found `%s`", si.Name.String(), baseTy.String()))
 	}
 	baseStruct := baseTy.Struct()
 	expected := len(baseStruct.Generics.Params)
@@ -26,28 +22,16 @@ func (a *Analysis) handleStructInit(scope *Scope, si *ast.ExprStructInit) Type {
 	// If user provided generics but struct is not generic:
 	switch {
 	case expected == 0 && provided > 0:
-		a.Panic(
-			fmt.Sprintf("struct `%s` is not generic but generics were provided",
-				baseStruct.Def.Name.Raw),
-			si.Name.Span(),
-		)
+		a.panic(si.Name.Span(), fmt.Sprintf("struct `%s` is not generic but generics were provided", baseStruct.Def.Name.Raw))
 	case provided > expected:
-		a.Panic(
-			fmt.Sprintf("struct `%s` expects %d generic argument(s), but %d provided",
-				baseStruct.Def.Name.Raw, expected, provided),
-			si.Name.Span(),
-		)
+		a.panic(si.Name.Span(), fmt.Sprintf("struct `%s` expects %d generic argument(s), but %d provided", baseStruct.Def.Name.Raw, expected, provided))
 	}
 
 	// 1) If user explicitly gave generics, resolve them
 	var explicitGenerics []Type
 	if provided > 0 {
 		if provided != expected {
-			a.Panic(
-				fmt.Sprintf("struct `%s` expects %d generic argument(s), but %d provided",
-					baseStruct.Def.Name.Raw, expected, provided),
-				si.Name.Span(),
-			)
+			a.panic(si.Name.Span(), fmt.Sprintf("struct `%s` expects %d generic argument(s), but %d provided", baseStruct.Def.Name.Raw, expected, provided))
 		}
 		explicitGenerics = make([]Type, 0, provided)
 		for _, tyAst := range si.Generics {
@@ -61,7 +45,7 @@ func (a *Analysis) handleStructInit(scope *Scope, si *ast.ExprStructInit) Type {
 		var err error
 		inferredGenerics, err = a.inferStructGenericsForInit(scope, baseStruct, si.Fields)
 		if err != nil {
-			a.Panic(err.Error(), si.Span())
+			a.panic(si.Span(), err.Error())
 		}
 	}
 
@@ -84,11 +68,7 @@ func (a *Analysis) handleStructInit(scope *Scope, si *ast.ExprStructInit) Type {
 	for name := range newStruct.Fields {
 		// if _, ok := providedFields[name]; !ok && ty.Kind() != ast.SemOptionalKind {
 		if _, ok := providedFields[name]; !ok {
-			a.Panic(
-				fmt.Sprintf("missing required field `%s` in struct `%s` initialization",
-					name, baseStruct.Def.Name.Raw),
-				si.Span(),
-			)
+			a.panic(si.Span(), fmt.Sprintf("missing required field `%s` in struct `%s` initialization", name, baseStruct.Def.Name.Raw))
 		}
 	}
 
@@ -97,14 +77,13 @@ func (a *Analysis) handleStructInit(scope *Scope, si *ast.ExprStructInit) Type {
 		f := &si.Fields[i]
 		field, ok := newStruct.Fields[f.Name.Raw]
 		if !ok {
-			a.Panic(
+			a.panic(f.Name.Span(),
 				fmt.Sprintf("struct `%s` has no field named `%s`",
 					baseStruct.Def.Name.Raw, f.Name.Raw),
-				f.Name.Span(),
 			)
 		}
 		if !a.canAccessStructMember(newStruct, field.IsPublic()) {
-			a.Error(fmt.Sprintf("field `%s` of struct `%s` is private", f.Name.Raw, newStruct.Def.Name.Raw), f.Name.Span())
+			a.Errorf(f.Name.Span(), "field `%s` of struct `%s` is private", f.Name.Raw, newStruct.Def.Name.Raw)
 		}
 		a.handleExpr(scope, &f.Value)
 		exprTy := f.Value.Type()

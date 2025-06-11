@@ -1,7 +1,6 @@
 package sema
 
 import (
-	"fmt"
 	"maps"
 
 	"github.com/gluax-lang/gluax/frontend/ast"
@@ -38,10 +37,7 @@ func (a *Analysis) setupTypeGenerics(scope *Scope, generics ast.Generics, concre
 func (a *Analysis) setupStruct(def *ast.Struct, concrete []Type) *SemStruct {
 	for _, ty := range concrete {
 		if !isInnerTypeRuleCompliant(ty) {
-			a.Panic(
-				fmt.Sprintf("type `%s` cannot be used as a generic type", ty.String()),
-				a.GetStructSetupSpan(def.Span()),
-			)
+			a.panicf(a.GetStructSetupSpan(def.Span()), "type `%s` cannot be used as a generic type", ty.String())
 		}
 	}
 	stScope := def.Scope.(*Scope).Child(false)
@@ -59,7 +55,7 @@ func (a *Analysis) HandleStructMethod(st *ast.SemStruct, method ast.SemFunction,
 	{
 		stTy := ast.NewSemType(st, st.Def.Name.Span())
 		if err := genericsScope.AddType("Self", stTy); err != nil {
-			a.Error(err.Error(), st.Def.Name.Span())
+			a.Error(st.Def.Name.Span(), err.Error())
 		}
 	}
 	var funcTy ast.SemFunction
@@ -103,11 +99,8 @@ func (a *Analysis) buildGenericsTable(scope *Scope, st *SemStruct, concrete []Ty
 						// If the binding is a struct, we need to ensure it implements the trait
 						// specified in the constraint.
 						if !a.StructHasTrait(st, constraint.ResolvedSymbol.Trait()) {
-							a.Panic(
-								fmt.Sprintf("struct `%s` does not implement trait `%s`",
-									binding.String(), constraint.ResolvedSymbol.Trait().Def.Name),
-								a.GetStructSetupSpan(binding.Span()),
-							)
+							a.panicf(a.GetStructSetupSpan(binding.Span()),
+								"struct `%s` does not implement trait `%s`", binding.String(), constraint.ResolvedSymbol.Trait().Def.Name)
 						}
 					}
 				} else if binding.IsGeneric() {
@@ -122,19 +115,12 @@ func (a *Analysis) buildGenericsTable(scope *Scope, st *SemStruct, concrete []Ty
 							}
 						}
 						if !implements {
-							a.Panic(
-								fmt.Sprintf("generic `%s` does not implement trait `%s`",
-									generic.Ident.Raw, trait.Def.Name),
-								a.GetStructSetupSpan(binding.Span()),
-							)
+							a.panicf(a.GetStructSetupSpan(binding.Span()),
+								"generic `%s` does not implement trait `%s`", generic.Ident.Raw, trait.Def.Name)
 						}
 					}
 				} else {
-					a.Panic(
-						fmt.Sprintf("`%s` cannot be used as a generic type",
-							binding.String()),
-						a.GetStructSetupSpan(binding.Span()),
-					)
+					a.panicf(a.GetStructSetupSpan(binding.Span()), "`%s` cannot be used as a generic type", binding.String())
 				}
 			}
 		}
@@ -147,7 +133,7 @@ func (a *Analysis) buildGenericsTable(scope *Scope, st *SemStruct, concrete []Ty
 func (a *Analysis) collectStructFields(st *SemStruct) {
 	for _, field := range st.Def.Fields {
 		if _, ok := st.Fields[field.Name.Raw]; ok {
-			a.Error("duplicate field name", field.Name.Span())
+			a.Error(field.Name.Span(), "duplicate field name")
 		}
 		stScope := st.Scope.(*Scope)
 		ty := a.resolveType(stScope, field.Type)
@@ -161,11 +147,8 @@ func (a *Analysis) instantiateStruct(def *ast.Struct, concrete []Type) *SemStruc
 	}
 
 	if len(concrete) != def.Generics.Len() {
-		a.Panic(
-			fmt.Sprintf("struct `%s` expects %d generic argument(s), but %d provided",
-				def.Name.Raw, def.Generics.Len(), len(concrete)),
-			a.GetStructSetupSpan(def.Span()),
-		)
+		a.panicf(a.GetStructSetupSpan(def.Span()),
+			"struct `%s` expects %d generic argument(s), but %d provided", def.Name.Raw, def.Generics.Len(), len(concrete))
 	}
 
 	st := a.setupStruct(def, concrete)
@@ -181,21 +164,18 @@ func (a *Analysis) resolveStruct(scope *Scope, st *ast.SemStruct, generics []ast
 	if len(generics) == 0 {
 		if !st.Def.Generics.IsEmpty() {
 			if st.Generics.UnboundCount() == st.Generics.Len() {
-				a.Panic(fmt.Sprintf(
-					"struct `%s` is generic but no generic arguments were provided",
-					st.Def.Name.Raw,
-				), span)
+				a.panicf(span, "struct `%s` is generic but no generic arguments were provided", st.Def.Name.Raw)
 			}
 		}
 		return st
 	}
 
 	if st.Def.Generics.IsEmpty() {
-		a.Panic(fmt.Sprintf("struct `%s` is not generic but generics were provided", st.Def.Name.Raw), span)
+		a.panicf(span, "struct `%s` is not generic but generics were provided", st.Def.Name.Raw)
 	}
 
 	if len(generics) != st.Def.Generics.Len() {
-		a.Panic(fmt.Sprintf("expected %d generics, got %d", st.Def.Generics.Len(), len(generics)), span)
+		a.panicf(span, "expected %d generics, got %d", st.Def.Generics.Len(), len(generics))
 	}
 
 	concrete := make([]Type, 0, len(generics))
@@ -358,7 +338,7 @@ func (a *Analysis) unify(
 	span Span,
 ) Type {
 	if disallowedKind(base) || disallowedKind(actual) {
-		a.Panic("type cannot be used here", span)
+		a.panic(span, "type cannot be used here")
 	}
 
 	if base.IsGeneric() {
@@ -389,32 +369,23 @@ func (a *Analysis) unify(
 		bs := base.Struct()
 		// actual must be a struct
 		if !actual.IsStruct() {
-			a.Panic(
-				fmt.Sprintf("type mismatch: expected struct `%s`, got `%s`",
-					bs.String(), actual.String()),
-				span,
-			)
+			a.panicf(span, "type mismatch: expected struct `%s`, got `%s`", bs.String(), actual.String())
 		}
 		as := actual.Struct()
 
 		// same def
 		if bs.Def != as.Def {
-			a.Panic(
-				fmt.Sprintf("type mismatch: expected struct `%s`, got `%s`",
-					bs.Def.Name.Raw, as.Def.Name.Raw),
-				span,
-			)
+			a.panicf(span, "type mismatch: expected struct `%s`, got `%s`", bs.Def.Name.Raw, as.Def.Name.Raw)
 		}
 		// unify each generic param
 		if len(bs.Generics.Params) != len(as.Generics.Params) {
-			a.Panic(
-				fmt.Sprintf(
-					"struct `%s` has %d generic param(s), but got %d in `%s`",
-					bs.Def.Name.Raw,
-					len(bs.Generics.Params),
-					len(as.Generics.Params),
-					as.Def.Name.Raw),
-				span,
+			a.panicf(span,
+
+				"struct `%s` has %d generic param(s), but got %d in `%s`",
+				bs.Def.Name.Raw,
+				len(bs.Generics.Params),
+				len(as.Generics.Params),
+				as.Def.Name.Raw,
 			)
 		}
 		newParams := make([]Type, len(bs.Generics.Params))
@@ -441,11 +412,7 @@ func (a *Analysis) unify(
 	// For everything else (e.g. base is a string/number/bool/nil literal struct),
 	// just see if they strictly match. If not, panic.
 	if !a.MatchTypesStrict(base, actual) {
-		a.Panic(
-			fmt.Sprintf("mismatched types: expected `%s`, got `%s`",
-				base.String(), actual.String()),
-			span,
-		)
+		a.panicf(span, "mismatched types: expected `%s`, got `%s`", base.String(), actual.String())
 	}
 	// If we get here, base == actual. Return base.
 	return base

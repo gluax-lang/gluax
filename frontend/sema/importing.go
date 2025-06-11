@@ -49,21 +49,21 @@ func (a *Analysis) handleImport(scope *Scope, it *ast.Import) {
 	// Resolve relative path
 	resolved, err := a.resolveImportPath(a.Src, importPath)
 	if err != nil {
-		a.Error(fmt.Sprintf("error importing file: %s", err), it.Path.Span())
+		a.Errorf(it.Path.Span(), "%s", err.Error())
 		return
 	}
 
 	// Now analyze that file via the project:
 	importedAnalysis, hardError := a.Project.AnalyzeFile(resolved)
 	if hardError {
-		a.Error("failed to import", it.Path.Span())
+		a.Errorf(it.Path.Span(), "failed to import")
 		return
 	}
 
 	if it.As == nil {
 		inferred := strings.TrimSuffix(filepath.Base(resolved), filepath.Ext(resolved))
 		if !lexer.IsValidIdent(inferred) {
-			a.Error("file name is not a valid identifier to use, specify an alias", it.Path.Span())
+			a.Errorf(it.Path.Span(), "file name is not a valid identifier to use, specify an alias: %s", inferred)
 			return
 		}
 
@@ -74,6 +74,6 @@ func (a *Analysis) handleImport(scope *Scope, it *ast.Import) {
 	importInfo := ast.NewSemImport(*it, resolved, importedAnalysis)
 	it.SafePath = a.Project.PathRelativeToWorkspace(resolved)
 	if err := scope.AddImport(it.As.Raw, importInfo, it.As.Span(), it.Public); err != nil {
-		a.Error(err.Error(), it.As.Span())
+		a.Error(it.As.Span(), err.Error())
 	}
 }

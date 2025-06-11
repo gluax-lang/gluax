@@ -1,7 +1,6 @@
 package sema
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/gluax-lang/gluax/frontend/ast"
@@ -23,10 +22,10 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 	case ast.ExprKindVararg:
 		fun := scope.Func
 		if fun == nil {
-			a.Panic("vararg outside of function", expr.Span())
+			a.panic(expr.Span(), "vararg outside of function")
 		}
 		if !fun.HasVarargParam() {
-			a.Panic("vararg used in function that does not accept varargs", expr.Span())
+			a.panic(expr.Span(), "vararg used in function that does not accept varargs")
 		}
 		retTy = ast.NewSemType(ast.NewSemVararg(fun.VarargParamType()), expr.Span())
 	case ast.ExprKindBinary:
@@ -65,11 +64,11 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 			a.handleExpr(scope, v)
 			ty := v.Type()
 			if ty.IsTuple() {
-				a.Panic("cannot have nested tuples", v.Span())
+				a.panic(v.Span(), "cannot have nested tuples")
 			}
 			if ty.IsVararg() {
 				if i != last {
-					a.Panic("vararg value is only permitted as the last expression", v.Span())
+					a.panic(v.Span(), "vararg value is only permitted as the last expression")
 				}
 			}
 			elems[i] = ty
@@ -110,7 +109,7 @@ func (a *Analysis) handleBinaryExpr(scope *Scope, binE *ast.ExprBinary) Type {
 			ast.BinaryOpGreaterEqual,
 			ast.BinaryOpEqual,
 			ast.BinaryOpNotEqual:
-			a.Panic("chained comparisons are not allowed", binE.Span())
+			a.panic(binE.Span(), "chained comparisons are not allowed")
 		}
 	}
 
@@ -125,15 +124,15 @@ func (a *Analysis) handleBinaryExpr(scope *Scope, binE *ast.ExprBinary) Type {
 		// we need to compare from left and right
 		// Matches is built that if left side is not optional and right side is optional, it will not match, but works vice versa
 		if !a.matchTypes(lty, rty) && !a.matchTypes(rty, lty) {
-			a.Error(fmt.Sprintf("cannot `%s` with `%s`", lty.String(), rty.String()), binE.Span())
+			a.Errorf(binE.Span(), "cannot `%s` with `%s`", lty.String(), rty.String())
 		}
 		return a.boolType()
 	case ast.BinaryOpLogicalOr, ast.BinaryOpLogicalAnd:
 		if !lty.IsLogical() {
-			a.Error("expected boolean value", binE.Left.Span())
+			a.Errorf(binE.Left.Span(), "expected boolean value, got: %s", lty.String())
 		}
 		if !rty.IsLogical() {
-			a.Error("expected boolean value", binE.Right.Span())
+			a.Errorf(binE.Right.Span(), "expected boolean value, got: %s", rty.String())
 		}
 		binE.Left.AsCond = true
 		binE.Right.AsCond = true
@@ -141,10 +140,10 @@ func (a *Analysis) handleBinaryExpr(scope *Scope, binE *ast.ExprBinary) Type {
 	case ast.BinaryOpLess, ast.BinaryOpGreater,
 		ast.BinaryOpLessEqual, ast.BinaryOpGreaterEqual:
 		if !lty.IsNumber() {
-			a.Error("attempted to perform comparison on non-number value", binE.Left.Span())
+			a.Errorf(binE.Left.Span(), "attempted to perform comparison on non-number value, got: %s", lty.String())
 		}
 		if !rty.IsNumber() {
-			a.Error("attempted to perform comparison on non-number value", binE.Right.Span())
+			a.Errorf(binE.Right.Span(), "attempted to perform comparison on non-number value, got: %s", rty.String())
 		}
 		return a.boolType()
 	case ast.BinaryOpBitwiseOr, ast.BinaryOpBitwiseXor, ast.BinaryOpBitwiseAnd,
@@ -153,18 +152,18 @@ func (a *Analysis) handleBinaryExpr(scope *Scope, binE *ast.ExprBinary) Type {
 		ast.BinaryOpMul, ast.BinaryOpDiv,
 		ast.BinaryOpMod, ast.BinaryOpExponent:
 		if !lty.IsNumber() {
-			a.Error("attempted to perform arithmetic on non-number value", binE.Left.Span())
+			a.Errorf(binE.Left.Span(), "attempted to perform arithmetic on non-number value, got: %s", lty.String())
 		}
 		if !rty.IsNumber() {
-			a.Error("attempted to perform arithmetic on non-number value", binE.Right.Span())
+			a.Errorf(binE.Right.Span(), "attempted to perform arithmetic on non-number value, got: %s", rty.String())
 		}
 		return a.numberType()
 	case ast.BinaryOpConcat:
 		if !lty.IsString() {
-			a.Error("attempted to concatenate non-string value", binE.Left.Span())
+			a.Errorf(binE.Left.Span(), "attempted to concatenate non-string value, got: %s", lty.String())
 		}
 		if !rty.IsString() {
-			a.Error("attempted to concatenate non-string value", binE.Right.Span())
+			a.Errorf(binE.Right.Span(), "attempted to concatenate non-string value, got: %s", rty.String())
 		}
 		return a.stringType()
 	}
@@ -178,22 +177,22 @@ func (a *Analysis) handleUnaryExpr(scope *Scope, unE *ast.ExprUnary) Type {
 	switch unE.Op {
 	case ast.UnaryOpNot:
 		if !ty.IsLogical() {
-			a.Panic("unary not operator requires a boolean value", unE.Span())
+			a.panic(unE.Span(), "unary not operator requires a boolean value")
 		}
 		return a.boolType()
 	case ast.UnaryOpNegate:
 		if !ty.IsNumber() {
-			a.Panic("unary negate operator requires a number value", unE.Span())
+			a.panic(unE.Span(), "unary negate operator requires a number value")
 		}
 		return a.numberType()
 	case ast.UnaryOpBitwiseNot:
 		if !ty.IsNumber() {
-			a.Panic("unary bitwise not operator requires an integer value", unE.Span())
+			a.panic(unE.Span(), "unary bitwise not operator requires an integer value")
 		}
 		return a.numberType()
 	case ast.UnaryOpLength:
 		if !ty.IsVec() && !ty.IsString() {
-			a.Panic("unary length operator requires a vector or string value", unE.Span())
+			a.panic(unE.Span(), "unary length operator requires a vector or string value")
 		}
 		return a.numberType()
 	default:
@@ -371,7 +370,7 @@ func (a *Analysis) handleForInExpr(scope *Scope, forIn *ast.ExprForIn) {
 
 	inExprTy := inExpr.Type()
 	if !inExprTy.IsStruct() {
-		a.Panic(fmt.Sprintf("cannot iterate over non-struct type: %s", inExprTy.String()), inExpr.Span())
+		a.panicf(inExpr.Span(), "expected struct type, got: %s", inExprTy.String())
 	}
 
 	var iterReturn Type
@@ -388,12 +387,12 @@ func (a *Analysis) handleForInExpr(scope *Scope, forIn *ast.ExprForIn) {
 		iterReturnCount = 2
 		forIn.IsRange = true
 	} else {
-		a.Panic("cannot iterate over struct without __x_iter_pairs method", inExpr.Span())
+		a.panic(inExpr.Span(), "cannot iterate over struct without __x_iter_pairs method")
 	}
 
 	variableCount := len(forIn.Vars)
 	if variableCount > iterReturnCount {
-		a.Panic(fmt.Sprintf("for-in loop declares %d variables, but iterator returns %d value(s)", variableCount, iterReturnCount), forIn.Span())
+		a.panicf(forIn.Span(), "for-in loop declares %d variables, but iterator returns %d value(s)", variableCount, iterReturnCount)
 	}
 
 	varsTypes := make([]Type, variableCount)
@@ -457,21 +456,21 @@ func (a *Analysis) handlePostfixExpr(scope *Scope, e *ast.ExprPostfix) Type {
 
 func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span Span) Type {
 	if toCallTy.Kind() != ast.SemFunctionKind {
-		a.Panic(fmt.Sprintf("expected function type, got: %s", toCallTy.String()), span)
+		a.panicf(span, "expected function type, got: %s", toCallTy.String())
 	}
 	funcTy := toCallTy.Function()
 
 	if call.Catch != nil && !funcTy.Def.Errorable {
-		a.Panic("cannot catch on non-erroable function", call.Span())
+		a.panic(call.Span(), "cannot catch on non-erroable function")
 	}
 
 	if call.IsTryCall {
 		if !funcTy.Def.Errorable {
-			a.Panic("cannot try-call on non-erroable function", call.Span())
+			a.panic(call.Span(), "cannot try-call on non-erroable function")
 		}
 
 		if !scope.IsFuncErrorable() {
-			a.Panic("cannot call try-call outside non erroable function", call.Span())
+			a.panic(call.Span(), "cannot call try-call outside non erroable function")
 		}
 	}
 
@@ -506,15 +505,15 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 		switch argType.Kind() {
 		case ast.SemVarargKind:
 			if !isLastArg {
-				a.Panic("vararg value is only permitted as the last argument in a call", rawArg.Span())
+				a.panic(rawArg.Span(), "vararg value is only permitted as the last argument in a call")
 			}
 			if !hasVararg {
-				a.Panic("function does not accept vararg arguments", rawArg.Span())
+				a.panic(rawArg.Span(), "function does not accept vararg arguments")
 			}
 			a.Matches(varargParam, argType, rawArg.Span())
 		case ast.SemTupleKind:
 			if !isLastArg {
-				a.Panic("tuple value is only permitted as the last argument in a call", rawArg.Span())
+				a.panic(rawArg.Span(), "tuple value is only permitted as the last argument in a call")
 			}
 			for _, elemType := range argType.Tuple().Elems {
 				appendArg(elemType, rawArg.Span())
@@ -528,16 +527,10 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 	actualCount := len(processedArgs)
 
 	if actualCount < requiredCount {
-		a.Panic(
-			fmt.Sprintf("expected at least %d argument(s), found %d", requiredCount, actualCount),
-			call.Span(),
-		)
+		a.panicf(call.Span(), "expected at least %d argument(s), found %d", requiredCount, actualCount)
 	}
 	if !hasVararg && actualCount != requiredCount {
-		a.Panic(
-			fmt.Sprintf("expected exactly %d argument(s), found %d", requiredCount, actualCount),
-			call.Span(),
-		)
+		a.panicf(call.Span(), "expected exactly %d argument(s), found %d", requiredCount, actualCount)
 	}
 
 	for i := range requiredCount {
@@ -566,7 +559,7 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 	}
 
 	if funcTy.Def.Errorable {
-		a.Warning("unhandled error", call.Span())
+		a.Warning(call.Span(), "unhandled error")
 		return ast.NewErrorType(call.Span())
 	}
 
@@ -576,7 +569,7 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 func (a *Analysis) handleDotAccess(expr *ast.DotAccess, toIndex *ast.Expr) Type {
 	toIndexTy := toIndex.Type()
 	if !toIndexTy.IsStruct() {
-		a.Panic(fmt.Sprintf("cannot index into non-struct type `%s`", toIndexTy.String()), expr.Span())
+		a.panicf(expr.Span(), "cannot index into non-struct type `%s`", toIndexTy.String())
 	}
 
 	st := toIndexTy.Struct()
@@ -586,17 +579,14 @@ func (a *Analysis) handleDotAccess(expr *ast.DotAccess, toIndex *ast.Expr) Type 
 	flds := st.Fields
 	if fld, ok := flds[field.Raw]; ok {
 		if !a.canAccessStructMember(st, fld.IsPublic()) {
-			a.Error(fmt.Sprintf("field `%s` of struct `%s` is private", field.Raw, st.Def.Name.Raw), field.Span())
+			a.Errorf(field.Span(), "field `%s` of struct `%s` is private", field.Raw, st.Def.Name.Raw)
 		}
 		fldSym := ast.NewSymbol(field.Raw, &fld, fld.Def.Name.Span(), true)
 		a.AddSpanSymbol(expr.Span(), fldSym)
 		return fld.Ty
 	}
 
-	a.Panic(
-		fmt.Sprintf("no field named `%s` in `%s`", field.Raw, st.Def.Name.Raw),
-		field.Span(),
-	)
+	a.panicf(field.Span(), "no field named `%s` in `%s`", field.Raw, st.Def.Name.Raw)
 	panic("unreachable")
 }
 
@@ -623,31 +613,22 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 			}
 		}
 		if !found {
-			a.Panic(
-				fmt.Sprintf("no method named `%s` in generic type `%s`", call.Method.Raw, toCallName),
-				call.Method.Span(),
-			)
+			a.panicf(call.Method.Span(), "no method named `%s` in generic type `%s`", call.Method.Raw, toCallName)
 		}
 	case toCallTy.IsDynTrait():
 		dynTrait := toCallTy.DynTrait()
 		toCallName = dynTrait.String()
 		method, exists = a.GetTraitMethod(dynTrait.Trait, call.Method.Raw)
 	default:
-		a.Panic(fmt.Sprintf("cannot call method on non-struct/dyn-trait type `%s`", toCallTy.String()), call.Span())
+		a.panicf(call.Span(), "cannot call method on non-struct/dyn-trait type `%s`", toCallTy.String())
 	}
 
 	if !exists {
-		a.Panic(
-			fmt.Sprintf("no method named `%s` in `%s`", call.Method.Raw, toCallName),
-			call.Method.Span(),
-		)
+		a.panicf(call.Method.Span(), "no method named `%s` in `%s`", call.Method.Raw, toCallName)
 	}
 
 	if len(method.Params) < 1 || method.Def.Params[0].Name.Raw != "self" {
-		a.Panic(
-			fmt.Sprintf("no method named `%s` in `%s`", call.Method.Raw, toCallName),
-			call.Method.Span(),
-		)
+		a.panicf(call.Method.Span(), "no method named `%s` in `%s`", call.Method.Raw, toCallName)
 	}
 
 	method.Params = method.Params[1:]
@@ -668,7 +649,7 @@ func (a *Analysis) handleUnsafeCast(scope *Scope, as *ast.UnsafeCast) Type {
 func (a *Analysis) handleElse(scope *Scope, elseOp *ast.Else, expr *ast.Expr) Type {
 	exprTy := expr.Type()
 	if !exprTy.IsOption() {
-		a.Panic("`else` can only be used on options", elseOp.Span())
+		a.panic(elseOp.Span(), "`else` can only be used on options")
 	}
 	a.handleExpr(scope, &elseOp.Value)
 	a.Matches(exprTy.OptionInnerType(), elseOp.Value.Type(), elseOp.Value.Span())
@@ -678,7 +659,7 @@ func (a *Analysis) handleElse(scope *Scope, elseOp *ast.Else, expr *ast.Expr) Ty
 func (a *Analysis) handleUnwrapOption(_ *Scope, unwrapOp *ast.UnwrapOption, expr *ast.Expr) Type {
 	exprTy := expr.Type()
 	if !exprTy.IsOption() {
-		a.Panic("`?` can only be used on options", unwrapOp.Span())
+		a.panic(unwrapOp.Span(), "`?` can only be used on options")
 	}
 	return exprTy.OptionInnerType()
 }
@@ -686,7 +667,7 @@ func (a *Analysis) handleUnwrapOption(_ *Scope, unwrapOp *ast.UnwrapOption, expr
 func (a *Analysis) handleRunRaw(scope *Scope, runRaw *ast.ExprRunRaw) Type {
 	code := runRaw.Code.Raw
 	if code == "" {
-		a.Panic("run raw expression cannot be empty", runRaw.Span())
+		a.panic(runRaw.Span(), "run raw expression cannot be empty")
 	}
 
 	matches := runRaw.GetArgRegex().FindAllStringSubmatch(code, -1)
@@ -696,13 +677,13 @@ func (a *Analysis) handleRunRaw(scope *Scope, runRaw *ast.ExprRunRaw) Type {
 	for _, match := range matches {
 		argNum, err := strconv.Atoi(match[1])
 		if err != nil {
-			a.Panic(fmt.Sprintf("invalid argument number in placeholder: %s", match[0]), runRaw.Span())
+			a.panicf(runRaw.Span(), "invalid argument number in placeholder: %s", match[0])
 		}
 		if argNum < 1 {
-			a.Panic("argument numbers must start from 1", runRaw.Span())
+			a.panicf(runRaw.Span(), "argument numbers must start from 1")
 		}
 		if usedArgs[argNum] {
-			a.Panic(fmt.Sprintf("argument {@%d@} is used more than once", argNum), runRaw.Span())
+			a.panicf(runRaw.Span(), "argument {@%d@} is used more than once", argNum)
 		}
 		usedArgs[argNum] = true
 		if argNum > maxArgUsed {
@@ -712,22 +693,22 @@ func (a *Analysis) handleRunRaw(scope *Scope, runRaw *ast.ExprRunRaw) Type {
 
 	for i := 1; i <= maxArgUsed; i++ {
 		if !usedArgs[i] {
-			a.Panic(fmt.Sprintf("argument {@%d@} is missing - all arguments from 1 to %d must be used", i, maxArgUsed), runRaw.Span())
+			a.panicf(runRaw.Span(), "argument {@%d@} is missing - all arguments from 1 to %d must be used", i, maxArgUsed)
 		}
 	}
 
 	actualArgs := len(runRaw.Args)
 	if actualArgs != maxArgUsed {
 		if maxArgUsed == 0 {
-			a.Panic(fmt.Sprintf("no argument placeholders found in code, but %d arguments provided", actualArgs), runRaw.Span())
+			a.panicf(runRaw.Span(), "no argument placeholders found in code, but %d arguments provided", actualArgs)
 		} else {
-			a.Panic(fmt.Sprintf("expected %d arguments based on placeholders, but got %d", maxArgUsed, actualArgs), runRaw.Span())
+			a.panicf(runRaw.Span(), "expected %d arguments based on placeholders, but got %d", maxArgUsed, actualArgs)
 		}
 	}
 
 	returnMatches := runRaw.GetReturnRegex().FindAllStringSubmatch(code, -1)
 	if len(returnMatches) > 1 {
-		a.Panic("can't have more than one {@RETURN@} placeholder", runRaw.Span())
+		a.panicf(runRaw.Span(), "can't have more than one {@RETURN@} placeholder")
 	}
 
 	for i := range runRaw.Args {
@@ -741,7 +722,7 @@ func (a *Analysis) handleVecInit(scope *Scope, vecInit *ast.ExprVecInit) Type {
 	var ty Type
 	generics := vecInit.Generics
 	if len(generics) > 1 {
-		a.Panic("vector only accepts up to 1 generic", vecInit.Span())
+		a.panic(vecInit.Span(), "vector only accepts up to 1 generic")
 	}
 	if len(generics) > 0 {
 		ty = a.resolveType(scope, generics[0])
@@ -756,7 +737,7 @@ func (a *Analysis) handleVecInit(scope *Scope, vecInit *ast.ExprVecInit) Type {
 		}
 	}
 	if !ty.IsValid() {
-		a.Panic("cannot infer type of empty vector", vecInit.Span())
+		a.panic(vecInit.Span(), "cannot infer type of empty vector")
 	}
 	return a.vecType(ty, vecInit.Span())
 }
@@ -765,7 +746,7 @@ func (a *Analysis) handleMapInit(scope *Scope, mapInit *ast.ExprMapInit) Type {
 	var keyTy, valueTy Type
 	generics := mapInit.Generics
 	if len(generics) > 2 {
-		a.Panic("map only accepts up to 2 generics", mapInit.Span())
+		a.panic(mapInit.Span(), "map only accepts up to 2 generics")
 	}
 	if len(generics) > 0 {
 		keyTy = a.resolveType(scope, generics[0])
@@ -789,7 +770,7 @@ func (a *Analysis) handleMapInit(scope *Scope, mapInit *ast.ExprMapInit) Type {
 		}
 	}
 	if !keyTy.IsValid() {
-		a.Panic("cannot infer types of empty map", mapInit.Span())
+		a.panic(mapInit.Span(), "cannot infer types of empty map")
 	}
 	return a.mapType(keyTy, valueTy, mapInit.Span())
 }

@@ -1,7 +1,6 @@
 package sema
 
 import (
-	"fmt"
 	"slices"
 
 	"github.com/gluax-lang/gluax/frontend/ast"
@@ -11,99 +10,99 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemStruct, string){
 	"__x_iter_pairs": func(a *Analysis, st *ast.SemStruct, methodName string) {
 		fun, _ := a.GetStructMethod(st, methodName)
 		if len(fun.Params) != 1 {
-			a.Error(fmt.Sprintf("method `%s` must have a single parameter", methodName), fun.Def.Name.Span())
+			a.Errorf(fun.Def.Span(), "method `%s` must have one parameter", methodName)
 			return
 		}
 
 		if fun.Def.Params[0].Name.Raw != "self" {
-			a.Error("first parameter must be `self`", fun.Def.Params[0].Type.Span())
+			a.Error(fun.Def.Params[0].Type.Span(), "first parameter must be `self`")
 			return
 		}
 
 		if fun.HasVarargReturn() {
-			a.Error(fmt.Sprintf("method `%s` cannot have vararg return", methodName), fun.Return.Span())
+			a.Errorf(fun.Return.Span(), "method `%s` cannot have vararg return", methodName)
 			return
 		}
 
 		if fun.ReturnCount() > 3 {
-			a.Error(fmt.Sprintf("method `%s` cannot have more than 3 return values", methodName), fun.Return.Span())
+			a.Errorf(fun.Return.Span(), "method `%s` cannot have more than 3 return values", methodName)
 			return
 		}
 
 		firstReturn := fun.FirstReturnType()
 		if !firstReturn.IsFunction() {
-			a.Error("first return value must be a function type", firstReturn.Span())
+			a.Errorf(firstReturn.Span(), "first return value must be a function type")
 			return
 		}
 
 		iterFunc := firstReturn.Function()
 		if iterFunc.HasVarargReturn() {
-			a.Error(fmt.Sprintf("method `%s` iterator function cannot have vararg return", methodName), iterFunc.Return.Span())
+			a.Errorf(iterFunc.Return.Span(), "method `%s` iterator function cannot have vararg return", methodName)
 			return
 		}
 	},
 	"__x_iter_range": func(a *Analysis, st *ast.SemStruct, methodName string) {
 		fun, _ := a.GetStructMethod(st, methodName)
 		if len(fun.Params) != 2 {
-			a.Error(fmt.Sprintf("method `%s` must have two parameters", methodName), fun.Def.Name.Span())
+			a.Errorf(fun.Def.Name.Span(), "method `%s` must have two parameters", methodName)
 			return
 		}
 
 		if _, exists := a.GetStructMethod(st, "__x_iter_range_bound"); !exists {
-			a.Error(fmt.Sprintf("struct `%s` must implement method `__x_iter_range_bound` to use `%s`", st.Def.Name.Raw, methodName), fun.Def.Name.Span())
+			a.Errorf(fun.Def.Name.Span(), "struct `%s` must implement method `__x_iter_range_bound` to use `%s`", st.Def.Name.Raw, methodName)
 			return
 		}
 
 		if fun.Def.Params[0].Name.Raw != "self" {
-			a.Error("first parameter must be `self`", fun.Def.Params[0].Type.Span())
+			a.Errorf(fun.Def.Params[0].Type.Span(), "first parameter must be `self`")
 			return
 		}
 
 		if !fun.Params[1].IsNumber() {
-			a.Error("second parameter must be a number type", fun.Def.Params[1].Type.Span())
+			a.Errorf(fun.Def.Params[1].Type.Span(), "second parameter must be a number type")
 			return
 		}
 
 		if fun.HasVarargReturn() {
-			a.Error(fmt.Sprintf("method `%s` cannot have vararg return", methodName), fun.Return.Span())
+			a.Errorf(fun.Return.Span(), "method `%s` cannot have vararg return", methodName)
 			return
 		}
 
 		if fun.ReturnCount() != 1 {
-			a.Error(fmt.Sprintf("method `%s` must have exactly one return value", methodName), fun.Return.Span())
+			a.Errorf(fun.Return.Span(), "method `%s` must have exactly one return value", methodName)
 			return
 		}
 	},
 	"__x_iter_range_bound": func(a *Analysis, st *ast.SemStruct, methodName string) {
 		fun, _ := a.GetStructMethod(st, methodName)
 		if len(fun.Params) != 1 {
-			a.Error(fmt.Sprintf("method `%s` must have one parameter", methodName), fun.Def.Name.Span())
+			a.Errorf(fun.Def.Name.Span(), "method `%s` must have one parameter", methodName)
 			return
 		}
 
 		if _, exists := a.GetStructMethod(st, "__x_iter_range"); !exists {
-			a.Error(fmt.Sprintf("struct `%s` must implement method `__x_iter_range` to use `%s`", st.Def.Name.Raw, methodName), fun.Def.Name.Span())
+			a.Errorf(fun.Def.Name.Span(), "struct `%s` must implement method `__x_iter_range` to use `%s`", st.Def.Name.Raw, methodName)
 			return
 		}
 
 		if fun.Def.Params[0].Name.Raw != "self" {
-			a.Error("first parameter must be `self`", fun.Def.Params[0].Type.Span())
+			a.Errorf(fun.Def.Params[0].Type.Span(), "first parameter must be `self`")
 			return
 		}
 
 		if fun.HasVarargReturn() {
-			a.Error(fmt.Sprintf("method `%s` cannot have vararg return", methodName), fun.Return.Span())
+			a.Errorf(fun.Return.Span(), "method `%s` cannot have vararg return", methodName)
 			return
 		}
 
 		if fun.ReturnCount() != 1 {
-			a.Error(fmt.Sprintf("method `%s` must have exactly one return value", methodName), fun.Return.Span())
+			a.Errorf(fun.Return.Span(), "method `%s` must have exactly one return value", methodName)
 			return
 		}
 
 		firstReturn := fun.FirstReturnType()
 		if !firstReturn.IsNumber() {
-			a.Error("return value must be a number type", firstReturn.Span())
+			a.Errorf(firstReturn.Span(), "return value must be a number type")
 			return
 		}
 	},
@@ -131,7 +130,7 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 		trait := ast.NewSemTrait(traitDef)
 		trait.Scope = a.Scope.Child(false)
 		if err := a.Scope.AddTrait(traitDef.Name.Raw, &trait, traitDef.Span(), traitDef.Public); err != nil {
-			a.Error(err.Error(), traitDef.Span())
+			a.Error(traitDef.Span(), err.Error())
 		}
 		traitDef.Sem = &trait
 	}
@@ -140,12 +139,12 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 		for _, super := range traitDef.SuperTraits {
 			superDef := a.resolvePathSymbol(a.Scope, &super)
 			if !superDef.IsTrait() {
-				a.Panic("expected trait", super.Span())
+				a.panic(super.Span(), "expected trait")
 			}
 			trait := traitDef.Sem
 			superTrait := superDef.Trait()
 			if causesTraitCycle(trait, superTrait) {
-				a.Panic(fmt.Sprintf("cyclic supertrait: trait `%s` is (directly or indirectly) a supertrait of itself", trait.Def.Name.Raw), super.Span())
+				a.panicf(super.Span(), "cyclic supertrait: trait `%s` is (directly or indirectly) a supertrait of itself", trait.Def.Name.Raw)
 			}
 			trait.SuperTraits = append(trait.SuperTraits, superTrait)
 		}
@@ -190,14 +189,14 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 		genericsScope := a.setupTypeGenerics(a.Scope, impl.Generics, nil)
 		stTy := a.resolveType(genericsScope, impl.Struct)
 		if !stTy.IsStruct() {
-			a.Panic(fmt.Sprintf("expected struct type, got: %s", stTy.String()), impl.Struct.Span())
+			a.panicf(impl.Struct.Span(), "expected struct type, got: %s", stTy.String())
 		}
 		if err := genericsScope.AddType("Self", stTy); err != nil {
-			a.Error(err.Error(), impl.Struct.Span())
+			a.Error(impl.Struct.Span(), err.Error())
 		}
 		st := stTy.Struct()
 		if st.Def.Attributes.Has("no_impl") {
-			a.Panic(fmt.Sprintf("struct `%s` cannot implement methods", st.Def.Name.Raw), impl.Span())
+			a.panicf(impl.Span(), "struct `%s` cannot implement methods", st.Def.Name.Raw)
 		}
 		for _, method := range impl.Methods {
 			funcTy := a.handleFunctionSignature(genericsScope, &method)
@@ -205,7 +204,7 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 			funcTy.Generics = impl.Generics
 			methodName := method.Name.Raw
 			if _, exists := a.GetStructMethod(st, methodName); exists {
-				a.Panic(fmt.Sprintf("method '%s' already exists for these concrete types", methodName), funcTy.Def.Name.Span())
+				a.panicf(funcTy.Def.Name.Span(), "method '%s' already exists for these concrete types", methodName)
 			}
 			a.addStructMethod(st, funcTy)
 			implStructsChecks = append(implStructsChecks, func() {
@@ -213,7 +212,7 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 				// without caring for order of implementation
 				delete(st.Methods, methodName)
 				if _, exists := a.GetStructMethod(st, methodName); exists {
-					a.Panic(fmt.Sprintf("method '%s' already exists for these concrete types", methodName), funcTy.Def.Name.Span())
+					a.panicf(funcTy.Def.Name.Span(), "method '%s' already exists for these concrete types", methodName)
 				}
 				st.Methods[methodName] = funcTy
 				// this hack is also needed, so something like `__x_iter_range` can check if `__x_iter_range_bound` exists or not
@@ -236,7 +235,7 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 		for _, method := range traitDef.Methods {
 			params := method.Params
 			if len(params) < 1 || params[0].Name.Raw != "self" {
-				a.Panic(fmt.Sprintf("trait `%s` method `%s` must have a `self` parameter as the first parameter", traitDef.Name.Raw, method.Name.Raw), method.Name.Span())
+				a.panicf(method.Name.Span(), "trait `%s` method `%s` must have a `self` parameter as the first parameter", traitDef.Name.Raw, method.Name.Raw)
 			}
 			funcTy := a.handleFunctionSignature(SelfScope, &method)
 			funcTy.Scope = scope
@@ -252,10 +251,7 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 		for name, method := range trait.Methods {
 			for _, superTrait := range trait.SuperTraits {
 				if _, exists := a.GetTraitMethod(superTrait, name); exists {
-					a.Panic(fmt.Sprintf(
-						"cannot redefine method `%s`: already defined in supertrait `%s`",
-						name, superTrait.Def.Name.Raw,
-					), method.Def.Name.Span())
+					a.panicf(method.Def.Name.Span(), "cannot redefine method `%s`: already defined in supertrait `%s`", name, superTrait.Def.Name.Raw)
 				}
 			}
 		}
@@ -265,7 +261,7 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 	for _, implTrait := range astD.ImplTraits {
 		traitPath := a.resolvePathSymbol(a.Scope, &implTrait.Trait)
 		if !traitPath.IsTrait() {
-			a.Panic("expected trait", implTrait.Trait.Span())
+			a.panic(implTrait.Trait.Span(), "expected trait")
 		}
 		trait := traitPath.Trait()
 
@@ -273,18 +269,18 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 
 		stTy := a.resolveType(genericsScope, implTrait.Struct)
 		if !stTy.IsStruct() {
-			a.Panic("expected struct", implTrait.Struct.Span())
+			a.panic(implTrait.Struct.Span(), "expected struct")
 		}
 		st := stTy.Struct()
 
 		if trait.Def.Attributes.Has("requires_metatable") && st.Def.Attributes.Has("no_metatable") {
-			a.Panic(fmt.Sprintf("struct `%s` must have a metatable to implement trait `%s`", st.Def.Name.Raw, trait.Def.Name.Raw), implTrait.Span())
+			a.panicf(implTrait.Span(), "struct `%s` cannot implement trait `%s` because it has no metatable", st.Def.Name.Raw, trait.Def.Name.Raw)
 		}
 
 		checks = append(checks, func() {
 			for _, superTrait := range trait.SuperTraits {
 				if !a.StructHasTrait(st, superTrait) {
-					a.Panic(fmt.Sprintf("struct `%s` must implement supertrait `%s`", st.Def.Name.Raw, superTrait.Def.Name.Raw), implTrait.Span())
+					a.panicf(implTrait.Span(), "struct `%s` must implement supertrait `%s`", st.Def.Name.Raw, superTrait.Def.Name.Raw)
 				}
 			}
 		})
@@ -296,12 +292,12 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 					a.addStructMethod(st, method)
 					continue
 				} else {
-					a.Panic(fmt.Sprintf("struct `%s` does not implement trait `%s` method `%s`", st.Def.Name.Raw, trait.Def.Name.Raw, name), implTrait.Span())
+					a.panicf(implTrait.Span(), "struct `%s` does not implement trait `%s` method `%s`", st.Def.Name.Raw, trait.Def.Name.Raw, name)
 				}
 			}
 			params := stMethod.Def.Params
 			if len(params) < 1 || params[0].Name.Raw != "self" {
-				a.Panic(fmt.Sprintf("struct `%s` method `%s` must have a `self` parameter as the first parameter", st.Def.Name.Raw, name), implTrait.Span())
+				a.panicf(implTrait.Span(), "struct `%s` method `%s` must have a `self` parameter as the first parameter", st.Def.Name.Raw, name)
 			}
 
 			methodCopy := method
@@ -312,19 +308,19 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 
 			stMethodTy := ast.NewSemType(stMethodCopy, st.Def.Name.Span())
 			if !a.matchFunctionType(methodCopy, stMethodTy) {
-				a.Panic(fmt.Sprintf("method `%s` doesn't match trait `%s`: expected %s, got %s", name, trait.Def.Name.Raw, method.String(), stMethodTy.String()), implTrait.Span())
+				a.panicf(implTrait.Span(), "method `%s` doesn't match trait `%s`: expected %s, got %s", name, trait.Def.Name.Raw, method.String(), stMethodTy.String())
 			}
 		}
 
 		if a.StructHasTrait(st, trait) {
-			a.Panic(fmt.Sprintf("trait `%s` already exists for this struct", trait.Def.Name.Raw), implTrait.Span())
+			a.panicf(implTrait.Span(), "struct `%s` already implements trait `%s`", st.String(), trait.Def.Name.Raw)
 		}
 
 		st.Traits[trait] = struct{}{}
 		checks = append(checks, func() {
 			delete(st.Traits, trait)
 			if a.StructHasTrait(st, trait) {
-				a.Panic(fmt.Sprintf("trait `%s` already exists for this struct", trait.Def.Name.Raw), implTrait.Span())
+				a.panicf(implTrait.Span(), "struct `%s` already implements trait `%s`", st.String(), trait.Def.Name.Raw)
 			}
 			st.Traits[trait] = struct{}{}
 		})
@@ -359,7 +355,7 @@ func (a *Analysis) handleUse(scope *Scope, it *ast.Use) {
 	sym.SetPublic(it.Public)
 
 	if err := scope.AddSymbol(it.NameIdent().Raw, sym); err != nil {
-		a.Error(err.Error(), it.Span())
+		a.Error(it.Span(), err.Error())
 	}
 }
 

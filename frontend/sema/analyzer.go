@@ -78,7 +78,7 @@ func (a *Analysis) handleAst(ast *ast.Ast) {
 	a.handleItems(ast)
 }
 
-func (a *Analysis) Error(msg string, span Span) {
+func (a *Analysis) Error(span Span, msg string) {
 	// println("\n-------------------------------------")
 	// println(msg)
 	// debug.PrintStack()
@@ -86,42 +86,51 @@ func (a *Analysis) Error(msg string, span Span) {
 	a.Diags = append(a.Diags, *common.ErrorDiag(msg, span))
 }
 
-func (a *Analysis) Warning(msg string, span Span) {
+func (a *Analysis) Errorf(span Span, format string, args ...any) {
+	a.Error(span, fmt.Sprintf(format, args...))
+}
+
+func (a *Analysis) Warning(span Span, msg string) {
 	a.Diags = append(a.Diags, *common.WarningDiag(msg, span))
 }
 
-func (a *Analysis) Panic(msg string, span Span) {
-	a.Error(msg, span)
+func (a *Analysis) panic(span Span, msg string) {
+	a.Error(span, msg)
+	panic("")
+}
+
+func (a *Analysis) panicf(span Span, format string, args ...any) {
+	a.Errorf(span, format, args...)
 	panic("")
 }
 
 func (a *Analysis) AddType(scope *Scope, name string, ty Type) {
 	if err := scope.AddType(name, ty); err != nil {
-		a.Error(err.Error(), ty.Span())
+		a.Errorf(ty.Span(), "%s", err.Error())
 	}
 }
 
 func (a *Analysis) AddTypeVisibility(scope *Scope, name string, ty Type, public bool) {
 	if err := scope.AddTypeVisibility(name, ty, public); err != nil {
-		a.Error(err.Error(), ty.Span())
+		a.Errorf(ty.Span(), "%s", err.Error())
 	}
 }
 
 func (a *Analysis) AddValue(scope *Scope, name string, val Value, span Span) {
 	if err := scope.AddValue(name, val, span); err != nil {
-		a.Error(err.Error(), span)
+		a.Errorf(span, "%s", err.Error())
 	}
 }
 
 func (a *Analysis) AddValueVisibility(scope *Scope, name string, val Value, span Span, public bool) {
 	if err := scope.AddValueVisibility(name, val, span, public); err != nil {
-		a.Error(err.Error(), span)
+		a.Errorf(span, "%s", err.Error())
 	}
 }
 
 func (a *Analysis) AddLabel(scope *Scope, label *ast.Ident) {
 	if err := scope.AddLabel(label.Raw); err != nil {
-		a.Error(err.Error(), label.Span())
+		a.Errorf(label.Span(), "%s", err.Error())
 	}
 }
 
@@ -143,10 +152,10 @@ func (a *Analysis) getBuiltinType(name string) Type {
 	scope := a.Scope
 	ty := scope.GetType(name)
 	if ty == nil {
-		a.Panic(fmt.Sprintf("unknown type: %s", name), common.SpanDefault())
+		a.panicf(common.SpanDefault(), "unknown type: %s", name)
 	}
 	if ty.Kind() != ast.SemStructKind {
-		a.Panic(fmt.Sprintf("expected struct type, got: %s", ty.Kind()), common.SpanDefault())
+		a.panicf(common.SpanDefault(), "expected struct type, got: %s", ty.Kind())
 	}
 	return *ty
 }
@@ -207,18 +216,18 @@ func (a *Analysis) tupleType(span Span, ty Type, other ...Type) Type {
 
 func (a *Analysis) Matches(ty, other Type, span Span) {
 	if !a.matchTypes(ty, other) {
-		a.Error(fmt.Sprintf("mismatched types, expected `%s`, got `%s`", ty.String(), other.String()), span)
+		a.Errorf(span, "mismatched types, expected `%s`, got `%s`", ty.String(), other.String())
 	}
 }
 
 func (a *Analysis) StrictMatches(ty, other Type, span Span) {
 	if !a.MatchTypesStrict(ty, other) {
-		a.Error(fmt.Sprintf("mismatched types, expected `%s`, got `%s`", ty.String(), other.String()), span)
+		a.Errorf(span, "mismatched types, expected `%s`, got `%s`", ty.String(), other.String())
 	}
 }
 
 func (a *Analysis) MatchesPanic(ty, other Type, span Span) {
 	if !a.matchTypes(ty, other) {
-		a.Panic(fmt.Sprintf("mismatched types, expected `%s`, got `%s`", ty.String(), other.String()), span)
+		a.panicf(span, "mismatched types, expected `%s`, got `%s`", ty.String(), other.String())
 	}
 }

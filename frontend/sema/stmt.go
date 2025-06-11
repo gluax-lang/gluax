@@ -49,7 +49,7 @@ func (a *Analysis) handleStmt(scope *Scope, raw ast.Stmt) (Type, FlowStatus) {
 
 func (a *Analysis) handleReturn(scope *Scope, stmt *ast.StmtReturn) {
 	if scope.Func == nil {
-		a.Panic("return statement outside of function", stmt.Span())
+		a.panic(stmt.Span(), "return statement outside of function")
 	}
 
 	stmt.IsFuncErroable = scope.IsFuncErrorable()
@@ -77,7 +77,7 @@ func (a *Analysis) handleReturn(scope *Scope, stmt *ast.StmtReturn) {
 
 func (a *Analysis) handleThrow(scope *Scope, stmt *ast.StmtThrow) {
 	if !scope.IsFuncErrorable() {
-		a.Error("throw is not allowed outside of an erroable function", stmt.Span())
+		a.Error(stmt.Span(), "throw is not allowed outside of an erroable function")
 	}
 	a.handleExpr(scope, &stmt.Value)
 	value := stmt.Value.Type()
@@ -86,22 +86,22 @@ func (a *Analysis) handleThrow(scope *Scope, stmt *ast.StmtThrow) {
 
 func (a *Analysis) handleBreak(scope *Scope, stmt *ast.StmtBreak) {
 	if !scope.InLoop {
-		a.Error("break is not allowed outside of a loop", stmt.Span())
+		a.Error(stmt.Span(), "break is not allowed outside of a loop")
 	}
 	if stmt.Label != nil {
 		if !scope.LabelExists(stmt.Label.Raw) {
-			a.Error("label not found", stmt.Label.Span())
+			a.Error(stmt.Label.Span(), "label not found")
 		}
 	}
 }
 
 func (a *Analysis) handleContinue(scope *Scope, stmt *ast.StmtContinue) {
 	if !scope.InLoop {
-		a.Error("continue is not allowed outside of a loop", stmt.Span())
+		a.Error(stmt.Span(), "continue is not allowed outside of a loop")
 	}
 	if stmt.Label != nil {
 		if !scope.LabelExists(stmt.Label.Raw) {
-			a.Error("label not found", stmt.Label.Span())
+			a.Error(stmt.Label.Span(), "label not found")
 		}
 	}
 }

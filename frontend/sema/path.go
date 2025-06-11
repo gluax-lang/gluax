@@ -1,8 +1,6 @@
 package sema
 
 import (
-	"fmt"
-
 	"github.com/gluax-lang/gluax/common"
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
@@ -38,7 +36,7 @@ func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafRe
 				return nil
 			}
 			if i > 0 && !currentSym.IsPublic() {
-				a.Panic(fmt.Sprintf("`%s` is private", ident.Raw), ident.Span())
+				a.panicf(ident.Span(), "`%s` is private", ident.Raw)
 			}
 			if currentSym.IsImport() {
 				imp := currentSym.Import()
@@ -72,14 +70,14 @@ func (a *Analysis) resolvePathType(scope *Scope, path *ast.Path) Type {
 			return nil
 		}
 		if len(path.Idents) > 1 && !sym.IsPublic() {
-			a.Panic(fmt.Sprintf("`%s` is private", name.Raw), name.Span())
+			a.panicf(name.Span(), "`%s` is private", name.Raw)
 		}
 		path.ResolvedSymbol = sym
 		a.AddSpanSymbol(name.Span(), *sym)
 		return sym.Type()
 	})
 	if t == nil {
-		a.Panic(fmt.Sprintf("Type `%s` not found", path.String()), path.Span())
+		a.panicf(path.Span(), "type `%s` not found", path.String())
 	}
 	return *t
 }
@@ -93,7 +91,7 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 				return nil
 			}
 			if len(path.Idents) > 1 && !sym.IsPublic() {
-				a.Panic(fmt.Sprintf("`%s` is private", raw), name.Span())
+				a.panicf(name.Span(), "`%s` is private", raw)
 			}
 			path.ResolvedSymbol = sym
 			a.AddSpanSymbol(name.Span(), *sym)
@@ -114,7 +112,7 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 		return nil
 	})
 	if t == nil {
-		a.Panic(fmt.Sprintf("Value `%s` not found", path.String()), path.Span())
+		a.panicf(path.Span(), "value `%s` not found", path.String())
 	}
 	return *t
 }
@@ -130,14 +128,14 @@ func (a *Analysis) resolvePathSymbol(scope *Scope, path *ast.Path) Symbol {
 			return nil
 		}
 		if len(path.Idents) > 1 && !sym.IsPublic() {
-			a.Panic(fmt.Sprintf("`%s` is private", raw), name.Span())
+			a.panicf(name.Span(), "`%s` is private", raw)
 		}
 		path.ResolvedSymbol = sym
 		a.AddSpanSymbol(name.Span(), *sym)
 		return sym
 	})
 	if t == nil {
-		a.Panic(fmt.Sprintf("Symbol `%s` not found", path.String()), path.Span())
+		a.panicf(path.Span(), "symbol `%s` not found", path.String())
 	}
 	return *t
 }
@@ -145,7 +143,7 @@ func (a *Analysis) resolvePathSymbol(scope *Scope, path *ast.Path) Symbol {
 func (a *Analysis) resolvePathTrait(scope *Scope, path *ast.Path) *ast.SemTrait {
 	sym := a.resolvePathSymbol(scope, path)
 	if !sym.IsTrait() {
-		a.Panic(fmt.Sprintf("trait `%s` not found", path.String()), path.Span())
+		a.panicf(path.Span(), "expected trait type")
 	}
 	return sym.Trait()
 }
