@@ -1,6 +1,6 @@
 package lexer
 
-import "github.com/gluax-lang/gluax/frontend/common"
+import "github.com/gluax-lang/gluax/common"
 
 type TokIdent struct {
 	Raw  string

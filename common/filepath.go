@@ -1,4 +1,4 @@
-package file_path
+package common
 
 import (
 	"net/url"
@@ -10,14 +10,14 @@ import (
 //
 // Example:
 //   C:\H\ -> C:/H
-func Clean(p string) string {
+func FilePathClean(p string) string {
 	// First do the normal OS-based cleanup
 	cleaned := filepath.Clean(p)
 	// Then normalize all separators to forward slash
 	return filepath.ToSlash(cleaned)
 }
 
-func ToURI(path string) string {
+func FilePathToURI(path string) string {
 	uri := path
 	if runtime.GOOS == "windows" {
 		// Windows file URIs need three slashes: file:///C:/path

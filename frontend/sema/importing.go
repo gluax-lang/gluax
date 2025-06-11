@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	file_path "github.com/gluax-lang/gluax/filepath"
+	"github.com/gluax-lang/gluax/common"
 	"github.com/gluax-lang/gluax/frontend/ast"
 	"github.com/gluax-lang/gluax/frontend/lexer"
 )
@@ -18,11 +18,11 @@ func (a *Analysis) resolveImportPath(currentFile, relative string) (string, erro
 	if filepath.Ext(resolved) == "" {
 		resolved += ".gluax"
 	}
-	resolved = file_path.Clean(resolved)
+	resolved = common.FilePathClean(resolved)
 
 	// Ensure inside <workspace>/src
 	wsSrc := filepath.Join(a.Workspace, "src") + string(os.PathSeparator)
-	if !strings.HasPrefix(resolved+"/", file_path.Clean(wsSrc)+"/") {
+	if !strings.HasPrefix(resolved+"/", common.FilePathClean(wsSrc)+"/") {
 		return "", errors.New("import path cannot be outside of `src` directory")
 	}
 

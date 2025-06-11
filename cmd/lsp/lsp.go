@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	file_path "github.com/gluax-lang/gluax/filepath"
+	"github.com/gluax-lang/gluax/common"
 	"github.com/gluax-lang/gluax/frontend/sema"
 	protocol "github.com/gluax-lang/lsp"
 )
@@ -206,7 +206,7 @@ func (h *Handler) handleDiagnostics(uri, code string) {
 		return
 	}
 	for _, analysis := range pAnalysis.Files() {
-		fileURI := file_path.ToURI(analysis.Src)
+		fileURI := common.FilePathToURI(analysis.Src)
 		h.PublishDiagnostics(fileURI, analysis.Diags)
 	}
 }

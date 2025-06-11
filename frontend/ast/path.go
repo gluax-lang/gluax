@@ -3,7 +3,7 @@ package ast
 import (
 	"strings"
 
-	"github.com/gluax-lang/gluax/frontend/common"
+	"github.com/gluax-lang/gluax/common"
 )
 
 // Path represents a path to a symbol/struct function/type.

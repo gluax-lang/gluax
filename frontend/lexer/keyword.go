@@ -1,6 +1,6 @@
 package lexer
 
-import "github.com/gluax-lang/gluax/frontend/common"
+import "github.com/gluax-lang/gluax/common"
 
 // Keyword represents a reserved keyword.
 type Keyword int

@@ -1,8 +1,8 @@
 package sema
 
 import (
+	"github.com/gluax-lang/gluax/common"
 	"github.com/gluax-lang/gluax/frontend/ast"
-	"github.com/gluax-lang/gluax/frontend/common"
 	protocol "github.com/gluax-lang/lsp"
 )
 

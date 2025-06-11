@@ -8,7 +8,7 @@ import (
 
 	"maps"
 
-	"github.com/gluax-lang/gluax/frontend/common"
+	"github.com/gluax-lang/gluax/common"
 	protocol "github.com/gluax-lang/lsp"
 )
 

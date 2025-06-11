@@ -1,6 +1,6 @@
 package ast
 
-import "github.com/gluax-lang/gluax/frontend/common"
+import "github.com/gluax-lang/gluax/common"
 
 type Block struct {
 	Stmts  []Stmt

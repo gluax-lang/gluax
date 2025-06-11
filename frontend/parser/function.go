@@ -1,8 +1,8 @@
 package parser
 
 import (
+	"github.com/gluax-lang/gluax/common"
 	"github.com/gluax-lang/gluax/frontend/ast"
-	"github.com/gluax-lang/gluax/frontend/common"
 	"github.com/gluax-lang/gluax/frontend/lexer"
 )
 

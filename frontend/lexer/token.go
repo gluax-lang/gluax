@@ -1,7 +1,7 @@
 package lexer
 
 import (
-	"github.com/gluax-lang/gluax/frontend/common"
+	"github.com/gluax-lang/gluax/common"
 )
 
 type Token interface {

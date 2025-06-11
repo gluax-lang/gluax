@@ -3,7 +3,7 @@ package ast
 import (
 	"regexp"
 
-	"github.com/gluax-lang/gluax/frontend/common"
+	"github.com/gluax-lang/gluax/common"
 	"github.com/gluax-lang/gluax/frontend/lexer"
 )
 

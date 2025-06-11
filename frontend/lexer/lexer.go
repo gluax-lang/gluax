@@ -5,8 +5,8 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/gluax-lang/gluax/common"
 	"github.com/gluax-lang/gluax/frontend"
-	"github.com/gluax-lang/gluax/frontend/common"
 	"github.com/gluax-lang/gluax/frontend/lexer/peekable"
 	protocol "github.com/gluax-lang/lsp"
 )

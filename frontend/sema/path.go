@@ -3,8 +3,8 @@ package sema
 import (
 	"fmt"
 
+	"github.com/gluax-lang/gluax/common"
 	"github.com/gluax-lang/gluax/frontend/ast"
-	"github.com/gluax-lang/gluax/frontend/common"
 )
 
 func getImportAnalysis(imp *ast.SemImport) *Analysis {

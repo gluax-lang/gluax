@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	file_path "github.com/gluax-lang/gluax/filepath"
 	protocol "github.com/gluax-lang/lsp"
 )
 
@@ -44,7 +43,7 @@ func (s Span) ToRange() protocol.Range {
 
 func (s Span) ToLocation() protocol.Location {
 	return protocol.Location{
-		URI:   file_path.ToURI(s.Source),
+		URI:   FilePathToURI(s.Source),
 		Range: s.ToRange(),
 	}
 }

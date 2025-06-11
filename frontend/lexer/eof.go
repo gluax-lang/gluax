@@ -1,6 +1,6 @@
 package lexer
 
-import "github.com/gluax-lang/gluax/frontend/common"
+import "github.com/gluax-lang/gluax/common"
 
 type TokEOF struct {
 	span common.Span

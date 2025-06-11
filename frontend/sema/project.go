@@ -11,10 +11,9 @@ import (
 
 	"slices"
 
-	file_path "github.com/gluax-lang/gluax/filepath"
+	"github.com/gluax-lang/gluax/common"
 	"github.com/gluax-lang/gluax/frontend"
 	"github.com/gluax-lang/gluax/frontend/ast"
-	"github.com/gluax-lang/gluax/frontend/common"
 	"github.com/gluax-lang/gluax/frontend/lexer"
 	"github.com/gluax-lang/gluax/frontend/parser"
 	"github.com/gluax-lang/gluax/frontend/preprocess"
@@ -65,7 +64,7 @@ func NewProjectAnalysis(workspace string, overrides map[string]string) *ProjectA
 
 	for p, c := range overrides {
 		if p != "" {
-			pa.overrides[file_path.Clean(p)] = c
+			pa.overrides[common.FilePathClean(p)] = c
 		}
 	}
 
@@ -100,7 +99,7 @@ func (pa *ProjectAnalysis) globalsList() []string {
 				continue
 			}
 			if strings.HasSuffix(e.Name(), ".gluax") {
-				name := file_path.Clean(filepath.Join(globalsDir, e.Name()))
+				name := common.FilePathClean(filepath.Join(globalsDir, e.Name()))
 				out = append(out, name)                                                 // full absolute path
 				pa.allGlobals = append(pa.allGlobals, pa.PathRelativeToWorkspace(name)) // keep for later
 			}
@@ -124,7 +123,7 @@ func (pa *ProjectAnalysis) newAnalysis(path string) *Analysis {
 }
 
 func (pa *ProjectAnalysis) AnalyzeFile(path string) (analysis *Analysis, hardError bool) {
-	path = file_path.Clean(path)
+	path = common.FilePathClean(path)
 	m := pa.getStateFiles()
 
 	// println(false, path)
@@ -190,7 +189,7 @@ func (pa *ProjectAnalysis) AnalyzeFile(path string) (analysis *Analysis, hardErr
 }
 
 func (pa *ProjectAnalysis) ReadFile(path string) (string, error) {
-	path = file_path.Clean(path)
+	path = common.FilePathClean(path)
 	if content, ok := pa.overrides[path]; ok {
 		return content, nil
 	}
@@ -311,7 +310,7 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
 		mainPath = filepath.Join(pkgPath, "src", "lib.gluax")
 	}
 
-	mainPath = file_path.Clean(mainPath)
+	mainPath = common.FilePathClean(mainPath)
 	pa.Main = pa.PathRelativeToWorkspace(mainPath)
 
 	pa.importGlobals()
@@ -357,7 +356,7 @@ func (pa *ProjectAnalysis) processState(state *State, workspace string) error {
 			return err
 		}
 		pa.overrides = oldOverrides
-		publicPath := file_path.Clean(filepath.Join("std", "src", "public.gluax"))
+		publicPath := common.FilePathClean(filepath.Join("std", "src", "public.gluax"))
 		publicAnalysis := pa.currentState.Files[publicPath]
 		for name, sym := range publicAnalysis.Scope.Symbols {
 			if sym.IsPublic() {
