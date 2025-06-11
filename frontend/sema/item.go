@@ -126,24 +126,6 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 		a.handleUse(a.Scope, use)
 	}
 
-	for _, stDef := range astD.Structs {
-		stDef.Scope = a.Scope
-		st := a.setupStruct(stDef, nil)
-
-		SelfSt := a.setupStruct(stDef, nil)
-		for i, g := range SelfSt.Generics.Params {
-			SelfSt.Generics.Params[i] = ast.NewSemGenericType(g.Generic().Ident, true)
-		}
-		SelfStTy := ast.NewSemType(SelfSt, stDef.Span())
-		SelfStScope := SelfSt.Scope.(*Scope)
-		SelfStScope.ForceAddType("Self", SelfStTy)
-		stScope := st.Scope.(*Scope)
-		stScope.ForceAddType("Self", SelfStTy)
-
-		stSem := ast.NewSemType(st, stDef.Name.Span())
-		a.AddTypeVisibility(a.Scope, stDef.Name.Raw, stSem, stDef.Public)
-	}
-
 	for _, traitDef := range astD.Traits {
 		traitDef.Scope = a.Scope
 		trait := ast.NewSemTrait(traitDef)
@@ -167,6 +149,24 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 			}
 			trait.SuperTraits = append(trait.SuperTraits, superTrait)
 		}
+	}
+
+	for _, stDef := range astD.Structs {
+		stDef.Scope = a.Scope
+		st := a.setupStruct(stDef, nil)
+
+		SelfSt := a.setupStruct(stDef, nil)
+		for i, g := range SelfSt.Generics.Params {
+			SelfSt.Generics.Params[i] = ast.NewSemGenericType(g.Generic().Ident, true)
+		}
+		SelfStTy := ast.NewSemType(SelfSt, stDef.Span())
+		SelfStScope := SelfSt.Scope.(*Scope)
+		SelfStScope.ForceAddType("Self", SelfStTy)
+		stScope := st.Scope.(*Scope)
+		stScope.ForceAddType("Self", SelfStTy)
+
+		stSem := ast.NewSemType(st, stDef.Name.Span())
+		a.AddTypeVisibility(a.Scope, stDef.Name.Raw, stSem, stDef.Public)
 	}
 
 	for _, stDef := range astD.Structs {
