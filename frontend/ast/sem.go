@@ -212,7 +212,6 @@ type SemStruct struct {
 	Generics SemGenerics
 	Fields   map[string]SemStructField
 	Methods  map[string]SemFunction // Methods defined on this struct
-	Traits   map[*SemTrait]struct{} // Traits implemented by this struct
 	Scope    any
 }
 
@@ -220,13 +219,11 @@ func NewSemStruct(def *Struct) *SemStruct {
 	generics := SemGenerics{}
 	fields := map[string]SemStructField{}
 	methods := map[string]SemFunction{}
-	traits := map[*SemTrait]struct{}{}
 	return &SemStruct{
 		Def:      def,
 		Generics: generics,
 		Fields:   fields,
 		Methods:  methods,
-		Traits:   traits,
 	}
 }
 

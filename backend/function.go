@@ -157,7 +157,8 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 		switch {
 		case toCallTy.IsStruct():
 			st := toCallTy.Struct()
-			fun, _ = cg.Analysis.GetStructMethod(st, call.Method.Raw)
+			funP := cg.Analysis.FindStructMethod(st, call.Method.Raw)
+			fun = *funP
 		case toCallTy.IsDynTrait():
 			dt := toCallTy.DynTrait()
 			fun, _ = cg.Analysis.GetTraitMethod(dt.Trait, call.Method.Raw)

@@ -377,12 +377,12 @@ func (a *Analysis) handleForInExpr(scope *Scope, forIn *ast.ExprForIn) {
 	var iterReturnCount int
 
 	st := inExprTy.Struct()
-	if method, ok := a.GetStructMethod(st, "__x_iter_pairs"); ok {
+	if method := a.FindStructMethod(st, "__x_iter_pairs"); method != nil {
 		firstReturn := method.FirstReturnType()
 		iterFunc := firstReturn.Function()
 		iterReturn = iterFunc.Return
 		iterReturnCount = iterFunc.ReturnCount()
-	} else if method, ok := a.GetStructMethod(st, "__x_iter_range"); ok {
+	} else if method := a.FindStructMethod(st, "__x_iter_range"); method != nil {
 		iterReturn = a.tupleType(inExpr.Span(), a.numberType(), method.FirstReturnType())
 		iterReturnCount = 2
 		forIn.IsRange = true
@@ -600,7 +600,11 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 	case toCallTy.IsStruct():
 		st := toCallTy.Struct()
 		toCallName = st.String()
-		method, exists = a.GetStructMethod(st, call.Method.Raw)
+		methodPtr := a.FindStructMethod(st, call.Method.Raw)
+		if methodPtr != nil {
+			method = *methodPtr
+			exists = true
+		}
 	case toCallTy.IsGeneric():
 		generic := toCallTy.Generic()
 		toCallName = generic.String()

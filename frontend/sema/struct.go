@@ -1,8 +1,6 @@
 package sema
 
 import (
-	"maps"
-
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
@@ -98,7 +96,7 @@ func (a *Analysis) buildGenericsTable(scope *Scope, st *SemStruct, concrete []Ty
 					for _, constraint := range g.Constraints {
 						// If the binding is a struct, we need to ensure it implements the trait
 						// specified in the constraint.
-						if !a.StructHasTrait(st, constraint.ResolvedSymbol.Trait()) {
+						if !a.StructImplementsTrait(st, constraint.ResolvedSymbol.Trait()) {
 							a.panicf(a.GetStructSetupSpan(binding.Span()),
 								"struct `%s` does not implement trait `%s`", binding.String(), constraint.ResolvedSymbol.Trait().Def.Name)
 						}
@@ -188,112 +186,6 @@ func (a *Analysis) resolveStruct(scope *Scope, st *ast.SemStruct, generics []ast
 	return st
 }
 
-// Helper function to check if an impl pattern matches a concrete struct
-func implMatchesStruct(a *Analysis, inst StructInstance, st *ast.SemStruct) bool {
-	if len(inst.Args) != len(st.Generics.Params) {
-		return false
-	}
-
-	// Build a mapping from impl's generic parameter names to types
-	genericBindings := make(map[string]Type)
-
-	for i, implType := range inst.Args {
-		targetType := st.Generics.Params[i]
-
-		if implType.IsGeneric() {
-			// impl has a generic parameter at this position
-			genericName := implType.Generic().Ident.Raw
-			if existingBinding, exists := genericBindings[genericName]; exists {
-				// This generic was already bound to a type, check consistency
-				if targetType.IsGeneric() {
-					// Both are generic - they can potentially match
-					continue
-				}
-				if !a.MatchTypesStrict(existingBinding, targetType) {
-					return false
-				}
-			} else {
-				// First time seeing this generic, bind it
-				genericBindings[genericName] = targetType
-			}
-		} else {
-			// impl has a concrete type at this position
-			if targetType.IsGeneric() {
-				// impl is concrete, target is generic - no match
-				return false
-			}
-			// both concrete - must match exactly
-			if !a.MatchTypesStrict(implType, targetType) {
-				return false
-			}
-		}
-	}
-
-	return true
-}
-
-func findInStructStack[T any](
-	a *Analysis,
-	st *ast.SemStruct,
-	getItem func(inst StructInstance) (T, bool),
-	match func(item T) bool,
-) (T, bool) {
-	stack := st.Def.GetStructStack()
-	for _, inst := range stack {
-		item, ok := getItem(inst)
-		if !ok {
-			continue
-		}
-		if implMatchesStruct(a, inst, st) && match(item) {
-			return item, true
-		}
-	}
-	var zero T
-	return zero, false
-}
-
-func (a *Analysis) addStructMethod(st *ast.SemStruct, method ast.SemFunction) {
-	methodName := method.Def.Name.Raw
-	method.Struct = st
-	st.Methods[methodName] = method
-}
-
-func (a *Analysis) GetStructMethod(st *ast.SemStruct, methodName string) (ast.SemFunction, bool) {
-	if method, ok := st.Methods[methodName]; ok {
-		return method, true
-	}
-	getMethod := func(inst StructInstance) (ast.SemFunction, bool) {
-		m, ok := inst.Type.Methods[methodName]
-		return m, ok
-	}
-	match := func(_ ast.SemFunction) bool { return true }
-	if method, ok := findInStructStack(a, st, getMethod, match); ok {
-		method = a.HandleStructMethod(st, method, false)
-		return method, true
-	}
-	return ast.SemFunction{}, false
-}
-
-func (a *Analysis) StructHasTrait(st *ast.SemStruct, trait *ast.SemTrait) bool {
-	if _, ok := st.Traits[trait]; ok {
-		return true
-	}
-	getTrait := func(inst StructInstance) (*ast.SemTrait, bool) {
-		for tr := range inst.Type.Traits {
-			if tr == trait {
-				return tr, true
-			}
-		}
-		return nil, false
-	}
-	match := func(_ *ast.SemTrait) bool { return true }
-	if _, ok := findInStructStack(a, st, getTrait, match); ok {
-		st.Traits[trait] = struct{}{}
-		return true
-	}
-	return false
-}
-
 func (a *Analysis) GetStruct(def *ast.Struct, concrete []Type) *SemStruct {
 	stack := def.GetStructStack()
 	for _, inst := range stack {
@@ -313,22 +205,6 @@ func (a *Analysis) GetStruct(def *ast.Struct, concrete []Type) *SemStruct {
 		}
 	}
 	return nil
-}
-
-func (a *Analysis) GetStructMethods(st *ast.SemStruct) map[string]ast.SemFunction {
-	methods := make(map[string]ast.SemFunction, len(st.Methods))
-	maps.Copy(methods, st.Methods) // start with already cached methods
-	stack := st.Def.GetStructStack()
-	for _, inst := range stack {
-		if implMatchesStruct(a, inst, st) {
-			for name, method := range inst.Type.Methods {
-				if _, exists := methods[name]; !exists {
-					methods[name] = method
-				}
-			}
-		}
-	}
-	return methods
 }
 
 func (a *Analysis) unify(

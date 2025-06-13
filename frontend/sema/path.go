@@ -99,8 +99,8 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 		} else if sym.IsType() && sym.Type().IsStruct() {
 			st := sym.Type().Struct()
 			st = a.resolveStruct(scope, st, path.Generics, name.Span())
-			method, exists := a.GetStructMethod(st, raw)
-			if !exists {
+			method := a.FindStructMethod(st, raw)
+			if method == nil {
 				return nil
 			}
 			val := ast.NewValue(method)

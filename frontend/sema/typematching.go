@@ -217,7 +217,7 @@ func (a *Analysis) matchDynTraitType(dt SemDynTrait, other Type) bool {
 	trait := dt.Trait
 	if other.IsStruct() {
 		st := other.Struct()
-		return a.StructHasTrait(st, trait)
+		return a.StructImplementsTrait(st, trait)
 	}
 	if other.IsDynTrait() {
 		otherTrait := other.DynTrait().Trait
@@ -241,7 +241,7 @@ func (a *Analysis) matchDynTraitTypeStrict(dt SemDynTrait, other Type) bool {
 
 func (a *Analysis) matchGenericType(g SemGenericType, other Type) bool {
 	if other.IsGeneric() {
-		return g.Ident.Raw == other.Generic().Ident.Raw
+		return a.matchGenericTypeStrict(g, other)
 	}
 	return false
 }
@@ -249,5 +249,17 @@ func (a *Analysis) matchGenericType(g SemGenericType, other Type) bool {
 func (a *Analysis) matchGenericTypeStrict(g SemGenericType, other Type) bool {
 	// other is guaranteed to be a generic
 	otherG := other.Generic()
-	return g.Ident.Raw == otherG.Ident.Raw
+	if g.Ident.Raw != otherG.Ident.Raw {
+		return false
+	}
+	gTraits, otherGTraits := g.Traits, otherG.Traits
+	if len(gTraits) != len(otherGTraits) {
+		return false
+	}
+	for i, trait := range gTraits {
+		if trait != otherGTraits[i] {
+			return false
+		}
+	}
+	return true
 }

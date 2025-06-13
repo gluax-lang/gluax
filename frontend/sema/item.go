@@ -8,7 +8,7 @@ import (
 
 var toCheckFuncs = map[string]func(*Analysis, *ast.SemStruct, string){
 	"__x_iter_pairs": func(a *Analysis, st *ast.SemStruct, methodName string) {
-		fun, _ := a.GetStructMethod(st, methodName)
+		fun := a.FindStructMethod(st, methodName)
 		if len(fun.Params) != 1 {
 			a.Errorf(fun.Def.Span(), "method `%s` must have one parameter", methodName)
 			return
@@ -42,13 +42,13 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemStruct, string){
 		}
 	},
 	"__x_iter_range": func(a *Analysis, st *ast.SemStruct, methodName string) {
-		fun, _ := a.GetStructMethod(st, methodName)
+		fun := a.FindStructMethod(st, methodName)
 		if len(fun.Params) != 2 {
 			a.Errorf(fun.Def.Name.Span(), "method `%s` must have two parameters", methodName)
 			return
 		}
 
-		if _, exists := a.GetStructMethod(st, "__x_iter_range_bound"); !exists {
+		if method := a.FindStructMethod(st, "__x_iter_range_bound"); method == nil {
 			a.Errorf(fun.Def.Name.Span(), "struct `%s` must implement method `__x_iter_range_bound` to use `%s`", st.Def.Name.Raw, methodName)
 			return
 		}
@@ -74,13 +74,13 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemStruct, string){
 		}
 	},
 	"__x_iter_range_bound": func(a *Analysis, st *ast.SemStruct, methodName string) {
-		fun, _ := a.GetStructMethod(st, methodName)
+		fun := a.FindStructMethod(st, methodName)
 		if len(fun.Params) != 1 {
 			a.Errorf(fun.Def.Name.Span(), "method `%s` must have one parameter", methodName)
 			return
 		}
 
-		if _, exists := a.GetStructMethod(st, "__x_iter_range"); !exists {
+		if method := a.FindStructMethod(st, "__x_iter_range"); method == nil {
 			a.Errorf(fun.Def.Name.Span(), "struct `%s` must implement method `__x_iter_range` to use `%s`", st.Def.Name.Raw, methodName)
 			return
 		}
@@ -203,19 +203,9 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 			funcTy.Scope = a.Scope
 			funcTy.Generics = impl.Generics
 			methodName := method.Name.Raw
-			if _, exists := a.GetStructMethod(st, methodName); exists {
-				a.panicf(funcTy.Def.Name.Span(), "method '%s' already exists for these concrete types", methodName)
-			}
-			a.addStructMethod(st, funcTy)
+			a.RegisterStructMethod(st, funcTy)
 			implStructsChecks = append(implStructsChecks, func() {
-				// this hack needs to be done to check if a method was implemented or not
-				// without caring for order of implementation
-				delete(st.Methods, methodName)
-				if _, exists := a.GetStructMethod(st, methodName); exists {
-					a.panicf(funcTy.Def.Name.Span(), "method '%s' already exists for these concrete types", methodName)
-				}
-				st.Methods[methodName] = funcTy
-				// this hack is also needed, so something like `__x_iter_range` can check if `__x_iter_range_bound` exists or not
+				// this hack is needed, so something like `__x_iter_range` can check if `__x_iter_range_bound` exists or not
 				a.checkStructMethods(st, methodName)
 			})
 		}
@@ -279,17 +269,17 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 
 		checks = append(checks, func() {
 			for _, superTrait := range trait.SuperTraits {
-				if !a.StructHasTrait(st, superTrait) {
+				if !a.StructImplementsTrait(st, superTrait) {
 					a.panicf(implTrait.Span(), "struct `%s` must implement supertrait `%s`", st.Def.Name.Raw, superTrait.Def.Name.Raw)
 				}
 			}
 		})
 
 		for name, method := range trait.Methods {
-			stMethod, exists := a.GetStructMethod(st, name)
-			if !exists {
+			stMethod := a.FindStructMethod(st, name)
+			if stMethod == nil {
 				if method.Def.Body != nil {
-					a.addStructMethod(st, method)
+					a.RegisterStructMethod(st, method)
 					continue
 				} else {
 					a.panicf(implTrait.Span(), "struct `%s` does not implement trait `%s` method `%s`", st.Def.Name.Raw, trait.Def.Name.Raw, name)
@@ -303,7 +293,7 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 			methodCopy := method
 			methodCopy.Params = append([]Type{}, method.Params[1:]...)
 
-			stMethodCopy := stMethod
+			stMethodCopy := *stMethod
 			stMethodCopy.Params = append([]Type{}, stMethod.Params[1:]...)
 
 			stMethodTy := ast.NewSemType(stMethodCopy, st.Def.Name.Span())
@@ -312,18 +302,7 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 			}
 		}
 
-		if a.StructHasTrait(st, trait) {
-			a.panicf(implTrait.Span(), "struct `%s` already implements trait `%s`", st.String(), trait.Def.Name.Raw)
-		}
-
-		st.Traits[trait] = struct{}{}
-		checks = append(checks, func() {
-			delete(st.Traits, trait)
-			if a.StructHasTrait(st, trait) {
-				a.panicf(implTrait.Span(), "struct `%s` already implements trait `%s`", st.String(), trait.Def.Name.Raw)
-			}
-			st.Traits[trait] = struct{}{}
-		})
+		a.RegisterStructTraitImplementation(st, trait, implTrait.Span())
 	}
 
 	for _, check := range checks {
@@ -347,6 +326,9 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 	for _, traitCheck := range traitsChecks {
 		traitCheck()
 	}
+
+	a.CheckConflictingMethodImplementations()
+	a.CheckConflictingTraitImplementations()
 }
 
 func (a *Analysis) handleUse(scope *Scope, it *ast.Use) {
