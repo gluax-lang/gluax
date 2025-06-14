@@ -59,6 +59,12 @@ func (p *parser) parseStruct() ast.Item {
 	name := p.expectIdentMsg("expected struct name")
 	generics := p.parseGenerics()
 
+	var super *ast.Type
+	if p.tryConsume(":") {
+		t := p.parseType()
+		super = &t
+	}
+
 	p.expect("{")
 
 	var (
@@ -85,7 +91,7 @@ func (p *parser) parseStruct() ast.Item {
 
 	span := SpanFrom(spanStart, p.prevSpan())
 
-	st := ast.NewStruct(name, generics, fields, span)
+	st := ast.NewStruct(name, generics, super, fields, span)
 	st.IsGlobalDef = p.processingGlobals
 	return st
 }

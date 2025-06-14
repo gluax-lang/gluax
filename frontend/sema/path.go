@@ -103,7 +103,7 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 			if method == nil {
 				return nil
 			}
-			val := ast.NewValue(method)
+			val := ast.NewValue(*method)
 			sym := ast.NewSymbol(raw, &val, method.Def.Name.Span(), method.Def.Public)
 			path.ResolvedSymbol = &sym
 			a.AddSpanSymbol(name.Span(), sym)

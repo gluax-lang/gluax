@@ -65,7 +65,6 @@ func (a *Analysis) HandleStructMethod(st *ast.SemStruct, method ast.SemFunction,
 	funcTy.Generics = method.Generics
 	funcTy.Scope = method.Scope
 	funcTy.Struct = st
-	st.Methods[method.Def.Name.Raw] = funcTy
 	return funcTy
 }
 
@@ -129,6 +128,12 @@ func (a *Analysis) buildGenericsTable(scope *Scope, st *SemStruct, concrete []Ty
 }
 
 func (a *Analysis) collectStructFields(st *SemStruct) {
+	if st.Super != nil {
+		for _, field := range st.Super.Fields {
+			name := field.Def.Name.Raw
+			st.Fields[name] = field
+		}
+	}
 	for _, field := range st.Def.Fields {
 		if _, ok := st.Fields[field.Name.Raw]; ok {
 			a.Error(field.Name.Span(), "duplicate field name")
@@ -152,6 +157,12 @@ func (a *Analysis) instantiateStruct(def *ast.Struct, concrete []Type) *SemStruc
 	st := a.setupStruct(def, concrete)
 
 	stScope := st.Scope.(*Scope)
+
+	if def.Super != nil {
+		superT := a.resolveType(st.Scope.(*Scope), *def.Super)
+		st.Super = superT.Struct()
+	}
+
 	stScope.ForceAddType("Self", ast.NewSemType(st, def.Span()))
 	a.collectStructFields(st)
 

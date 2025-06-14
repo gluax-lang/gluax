@@ -93,6 +93,10 @@ func (cg *Codegen) generateStruct(st *ast.SemStruct) {
 	cg.ln("};")
 	if !st.Def.Attributes.Has("no__index") {
 		cg.ln("%s.__index = %s;\n", name, name)
+		if st.Super != nil {
+			superName := cg.decorateStName(st.Super)
+			cg.ln("setmetatable(%s, %s);", name, superName)
+		}
 	}
 }
 

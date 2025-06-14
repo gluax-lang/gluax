@@ -10,11 +10,12 @@ type StructMethodEntry struct {
 	// These are the types that were passed to the struct when doing impl // e.g. `impl MyStruct<T, U>`
 	TypeParameters []Type
 	// The method itself, which is a function
-	Method ast.SemFunction
+	Method SemFunction
 }
 
 type StructTraitsMeta struct {
 	TypeParameters []Type
+	Methods        map[string]SemFunction
 	Span           Span
 }
 
@@ -37,24 +38,6 @@ func NewState(label string) *State {
 		MethodsByStruct: make(map[*ast.Struct]map[string][]*StructMethodEntry),
 		TraitsByStruct:  make(map[*ast.Struct]map[*ast.SemTrait][]*StructTraitsMeta),
 	}
-}
-
-func (s *State) EnsureMethodBucketExists(st *ast.Struct) map[string][]*StructMethodEntry {
-	m, ok := s.MethodsByStruct[st]
-	if !ok {
-		m = make(map[string][]*StructMethodEntry)
-		s.MethodsByStruct[st] = m
-	}
-	return m
-}
-
-func (s *State) EnsureTraitBucketExists(st *ast.Struct) map[*ast.SemTrait][]*StructTraitsMeta {
-	m, ok := s.TraitsByStruct[st]
-	if !ok {
-		m = make(map[*ast.SemTrait][]*StructTraitsMeta)
-		s.TraitsByStruct[st] = m
-	}
-	return m
 }
 
 func (a *Analysis) ValidateTypeParameterConstraints(constraints, actuals []Type) bool {
@@ -168,8 +151,11 @@ func (a *Analysis) CheckConflictingTraitImplementations() {
 	}
 }
 
-func (a *Analysis) RegisterStructMethod(st *SemStruct, method ast.SemFunction) {
-	byName := a.State.EnsureMethodBucketExists(st.Def)
+func (a *Analysis) RegisterStructMethod(st *SemStruct, method SemFunction) {
+	if _, ok := a.State.MethodsByStruct[st.Def]; !ok {
+		a.State.MethodsByStruct[st.Def] = make(map[string][]*StructMethodEntry)
+	}
+	byName := a.State.MethodsByStruct[st.Def]
 	name := method.Def.Name.Raw
 	byName[name] = append(byName[name], &StructMethodEntry{
 		TypeParameters: st.Generics.Params,
@@ -177,42 +163,73 @@ func (a *Analysis) RegisterStructMethod(st *SemStruct, method ast.SemFunction) {
 	})
 }
 
-func (a *Analysis) RegisterStructTraitImplementation(st *SemStruct, trait *ast.SemTrait, span Span) {
-	byTrait := a.State.EnsureTraitBucketExists(st.Def)
+func (a *Analysis) RegisterStructTraitImplementation(st *SemStruct, trait *ast.SemTrait, methods map[string]SemFunction, span Span) {
+	if _, ok := a.State.TraitsByStruct[st.Def]; !ok {
+		a.State.TraitsByStruct[st.Def] = make(map[*ast.SemTrait][]*StructTraitsMeta)
+	}
+	byTrait := a.State.TraitsByStruct[st.Def]
 	byTrait[trait] = append(byTrait[trait], &StructTraitsMeta{
 		TypeParameters: st.Generics.Params,
+		Methods:        methods,
 		Span:           span,
 	})
 }
 
-func (a *Analysis) FindStructMethod(st *ast.SemStruct, name string) *ast.SemFunction {
+func (a *Analysis) FindStructMethod(st *ast.SemStruct, name string) *SemFunction {
 	actual := st.Generics.Params
-	list := a.State.EnsureMethodBucketExists(st.Def)[name]
-	for _, meta := range list {
-		if !a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
-			continue
+	if bucket, exists := a.State.MethodsByStruct[st.Def]; exists {
+		for _, meta := range bucket[name] {
+			if !a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
+				continue
+			}
+			inst := a.HandleStructMethod(st, meta.Method, false)
+			return &inst
 		}
-		inst := a.HandleStructMethod(st, meta.Method, false)
+	}
+	if st.Super != nil {
+		method := a.FindStructMethod(st.Super, name)
+		if method != nil {
+			return method
+		}
+	}
+	method := a.FindStructMethodByTrait(st, name)
+	if method != nil {
+		inst := a.HandleStructMethod(st, *method, false)
 		return &inst
 	}
 	return nil
 }
 
-func (a *Analysis) StructImplementsTrait(st *ast.SemStruct, asked *ast.SemTrait) bool {
+func (a *Analysis) FindStructMethodByTrait(st *ast.SemStruct, methodName string) *SemFunction {
+	var result *SemFunction
 	actual := st.Generics.Params
-	for _, meta := range a.State.EnsureTraitBucketExists(st.Def)[asked] { // bucketed look-up
-		if a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
-			return true
+
+	if bucket, exists := a.State.TraitsByStruct[st.Def]; exists {
+		for _, metas := range bucket {
+			for _, meta := range metas {
+				if a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
+					if method, exists := meta.Methods[methodName]; exists {
+						result = &method
+						return result
+					}
+				}
+			}
 		}
 	}
-	return false
+
+	// Check super struct
+	if st.Super != nil {
+		return a.FindStructMethodByTrait(st.Super, methodName)
+	}
+
+	return nil
 }
 
-func (a *Analysis) FindAllStructMethods(st *ast.SemStruct) map[string]*ast.SemFunction {
+func (a *Analysis) FindAllStructMethods(st *ast.SemStruct) map[string]*SemFunction {
 	actual := st.Generics.Params
-	result := make(map[string]*ast.SemFunction)
+	result := make(map[string]*SemFunction)
 
-	methodsByName := a.State.EnsureMethodBucketExists(st.Def)
+	methodsByName := a.State.MethodsByStruct[st.Def]
 	for name, list := range methodsByName {
 		for _, meta := range list {
 			if !a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
@@ -225,4 +242,19 @@ func (a *Analysis) FindAllStructMethods(st *ast.SemStruct) map[string]*ast.SemFu
 	}
 
 	return result
+}
+
+func (a *Analysis) StructImplementsTrait(st *ast.SemStruct, asked *ast.SemTrait) bool {
+	actual := st.Generics.Params
+	if bucket, exists := a.State.TraitsByStruct[st.Def]; exists {
+		for _, meta := range bucket[asked] {
+			if a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
+				return true
+			}
+		}
+	}
+	if st.Super != nil {
+		return a.StructImplementsTrait(st.Super, asked)
+	}
+	return false
 }

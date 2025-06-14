@@ -63,6 +63,7 @@ type Struct struct {
 	Public         bool
 	Name           lexer.TokIdent
 	Generics       Generics
+	Super          *Type // the type this struct extends, if any
 	Fields         []StructField
 	Attributes     Attributes
 	IsGlobalDef    bool // true if this is a global definition
@@ -71,10 +72,11 @@ type Struct struct {
 	span           common.Span
 }
 
-func NewStruct(name lexer.TokIdent, generics Generics, fields []StructField, span common.Span) *Struct {
+func NewStruct(name lexer.TokIdent, generics Generics, super *Type, fields []StructField, span common.Span) *Struct {
 	return &Struct{
 		Name:           name,
 		Generics:       generics,
+		Super:          super,
 		Fields:         fields,
 		CreatedStructs: make(StructsStack, 0, 4),
 		span:           span,

@@ -2,6 +2,7 @@ package ast
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/gluax-lang/gluax/common"
@@ -210,20 +211,18 @@ func (f SemStructField) AstString() string {
 type SemStruct struct {
 	Def      *Struct
 	Generics SemGenerics
+	Super    *SemStruct
 	Fields   map[string]SemStructField
-	Methods  map[string]SemFunction // Methods defined on this struct
 	Scope    any
 }
 
 func NewSemStruct(def *Struct) *SemStruct {
 	generics := SemGenerics{}
 	fields := map[string]SemStructField{}
-	methods := map[string]SemFunction{}
 	return &SemStruct{
 		Def:      def,
 		Generics: generics,
 		Fields:   fields,
-		Methods:  methods,
 	}
 }
 
@@ -287,6 +286,29 @@ func (s SemStruct) IsAnyFunc() bool {
 
 func (s SemStruct) IsTable() bool {
 	return s.Def.Name.Raw == "table"
+}
+
+func (s SemStruct) GetField(name string) (SemStructField, bool) {
+	if field, ok := s.Fields[name]; ok {
+		return field, true
+	}
+	return SemStructField{}, false
+}
+
+func (s SemStruct) AllFields() map[string]SemStructField {
+	allFields := make(map[string]SemStructField, len(s.Fields))
+	maps.Copy(allFields, s.Fields)
+	return allFields
+}
+
+func (s SemStruct) IsSubClassOf(other *SemStruct) bool {
+	if s.Super == nil {
+		return false
+	}
+	if s.Super == other {
+		return true
+	}
+	return s.Super.IsSubClassOf(other)
 }
 
 /* FunctionType */

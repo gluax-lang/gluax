@@ -170,6 +170,22 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 	}
 
 	for _, stDef := range astD.Structs {
+		superDef := stDef.Super
+		if superDef == nil {
+			continue
+		}
+		st := a.GetStruct(stDef, nil)
+		stScope := st.Scope.(*Scope)
+
+		superT := a.resolveType(stScope, *superDef)
+		if !superT.IsStruct() {
+			a.panicf((*superDef).Span(), "expected struct type, got: %s", superT.String())
+		}
+
+		st.Super = superT.Struct()
+	}
+
+	for _, stDef := range astD.Structs {
 		st := a.GetStruct(stDef, nil)
 		stScope := st.Scope.(*Scope)
 		SelfSt := stScope.GetType("Self").Struct()
@@ -275,13 +291,17 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 			}
 		})
 
+		var methods = make(map[string]ast.SemFunction, len(trait.Methods))
 		for name, method := range trait.Methods {
 			stMethod := a.FindStructMethod(st, name)
 			if stMethod == nil {
 				if method.Def.Body != nil {
-					a.RegisterStructMethod(st, method)
+					// a.RegisterStructMethod(st, method)
+					methods[name] = method
 					continue
 				} else {
+					methods[name] = method
+					continue
 					a.panicf(implTrait.Span(), "struct `%s` does not implement trait `%s` method `%s`", st.Def.Name.Raw, trait.Def.Name.Raw, name)
 				}
 			}
@@ -302,7 +322,7 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 			}
 		}
 
-		a.RegisterStructTraitImplementation(st, trait, implTrait.Span())
+		a.RegisterStructTraitImplementation(st, trait, methods, implTrait.Span())
 	}
 
 	for _, check := range checks {

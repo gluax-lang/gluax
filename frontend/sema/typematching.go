@@ -87,6 +87,10 @@ func (a *Analysis) matchStructType(s *SemStruct, other Type) bool {
 
 	oS := other.Struct()
 
+	if oS.IsSubClassOf(s) {
+		return true
+	}
+
 	if s.IsOption() {
 		inner := s.InnerType()
 		if other.IsNil() {
@@ -94,9 +98,9 @@ func (a *Analysis) matchStructType(s *SemStruct, other Type) bool {
 		}
 		if other.IsOption() {
 			otherInner := oS.InnerType()
-			return a.MatchTypesStrict(inner, otherInner)
+			return a.matchTypes(inner, otherInner)
 		}
-		return a.MatchTypesStrict(inner, other)
+		return a.matchTypes(inner, other)
 	}
 
 	if ast.IsBuiltinType(s.Def.Name.Raw) && ast.IsBuiltinType(oS.Def.Name.Raw) {
@@ -113,7 +117,7 @@ func (a *Analysis) matchStructType(s *SemStruct, other Type) bool {
 
 	for i, sg := range s.Generics.Params {
 		og := oS.Generics.Params[i]
-		if !sg.IsAny() && !a.MatchTypesStrict(sg, og) {
+		if !sg.IsAny() && !a.matchTypes(sg, og) {
 			return false
 		}
 	}

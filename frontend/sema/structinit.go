@@ -65,7 +65,7 @@ func (a *Analysis) handleStructInit(scope *Scope, si *ast.ExprStructInit) Type {
 	for _, f := range si.Fields {
 		providedFields[f.Name.Raw] = struct{}{}
 	}
-	for name := range newStruct.Fields {
+	for name := range newStruct.AllFields() {
 		// if _, ok := providedFields[name]; !ok && ty.Kind() != ast.SemOptionalKind {
 		if _, ok := providedFields[name]; !ok {
 			a.panic(si.Span(), fmt.Sprintf("missing required field `%s` in struct `%s` initialization", name, baseStruct.Def.Name.Raw))
@@ -75,7 +75,7 @@ func (a *Analysis) handleStructInit(scope *Scope, si *ast.ExprStructInit) Type {
 	// type-check each provided field
 	for i := range si.Fields {
 		f := &si.Fields[i]
-		field, ok := newStruct.Fields[f.Name.Raw]
+		field, ok := newStruct.GetField(f.Name.Raw)
 		if !ok {
 			a.panic(f.Name.Span(),
 				fmt.Sprintf("struct `%s` has no field named `%s`",
