@@ -17,7 +17,7 @@ func NilType(span common.Span) Type {
 }
 
 func IsOption(ty Type) bool {
-	if gs, ok := ty.(*GenericStruct); ok {
+	if gs, ok := ty.(*GenericClass); ok {
 		idents := gs.Path.Idents
 		if len(idents) == 1 && idents[0].Raw == "option" {
 			return true
@@ -77,21 +77,21 @@ func (v *Vararg) Span() common.Span {
 	return v.span
 }
 
-/* GenericStruct */
+/* GenericClass */
 
-type GenericStruct struct {
+type GenericClass struct {
 	Path     Path
 	Generics []Type
 	span     common.Span
 }
 
-func NewGenericStruct(path Path, generics []Type, span common.Span) *GenericStruct {
-	return &GenericStruct{Path: path, Generics: generics, span: span}
+func NewGenericClass(path Path, generics []Type, span common.Span) *GenericClass {
+	return &GenericClass{Path: path, Generics: generics, span: span}
 }
 
-func (g *GenericStruct) isType() {}
+func (g *GenericClass) isType() {}
 
-func (g *GenericStruct) Span() common.Span {
+func (g *GenericClass) Span() common.Span {
 	return g.span
 }
 

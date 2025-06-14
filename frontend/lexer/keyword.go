@@ -25,7 +25,6 @@ const (
 	KwPub
 	KwAs
 	KwUnsafeCast
-	KwStruct
 	KwClass
 	KwUse
 	KwThrow
@@ -68,7 +67,6 @@ var keywordTable = map[string]Keyword{
 	"pub":            KwPub,
 	"as":             KwAs,
 	"unsafe_cast_as": KwUnsafeCast,
-	"struct":         KwStruct,
 	"class":          KwClass,
 	"use":            KwUse,
 	"throw":          KwThrow,

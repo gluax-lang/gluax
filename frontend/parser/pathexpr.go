@@ -18,7 +18,7 @@ func (p *parser) parsePathExpr(ctx ExprCtx, ident *ast.Ident) ast.Expr {
 		if p.Token.Is("<") {
 			generics := p.parseTurbofishGenerics()
 			if p.Token.Is("{") {
-				return p.parseStructInit(path, generics)
+				return p.parseClassInit(path, generics)
 			} else {
 				path.Generics = generics
 				p.expect("::")
@@ -33,21 +33,21 @@ func (p *parser) parsePathExpr(ctx ExprCtx, ident *ast.Ident) ast.Expr {
 		}
 	}
 
-	// Struct initializer without turbofish:  Foo::Bar { ... }
+	// Class initializer without turbofish:  Foo::Bar { ... }
 	if !ctx.IsCondition() && p.Token.Is("{") {
-		return p.parseStructInit(path, nil)
+		return p.parseClassInit(path, nil)
 	}
 
 	return ast.NewExpr(&path)
 }
 
-// parseStructInitField parses a single `field: value` entry inside a struct
+// parseClassInitField parses a single `field: value` entry inside a class
 // initializer.
-func (p *parser) parseStructInitField() ast.ExprStructField {
+func (p *parser) parseClassInitField() ast.ExprClassField {
 	name := p.expectIdent()
 	p.expect(":")
 	value := p.parseExpr(ExprCtxNormal)
-	return ast.ExprStructField{
+	return ast.ExprClassField{
 		Name:  name,
 		Value: value,
 	}
@@ -63,7 +63,7 @@ func (p *parser) parseTurbofishGenerics() []ast.Type {
 	return generics
 }
 
-func (p *parser) parseStructInit(ty ast.Path, generics []ast.Type) ast.Expr {
+func (p *parser) parseClassInit(ty ast.Path, generics []ast.Type) ast.Expr {
 	if ty.IsVec() {
 		return p.parseVecInit(generics)
 	}
@@ -74,15 +74,15 @@ func (p *parser) parseStructInit(ty ast.Path, generics []ast.Type) ast.Expr {
 
 	p.expect("{")
 
-	var fields []ast.ExprStructField
+	var fields []ast.ExprClassField
 	p.parseCommaSeparatedDelimited("}", func(p *parser) {
-		fields = append(fields, p.parseStructInitField())
+		fields = append(fields, p.parseClassInitField())
 	})
 
 	spanEnd := p.prevSpan()
 	span := SpanFrom(ty.Span(), spanEnd)
 
-	return ast.NewStructInit(ty, generics, fields, span)
+	return ast.NewClassInit(ty, generics, fields, span)
 }
 
 func (p *parser) parseVecInit(generics []ast.Type) ast.Expr {

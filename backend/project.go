@@ -20,7 +20,7 @@ func GenerateProject(pA *sema.ProjectAnalysis) (string, string) {
 		},
 		publicIndex:      1,
 		publicMap:        make(map[string]int),
-		generatedStructs: make(map[string]struct{}),
+		generatedClasses: make(map[string]struct{}),
 	}
 	serverCg.bufCtx.buf.Grow(1024 * 2)
 	headers(&serverCg)
@@ -34,7 +34,7 @@ func GenerateProject(pA *sema.ProjectAnalysis) (string, string) {
 		},
 		publicIndex:      1,
 		publicMap:        make(map[string]int),
-		generatedStructs: make(map[string]struct{}),
+		generatedClasses: make(map[string]struct{}),
 	}
 	clientCg.bufCtx.buf.Grow(1024 * 2)
 	headers(&clientCg)
@@ -55,7 +55,7 @@ func headers(cg *Codegen) {
 	fastLocalsHeaders(cg)
 	cg.writeByte('\n')
 
-	structHeaders(cg)
+	classHeaders(cg)
 	cg.writeByte('\n')
 
 	importsHeaders(cg)

@@ -8,10 +8,10 @@ type Ast struct {
 	Imports     []*Import
 	Uses        []*Use
 	Funcs       []*Function
-	ImplStructs []*ImplStruct
-	ImplTraits  []*ImplTraitForStruct
+	ImplClasses []*ImplClass
+	ImplTraits  []*ImplTraitForClass
 	Lets        []*Let
-	Structs     []*Struct
+	Classes     []*Class
 	Traits      []*Trait
 
 	TokenStream []lexer.Token

@@ -21,11 +21,11 @@ const SymTrait = ast.SymTrait
 
 type ImportInfo = ast.SemImport
 
-type SemStruct = ast.SemStruct
+type SemClass = ast.SemClass
 type SemFunction = ast.SemFunction
 type SemTuple = ast.SemTuple
 type SemVararg = ast.SemVararg
 type SemDynTrait = ast.SemDynTrait
 type SemGenericType = ast.SemGenericType
 
-type StructInstance = ast.StructInstance
+type ClassInstance = ast.ClassInstance

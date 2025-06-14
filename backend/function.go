@@ -15,8 +15,8 @@ func (cg *Codegen) decorateFuncName(f *ast.SemFunction) string {
 		}
 		return raw
 	}
-	if f.Struct != nil {
-		stName := cg.decorateStName(f.Struct)
+	if f.Class != nil {
+		stName := cg.decorateClassName(f.Class)
 		return stName + "." + f.Def.Name.Raw
 	}
 	var sb strings.Builder
@@ -155,9 +155,9 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 	var fun ast.SemFunction
 	if call.Method != nil {
 		switch {
-		case toCallTy.IsStruct():
-			st := toCallTy.Struct()
-			funP := cg.Analysis.FindStructMethod(st, call.Method.Raw)
+		case toCallTy.IsClass():
+			st := toCallTy.Class()
+			funP := cg.Analysis.FindClassMethod(st, call.Method.Raw)
 			fun = *funP
 		case toCallTy.IsDynTrait():
 			dt := toCallTy.DynTrait()
@@ -190,8 +190,8 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 
 	buildCallExpr := func() string {
 		if call.Method != nil {
-			if toCallTy.IsStruct() && toCallTy.Struct().Def.Attributes.Has("no_metatable", "no__index") {
-				stName := cg.decorateStName(toCallTy.Struct())
+			if toCallTy.IsClass() && toCallTy.Class().Def.Attributes.Has("no_metatable", "no__index") {
+				stName := cg.decorateClassName(toCallTy.Class())
 				args := cg.getCallArgs(call, toCall)
 				return fmt.Sprintf("%s.%s(%s)", stName, call.Method.Raw, args)
 			}

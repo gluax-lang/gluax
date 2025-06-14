@@ -96,10 +96,10 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 			path.ResolvedSymbol = sym
 			a.AddSpanSymbol(name.Span(), *sym)
 			return sym.Value()
-		} else if sym.IsType() && sym.Type().IsStruct() {
-			st := sym.Type().Struct()
-			st = a.resolveStruct(scope, st, path.Generics, name.Span())
-			method := a.FindStructMethod(st, raw)
+		} else if sym.IsType() && sym.Type().IsClass() {
+			st := sym.Type().Class()
+			st = a.resolveClass(scope, st, path.Generics, name.Span())
+			method := a.FindClassMethod(st, raw)
 			if method == nil {
 				return nil
 			}

@@ -8,12 +8,12 @@ import (
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
-func (cg *Codegen) decorateStName_internal(st *ast.SemStruct) string {
+func (cg *Codegen) decorateClassName_internal(st *ast.SemClass) string {
 	var sb strings.Builder
-	var emit func(s *ast.SemStruct)
-	emit = func(s *ast.SemStruct) {
+	var emit func(s *ast.SemClass)
+	emit = func(s *ast.SemClass) {
 		if sb.Len() == 0 {
-			sb.WriteString(STRUCT_PREFIX)
+			sb.WriteString(CLASS_PREFIX)
 		}
 		sb.WriteString(s.Def.Name.Raw)
 		// we don't need an id for builtin types, because they are always unique everywhere
@@ -24,13 +24,13 @@ func (cg *Codegen) decorateStName_internal(st *ast.SemStruct) string {
 		for _, g := range s.Generics.Params {
 			sb.WriteByte('_')
 			switch {
-			case g.IsStruct():
-				emit(g.Struct())
+			case g.IsClass():
+				emit(g.Class())
 			case g.IsGeneric():
 				panic("THIS SHOULD NOT HAPPEN WITH NEW VERSION OF GLUAX")
 				sb.WriteString(g.Generic().Ident.Raw)
 			case g.IsFunction():
-				panic("TODO: handle function generics in struct names")
+				panic("TODO: handle function generics in class names")
 				// f := g.Function()
 				// sb.WriteString(cg.decorateFuncName(&f))
 			case g.IsUnreachable():
@@ -44,7 +44,7 @@ func (cg *Codegen) decorateStName_internal(st *ast.SemStruct) string {
 	return sb.String()
 }
 
-func (cg *Codegen) decorateStName(st *ast.SemStruct) string {
+func (cg *Codegen) decorateClassName(st *ast.SemClass) string {
 	{
 		raw := st.Def.Name.Raw
 		if st.Def.Public && st.Def.IsGlobalDef {
@@ -54,39 +54,39 @@ func (cg *Codegen) decorateStName(st *ast.SemStruct) string {
 			return raw
 		}
 	}
-	baseName := cg.decorateStName_internal(st)
+	baseName := cg.decorateClassName_internal(st)
 	if st.Def.Public {
-		return cg.getPublic(baseName) + fmt.Sprintf(" --[[struct: %s]]", st.String())
+		return cg.getPublic(baseName) + fmt.Sprintf(" --[[class: %s]]", st.String())
 	}
-	return baseName + fmt.Sprintf(" --[[struct: %s]]", st.String())
+	return baseName + fmt.Sprintf(" --[[class: %s]]", st.String())
 }
 
-func structHeaders(cg *Codegen) {
+func classHeaders(cg *Codegen) {
 
 }
 
-func (cg *Codegen) generateStruct(st *ast.SemStruct) {
+func (cg *Codegen) generateClass(st *ast.SemClass) {
 	for _, g := range st.Generics.Params {
 		if g.IsGeneric() {
-			return // we don't generate structs with generics, because they are not concrete types
+			return // we don't generate classes with generics, because they are not concrete types
 		}
 	}
-	name := cg.decorateStName(st)
+	name := cg.decorateClassName(st)
 	{
-		if _, ok := cg.generatedStructs[name]; ok {
+		if _, ok := cg.generatedClasses[name]; ok {
 			return
 		}
-		cg.generatedStructs[name] = struct{}{}
+		cg.generatedClasses[name] = struct{}{}
 	}
 	if !st.Def.Public {
 		cg.currentTempScope().all = append(cg.currentTempScope().all, name)
 	}
 	cg.ln("%s = {", name)
 	cg.pushIndent()
-	cg.ln("%s = true,", STRUCT_MARKER_PREFIX)
-	for name, method := range cg.Analysis.FindAllStructMethods(st) {
+	cg.ln("%s = true,", CLASS_MARKER_PREFIX)
+	for name, method := range cg.Analysis.FindAllClassMethods(st) {
 		// we need to handle it with body, to make sure body calls are generated correctly
-		hMethod := cg.Analysis.HandleStructMethod(st, *method, true)
+		hMethod := cg.Analysis.HandleClassMethod(st, *method, true)
 		cg.ln("%s = %s,", name, cg.genFunction(&hMethod))
 	}
 	cg.popIndent()
@@ -94,13 +94,13 @@ func (cg *Codegen) generateStruct(st *ast.SemStruct) {
 	if !st.Def.Attributes.Has("no__index") {
 		cg.ln("%s.__index = %s;\n", name, name)
 		if st.Super != nil {
-			superName := cg.decorateStName(st.Super)
+			superName := cg.decorateClassName(st.Super)
 			cg.ln("setmetatable(%s, %s);", name, superName)
 		}
 	}
 }
 
-func (cg *Codegen) genStructInit(si *ast.ExprStructInit, st *ast.SemStruct) string {
+func (cg *Codegen) genClassInit(si *ast.ExprClassInit, st *ast.SemClass) string {
 	var sb strings.Builder
 
 	type fieldEval struct {
@@ -134,7 +134,7 @@ func (cg *Codegen) genStructInit(si *ast.ExprStructInit, st *ast.SemStruct) stri
 		fieldEvals[i].Temp = tempNames[i]
 	}
 
-	toSetTo := cg.decorateStName(st)
+	toSetTo := cg.decorateClassName(st)
 
 	// Sort by field Id for table initialization
 	sorted := make([]fieldEval, len(fieldEvals))
@@ -157,7 +157,7 @@ func (cg *Codegen) genStructInit(si *ast.ExprStructInit, st *ast.SemStruct) stri
 }
 
 func (cg *Codegen) genDotAccess(expr *ast.DotAccess, toIndex string, toIndexTy ast.SemType) string {
-	st := toIndexTy.Struct()
+	st := toIndexTy.Class()
 	fieldId := 0
 	for _, def := range st.Def.Fields {
 		if def.Name.Raw == expr.Name.Raw {

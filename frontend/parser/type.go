@@ -22,7 +22,7 @@ func (p *parser) parseTypeX(flags Flags) ast.Type {
 		optionIdent := lexer.NewTokIdent("option", qSpan)
 		optionPath := ast.NewPath([]ast.Ident{optionIdent})
 		generics := []ast.Type{ty}
-		return ast.NewGenericStruct(optionPath, generics, SpanFrom(spanStart, p.prevSpan()))
+		return ast.NewGenericClass(optionPath, generics, SpanFrom(spanStart, p.prevSpan()))
 	}
 
 	if p.Token.Is("Self") {
@@ -98,13 +98,13 @@ func (p *parser) parsePathType(spanStart common.Span, path *ast.Path) ast.Type {
 		parsed := p.parsePath()
 		path = &parsed
 	}
-	// generic struct
+	// generic class
 	if p.tryConsume("<") {
 		var generics []ast.Type
 		p.parseCommaSeparatedDelimited(">", func(p *parser) {
 			generics = append(generics, p.parseType())
 		})
-		return ast.NewGenericStruct(*path, generics, SpanFrom(spanStart, p.prevSpan()))
+		return ast.NewGenericClass(*path, generics, SpanFrom(spanStart, p.prevSpan()))
 	}
 	return path
 }

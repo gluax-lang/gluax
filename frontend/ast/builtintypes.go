@@ -2,37 +2,37 @@ package ast
 
 const BuiltinTypes = `
 #[no_metatable]
-pub struct nil { _priv: nil }
+pub class nil { _priv: nil }
 
 #[no_metatable]
 #[no_impl]
-pub struct any { _priv: nil }
+pub class any { _priv: nil }
 
 #[no_metatable]
-pub struct bool { _priv: nil }
+pub class bool { _priv: nil }
 
 #[no_metatable]
-pub struct number { _priv: nil }
+pub class number { _priv: nil }
 
 #[no_metatable]
-pub struct string { _priv: nil }
+pub class string { _priv: nil }
 
 #[no__index]
-pub struct vec<T> { _priv: nil }
+pub class vec<T> { _priv: nil }
 
 #[no__index]
-pub struct map<K, V> { _priv: nil }
+pub class map<K, V> { _priv: nil }
 
 #[no_metatable]
-pub struct option<T> { _priv: nil }
-
-#[no_metatable]
-#[no_impl]
-pub struct anyfunc { _priv: nil }
+pub class option<T> { _priv: nil }
 
 #[no_metatable]
 #[no_impl]
-pub struct table { _priv: nil }
+pub class anyfunc { _priv: nil }
+
+#[no_metatable]
+#[no_impl]
+pub class table { _priv: nil }
 `
 
 var builtin = map[string]struct{}{

@@ -15,8 +15,8 @@ func (p *parser) parseItem() ast.Item {
 	switch p.Token.AsString() {
 	case "let":
 		item = p.parseLet(true)
-	case "struct":
-		item = p.parseStruct()
+	case "class":
+		item = p.parseClass()
 	case "use":
 		item = p.parseUse()
 	case "import":
@@ -51,12 +51,12 @@ func (p *parser) parseFunction() ast.Item {
 	return fun
 }
 
-func (p *parser) parseStruct() ast.Item {
+func (p *parser) parseClass() ast.Item {
 	spanStart := p.span()
 
-	p.expect("struct")
+	p.advance() // skip `class`
 
-	name := p.expectIdentMsg("expected struct name")
+	name := p.expectIdentMsg("expected class name")
 	generics := p.parseGenerics()
 
 	var super *ast.Type
@@ -68,7 +68,7 @@ func (p *parser) parseStruct() ast.Item {
 	p.expect("{")
 
 	var (
-		fields []ast.StructField
+		fields []ast.ClassField
 	)
 
 	fieldId := 1 // Start field IDs at 1
@@ -79,7 +79,7 @@ func (p *parser) parseStruct() ast.Item {
 			attributes = append(attributes, p.parseAttribute())
 		}
 
-		fields = append(fields, p.parseStructField(fieldId))
+		fields = append(fields, p.parseClassField(fieldId))
 		fieldId++ // Increment field ID for the next field
 
 		// optional trailing comma
@@ -91,17 +91,17 @@ func (p *parser) parseStruct() ast.Item {
 
 	span := SpanFrom(spanStart, p.prevSpan())
 
-	st := ast.NewStruct(name, generics, super, fields, span)
+	st := ast.NewClass(name, generics, super, fields, span)
 	st.IsGlobalDef = p.processingGlobals
 	return st
 }
 
-func (p *parser) parseStructField(id int) ast.StructField {
+func (p *parser) parseClassField(id int) ast.ClassField {
 	public := p.tryConsume("pub")
 	name := p.expectIdent()
 	p.expect(":")
 	ty := p.parseType()
-	return ast.StructField{
+	return ast.ClassField{
 		Id:     id,
 		Name:   name,
 		Type:   ty,
@@ -127,7 +127,7 @@ func (p *parser) parseImpl() ast.Item {
 		p.expect(";")
 
 		span := SpanFrom(spanStart, p.prevSpan())
-		return ast.NewImplTraitForStruct(generics, *trait, st, span)
+		return ast.NewImplTraitForClass(generics, *trait, st, span)
 	}
 
 	p.expect("{")
@@ -139,7 +139,7 @@ func (p *parser) parseImpl() ast.Item {
 		for p.Token.Is("#") {
 			attributes = append(attributes, p.parseAttribute())
 		}
-		method := p.parseStructMethod(false)
+		method := p.parseClassMethod(false)
 		method.Attributes = attributes
 		methods = append(methods, method)
 	}
@@ -148,10 +148,10 @@ func (p *parser) parseImpl() ast.Item {
 
 	span := SpanFrom(spanStart, p.prevSpan())
 
-	return ast.NewImplStruct(generics, ty, methods, span)
+	return ast.NewImplClass(generics, ty, methods, span)
 }
 
-func (p *parser) parseStructMethod(bodyOptional bool) ast.Function {
+func (p *parser) parseClassMethod(bodyOptional bool) ast.Function {
 	spanStart := p.span()
 
 	p.expect("func")
@@ -204,7 +204,7 @@ func (p *parser) parseTrait() ast.Item {
 	var methods []ast.Function
 
 	for !p.Token.Is("}") {
-		method := p.parseStructMethod(true)
+		method := p.parseClassMethod(true)
 		methods = append(methods, method)
 	}
 

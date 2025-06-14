@@ -78,14 +78,14 @@ func Parse(tkS []lexer.Token, processingGlobals bool) (astRet *ast.Ast, err *dia
 			switch item := item.(type) {
 			case *ast.Function:
 				astRet.Funcs = append(astRet.Funcs, item)
-			case *ast.ImplStruct:
-				astRet.ImplStructs = append(astRet.ImplStructs, item)
-			case *ast.ImplTraitForStruct:
+			case *ast.ImplClass:
+				astRet.ImplClasses = append(astRet.ImplClasses, item)
+			case *ast.ImplTraitForClass:
 				astRet.ImplTraits = append(astRet.ImplTraits, item)
 			case *ast.Let:
 				astRet.Lets = append(astRet.Lets, item)
-			case *ast.Struct:
-				astRet.Structs = append(astRet.Structs, item)
+			case *ast.Class:
+				astRet.Classes = append(astRet.Classes, item)
 			case *ast.Trait:
 				astRet.Traits = append(astRet.Traits, item)
 			}

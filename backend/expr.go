@@ -146,10 +146,10 @@ func (cg *Codegen) genExprX(e ast.Expr) string {
 		} else {
 			return cg.genBinaryExpr(e.Binary())
 		}
-	case ast.ExprKindStructInit:
+	case ast.ExprKindClassInit:
 		ty := e.Type()
-		st := ty.Struct()
-		return cg.genStructInit(e.StructInit(), st)
+		st := ty.Class()
+		return cg.genClassInit(e.ClassInit(), st)
 	case ast.ExprKindUnsafeCast:
 		return cg.genExprX(e.UnsafeCast().Expr)
 	case ast.ExprKindRunRaw:
@@ -382,7 +382,7 @@ func (cg *Codegen) genRunRaw(run *ast.ExprRunRaw) string {
 
 func (cg *Codegen) genVecInit(v *ast.ExprVecInit, ty ast.SemType) string {
 	values := cg.genExprsLeftToRight(v.Values)
-	return fmt.Sprintf("setmetatable({%s}, %s)", values, cg.decorateStName(ty.Struct()))
+	return fmt.Sprintf("setmetatable({%s}, %s)", values, cg.decorateClassName(ty.Class()))
 }
 
 func (cg *Codegen) genMapInit(m *ast.ExprMapInit, ty ast.SemType) string {
@@ -400,7 +400,7 @@ func (cg *Codegen) genMapInit(m *ast.ExprMapInit, ty ast.SemType) string {
 		sb.WriteString(fmt.Sprintf("[%s] = %s", all[i], all[i+1]))
 	}
 	sb.WriteString("}")
-	return fmt.Sprintf("setmetatable(%s, %s)", sb.String(), cg.decorateStName(ty.Struct()))
+	return fmt.Sprintf("setmetatable(%s, %s)", sb.String(), cg.decorateClassName(ty.Class()))
 }
 
 /* Loops */

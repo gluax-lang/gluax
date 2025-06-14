@@ -8,22 +8,22 @@ func (a *Analysis) resolveType(scope *Scope, ty ast.Type) Type {
 	switch t := ty.(type) {
 	case *ast.Path:
 		found := a.resolvePathType(scope, t)
-		if found.IsStruct() {
-			st := found.Struct()
-			_ = a.resolveStruct(scope, st, nil, t.Span())
+		if found.IsClass() {
+			st := found.Class()
+			_ = a.resolveClass(scope, st, nil, t.Span())
 		}
 		found.SetSpan(t.Span())
 		return found
-	case *ast.GenericStruct:
-		if a.SetStructSetupSpan(ty.Span()) {
-			defer a.ClearStructSetupSpan()
+	case *ast.GenericClass:
+		if a.SetClassSetupSpan(ty.Span()) {
+			defer a.ClearClassSetupSpan()
 		}
 		ty := a.resolvePathType(scope, &t.Path)
-		if !ty.IsStruct() {
-			a.panicf(t.Span(), "expected struct type, got: %s", ty.String())
+		if !ty.IsClass() {
+			a.panicf(t.Span(), "expected class type, got: %s", ty.String())
 		}
-		st := ty.Struct()
-		st = a.resolveStruct(scope, st, t.Generics, t.Span())
+		st := ty.Class()
+		st = a.resolveClass(scope, st, t.Generics, t.Span())
 		return ast.NewSemType(st, t.Span())
 	case *ast.Tuple:
 		elems := make([]Type, 0, len(t.Elems))

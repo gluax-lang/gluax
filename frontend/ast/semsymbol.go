@@ -10,11 +10,11 @@ type SymbolKind uint8
 
 const (
 	SymValue SymbolKind = iota // vars, params, functions  (see Value.Kind below)
-	SymType                    // struct / alias / type-def
+	SymType                    // class / alias / type-def
 	SymImport
 	SymTrait
 
-	SymStructField
+	SymClassField
 )
 
 type symbolData interface {
@@ -25,7 +25,7 @@ type symbolData interface {
 func (v *Value) SymbolKind() SymbolKind          { return SymValue }
 func (t *SemType) SymbolKind() SymbolKind        { return SymType }
 func (i *SemImport) SymbolKind() SymbolKind      { return SymImport }
-func (f *SemStructField) SymbolKind() SymbolKind { return SymStructField }
+func (f *SemaClassField) SymbolKind() SymbolKind { return SymClassField }
 func (t *SemTrait) SymbolKind() SymbolKind       { return SymTrait }
 
 type Symbol struct {

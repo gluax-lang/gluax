@@ -28,7 +28,7 @@ const (
 	ExprKindForNum
 	ExprKindForIn
 	ExprKindParenthesized
-	ExprKindStructInit
+	ExprKindClassInit
 	ExprKindPathCall
 	ExprKindTuple
 	ExprKindUnsafeCast
@@ -63,10 +63,10 @@ func (k ExprKind) String() string {
 		return "block"
 	case ExprKindParenthesized:
 		return "parenthesized"
-	case ExprKindStructInit:
-		return "struct init"
+	case ExprKindClassInit:
+		return "class init"
 	case ExprKindPathCall:
-		return "struct static call"
+		return "class static call"
 	case ExprKindFunction:
 		return "function"
 	case ExprKindPath:
@@ -222,11 +222,11 @@ func (e *Expr) Function() *Function {
 	return e.data.(*Function)
 }
 
-func (e *Expr) StructInit() *ExprStructInit {
-	if e.Kind() != ExprKindStructInit {
-		panic("not a struct init")
+func (e *Expr) ClassInit() *ExprClassInit {
+	if e.Kind() != ExprKindClassInit {
+		panic("not a class init")
 	}
-	return e.data.(*ExprStructInit)
+	return e.data.(*ExprClassInit)
 }
 
 func (e *Expr) UnsafeCast() *UnsafeCast {
@@ -554,27 +554,27 @@ func (t *ExprTuple) Span() common.Span {
 	return t.span
 }
 
-/* Struct Init */
+/* Class Init */
 
-type ExprStructField struct {
+type ExprClassField struct {
 	Name  Ident
 	Value Expr
 }
 
-type ExprStructInit struct {
+type ExprClassInit struct {
 	Name     Path
 	Generics []Type
-	Fields   []ExprStructField
+	Fields   []ExprClassField
 	span     common.Span
 }
 
-func NewStructInit(name Path, generics []Type, fields []ExprStructField, span common.Span) Expr {
-	return NewExpr(&ExprStructInit{Name: name, Generics: generics, Fields: fields, span: span})
+func NewClassInit(name Path, generics []Type, fields []ExprClassField, span common.Span) Expr {
+	return NewExpr(&ExprClassInit{Name: name, Generics: generics, Fields: fields, span: span})
 }
 
-func (s *ExprStructInit) ExprKind() ExprKind { return ExprKindStructInit }
+func (s *ExprClassInit) ExprKind() ExprKind { return ExprKindClassInit }
 
-func (s *ExprStructInit) Span() common.Span {
+func (s *ExprClassInit) Span() common.Span {
 	return s.span
 }
 

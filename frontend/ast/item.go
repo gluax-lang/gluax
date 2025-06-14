@@ -14,7 +14,7 @@ func SetItemPublic(item Item, b bool) {
 	switch v := item.(type) {
 	case *Let:
 		v.Public = b
-	case *Struct:
+	case *Class:
 		v.Public = b
 	case *Use:
 		v.Public = b
@@ -33,7 +33,7 @@ func SetItemAttributes(item Item, attrs Attributes) bool {
 	case *Let:
 		v.Attributes = attrs
 		return true
-	case *Struct:
+	case *Class:
 		v.Attributes = attrs
 		return true
 	case *Trait:
@@ -43,80 +43,80 @@ func SetItemAttributes(item Item, attrs Attributes) bool {
 	return false
 }
 
-/* Struct */
+/* Class */
 
-type StructField struct {
+type ClassField struct {
 	Id     int // the field id, in order of declaration
 	Name   lexer.TokIdent
 	Type   Type
 	Public bool
 }
 
-type StructInstance struct {
+type ClassInstance struct {
 	Args []SemType
-	Type *SemStruct
+	Type *SemClass
 }
 
-type StructsStack []StructInstance
+type ClassesStack []ClassInstance
 
-type Struct struct {
+type Class struct {
 	Public         bool
 	Name           lexer.TokIdent
 	Generics       Generics
-	Super          *Type // the type this struct extends, if any
-	Fields         []StructField
+	Super          *Type // the type this class extends, if any
+	Fields         []ClassField
 	Attributes     Attributes
 	IsGlobalDef    bool // true if this is a global definition
 	Scope          any
-	CreatedStructs StructsStack
+	CreatedClasses ClassesStack
 	span           common.Span
 }
 
-func NewStruct(name lexer.TokIdent, generics Generics, super *Type, fields []StructField, span common.Span) *Struct {
-	return &Struct{
+func NewClass(name lexer.TokIdent, generics Generics, super *Type, fields []ClassField, span common.Span) *Class {
+	return &Class{
 		Name:           name,
 		Generics:       generics,
 		Super:          super,
 		Fields:         fields,
-		CreatedStructs: make(StructsStack, 0, 4),
+		CreatedClasses: make(ClassesStack, 0, 4),
 		span:           span,
 	}
 }
 
-func (si *Struct) isItem() {}
+func (si *Class) isItem() {}
 
-func (si *Struct) SetPublic(b bool) { si.Public = b }
+func (si *Class) SetPublic(b bool) { si.Public = b }
 
-func (si Struct) Span() common.Span {
+func (si Class) Span() common.Span {
 	return si.span
 }
 
-func (s *Struct) AddStruct(st *SemStruct, concrete []SemType) {
-	s.CreatedStructs = append(s.CreatedStructs, StructInstance{concrete, st})
+func (s *Class) AddClass(st *SemClass, concrete []SemType) {
+	s.CreatedClasses = append(s.CreatedClasses, ClassInstance{concrete, st})
 }
 
-func (s *Struct) GetStructStack() StructsStack {
-	return s.CreatedStructs
+func (s *Class) GetClassStack() ClassesStack {
+	return s.CreatedClasses
 }
 
-/* Impl Struct */
+/* Impl Class */
 
-type ImplStruct struct {
+type ImplClass struct {
 	Generics      Generics
-	Struct        Type
+	Class         Type
 	Methods       []Function
 	Scope         any
 	GenericsScope any
 	span          common.Span
 }
 
-func NewImplStruct(generics Generics, st Type, methods []Function, span common.Span) *ImplStruct {
-	return &ImplStruct{Generics: generics, Struct: st, Methods: methods, span: span}
+func NewImplClass(generics Generics, st Type, methods []Function, span common.Span) *ImplClass {
+	return &ImplClass{Generics: generics, Class: st, Methods: methods, span: span}
 }
 
-func (is *ImplStruct) isItem() {}
+func (is *ImplClass) isItem() {}
 
-func (is *ImplStruct) Span() common.Span {
+func (is *ImplClass) Span() common.Span {
 	return is.span
 }
 
@@ -145,21 +145,21 @@ func (t Trait) Span() common.Span {
 	return t.span
 }
 
-/* Impl Trait for Struct */
-type ImplTraitForStruct struct {
+/* Impl Trait for Class */
+type ImplTraitForClass struct {
 	Generics Generics
 	Trait    Path
-	Struct   Type // the type this trait is implemented for
+	Class    Type // the type this trait is implemented for
 	span     common.Span
 }
 
-func NewImplTraitForStruct(g Generics, trait Path, st Type, span common.Span) *ImplTraitForStruct {
-	return &ImplTraitForStruct{Generics: g, Trait: trait, Struct: st, span: span}
+func NewImplTraitForClass(g Generics, trait Path, st Type, span common.Span) *ImplTraitForClass {
+	return &ImplTraitForClass{Generics: g, Trait: trait, Class: st, span: span}
 }
 
-func (it *ImplTraitForStruct) isItem() {}
+func (it *ImplTraitForClass) isItem() {}
 
-func (it *ImplTraitForStruct) Span() common.Span {
+func (it *ImplTraitForClass) Span() common.Span {
 	return it.span
 }
 

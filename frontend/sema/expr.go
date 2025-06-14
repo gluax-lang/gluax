@@ -80,8 +80,8 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 		retTy = ast.NewSemType(funcTy, expr.Span())
 	case ast.ExprKindPostfix:
 		retTy = a.handlePostfixExpr(scope, expr.Postfix())
-	case ast.ExprKindStructInit:
-		retTy = a.handleStructInit(scope, expr.StructInit())
+	case ast.ExprKindClassInit:
+		retTy = a.handleClassInit(scope, expr.ClassInit())
 	case ast.ExprKindUnsafeCast:
 		retTy = a.handleUnsafeCast(scope, expr.UnsafeCast())
 	case ast.ExprKindRunRaw:
@@ -369,25 +369,25 @@ func (a *Analysis) handleForInExpr(scope *Scope, forIn *ast.ExprForIn) {
 	a.handleExpr(scope, inExpr)
 
 	inExprTy := inExpr.Type()
-	if !inExprTy.IsStruct() {
-		a.panicf(inExpr.Span(), "expected struct type, got: %s", inExprTy.String())
+	if !inExprTy.IsClass() {
+		a.panicf(inExpr.Span(), "expected class type, got: %s", inExprTy.String())
 	}
 
 	var iterReturn Type
 	var iterReturnCount int
 
-	st := inExprTy.Struct()
-	if method := a.FindStructMethod(st, "__x_iter_pairs"); method != nil {
+	st := inExprTy.Class()
+	if method := a.FindClassMethod(st, "__x_iter_pairs"); method != nil {
 		firstReturn := method.FirstReturnType()
 		iterFunc := firstReturn.Function()
 		iterReturn = iterFunc.Return
 		iterReturnCount = iterFunc.ReturnCount()
-	} else if method := a.FindStructMethod(st, "__x_iter_range"); method != nil {
+	} else if method := a.FindClassMethod(st, "__x_iter_range"); method != nil {
 		iterReturn = a.tupleType(inExpr.Span(), a.numberType(), method.FirstReturnType())
 		iterReturnCount = 2
 		forIn.IsRange = true
 	} else {
-		a.panic(inExpr.Span(), "cannot iterate over struct without __x_iter_pairs method")
+		a.panic(inExpr.Span(), "cannot iterate over class without __x_iter_pairs method")
 	}
 
 	variableCount := len(forIn.Vars)
@@ -568,18 +568,18 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 
 func (a *Analysis) handleDotAccess(expr *ast.DotAccess, toIndex *ast.Expr) Type {
 	toIndexTy := toIndex.Type()
-	if !toIndexTy.IsStruct() {
-		a.panicf(expr.Span(), "cannot index into non-struct type `%s`", toIndexTy.String())
+	if !toIndexTy.IsClass() {
+		a.panicf(expr.Span(), "cannot index into non-class type `%s`", toIndexTy.String())
 	}
 
-	st := toIndexTy.Struct()
+	st := toIndexTy.Class()
 
 	field := expr.Name
 
 	flds := st.Fields
 	if fld, ok := flds[field.Raw]; ok {
-		if !a.canAccessStructMember(st, fld.IsPublic()) {
-			a.Errorf(field.Span(), "field `%s` of struct `%s` is private", field.Raw, st.Def.Name.Raw)
+		if !a.canAccessClassMember(st, fld.IsPublic()) {
+			a.Errorf(field.Span(), "field `%s` of class `%s` is private", field.Raw, st.Def.Name.Raw)
 		}
 		fldSym := ast.NewSymbol(field.Raw, &fld, fld.Def.Name.Span(), true)
 		a.AddSpanSymbol(expr.Span(), fldSym)
@@ -597,10 +597,10 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 
 	toCallTy := toCall.Type()
 	switch {
-	case toCallTy.IsStruct():
-		st := toCallTy.Struct()
+	case toCallTy.IsClass():
+		st := toCallTy.Class()
 		toCallName = st.String()
-		methodPtr := a.FindStructMethod(st, call.Method.Raw)
+		methodPtr := a.FindClassMethod(st, call.Method.Raw)
 		if methodPtr != nil {
 			method = *methodPtr
 			exists = true
@@ -624,7 +624,7 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 		toCallName = dynTrait.String()
 		method, exists = a.GetTraitMethod(dynTrait.Trait, call.Method.Raw)
 	default:
-		a.panicf(call.Span(), "cannot call method on non-struct/dyn-trait type `%s`", toCallTy.String())
+		a.panicf(call.Span(), "cannot call method on non-class/dyn-trait type `%s`", toCallTy.String())
 	}
 
 	if !exists {

@@ -6,9 +6,9 @@ import (
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
-var toCheckFuncs = map[string]func(*Analysis, *ast.SemStruct, string){
-	"__x_iter_pairs": func(a *Analysis, st *ast.SemStruct, methodName string) {
-		fun := a.FindStructMethod(st, methodName)
+var toCheckFuncs = map[string]func(*Analysis, *ast.SemClass, string){
+	"__x_iter_pairs": func(a *Analysis, st *ast.SemClass, methodName string) {
+		fun := a.FindClassMethod(st, methodName)
 		if len(fun.Params) != 1 {
 			a.Errorf(fun.Def.Span(), "method `%s` must have one parameter", methodName)
 			return
@@ -41,15 +41,15 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemStruct, string){
 			return
 		}
 	},
-	"__x_iter_range": func(a *Analysis, st *ast.SemStruct, methodName string) {
-		fun := a.FindStructMethod(st, methodName)
+	"__x_iter_range": func(a *Analysis, st *ast.SemClass, methodName string) {
+		fun := a.FindClassMethod(st, methodName)
 		if len(fun.Params) != 2 {
 			a.Errorf(fun.Def.Name.Span(), "method `%s` must have two parameters", methodName)
 			return
 		}
 
-		if method := a.FindStructMethod(st, "__x_iter_range_bound"); method == nil {
-			a.Errorf(fun.Def.Name.Span(), "struct `%s` must implement method `__x_iter_range_bound` to use `%s`", st.Def.Name.Raw, methodName)
+		if method := a.FindClassMethod(st, "__x_iter_range_bound"); method == nil {
+			a.Errorf(fun.Def.Name.Span(), "class `%s` must implement method `__x_iter_range_bound` to use `%s`", st.Def.Name.Raw, methodName)
 			return
 		}
 
@@ -73,15 +73,15 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemStruct, string){
 			return
 		}
 	},
-	"__x_iter_range_bound": func(a *Analysis, st *ast.SemStruct, methodName string) {
-		fun := a.FindStructMethod(st, methodName)
+	"__x_iter_range_bound": func(a *Analysis, st *ast.SemClass, methodName string) {
+		fun := a.FindClassMethod(st, methodName)
 		if len(fun.Params) != 1 {
 			a.Errorf(fun.Def.Name.Span(), "method `%s` must have one parameter", methodName)
 			return
 		}
 
-		if method := a.FindStructMethod(st, "__x_iter_range"); method == nil {
-			a.Errorf(fun.Def.Name.Span(), "struct `%s` must implement method `__x_iter_range` to use `%s`", st.Def.Name.Raw, methodName)
+		if method := a.FindClassMethod(st, "__x_iter_range"); method == nil {
+			a.Errorf(fun.Def.Name.Span(), "class `%s` must implement method `__x_iter_range` to use `%s`", st.Def.Name.Raw, methodName)
 			return
 		}
 
@@ -108,7 +108,7 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemStruct, string){
 	},
 }
 
-func (a *Analysis) checkStructMethods(st *ast.SemStruct, methodName string) {
+func (a *Analysis) checkClassMethods(st *ast.SemClass, methodName string) {
 	if checkFunc, exists := toCheckFuncs[methodName]; exists {
 		checkFunc(a, st, methodName)
 	}
@@ -150,11 +150,11 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 		}
 	}
 
-	for _, stDef := range astD.Structs {
+	for _, stDef := range astD.Classes {
 		stDef.Scope = a.Scope
-		st := a.setupStruct(stDef, nil)
+		st := a.setupClass(stDef, nil)
 
-		SelfSt := a.setupStruct(stDef, nil)
+		SelfSt := a.setupClass(stDef, nil)
 		for i, g := range SelfSt.Def.Generics.Params {
 			traits := getGenericParamTraits(g)
 			SelfSt.Generics.Params[i] = ast.NewSemGenericType(g.Name, traits, true)
@@ -169,28 +169,28 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 		a.AddTypeVisibility(a.Scope, stDef.Name.Raw, stSem, stDef.Public)
 	}
 
-	for _, stDef := range astD.Structs {
+	for _, stDef := range astD.Classes {
 		superDef := stDef.Super
 		if superDef == nil {
 			continue
 		}
-		st := a.GetStruct(stDef, nil)
+		st := a.GetClass(stDef, nil)
 		stScope := st.Scope.(*Scope)
 
 		superT := a.resolveType(stScope, *superDef)
-		if !superT.IsStruct() {
-			a.panicf((*superDef).Span(), "expected struct type, got: %s", superT.String())
+		if !superT.IsClass() {
+			a.panicf((*superDef).Span(), "expected class type, got: %s", superT.String())
 		}
 
-		st.Super = superT.Struct()
+		st.Super = superT.Class()
 	}
 
-	for _, stDef := range astD.Structs {
-		st := a.GetStruct(stDef, nil)
+	for _, stDef := range astD.Classes {
+		st := a.GetClass(stDef, nil)
 		stScope := st.Scope.(*Scope)
-		SelfSt := stScope.GetType("Self").Struct()
-		a.collectStructFields(SelfSt)
-		a.collectStructFields(st)
+		SelfSt := stScope.GetType("Self").Class()
+		a.collectClassFields(SelfSt)
+		a.collectClassFields(st)
 	}
 
 	for _, funcDef := range astD.Funcs {
@@ -199,36 +199,36 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 		a.AddValueVisibility(a.Scope, funcDef.Name.Raw, ast.NewValue(funcSem), funcDef.Name.Span(), funcDef.Public)
 	}
 
-	var implStructsChecks []func()
-	for _, impl := range astD.ImplStructs {
+	var implClassesChecks []func()
+	for _, impl := range astD.ImplClasses {
 		impl.Scope = a.Scope
 		genericsScope := a.setupTypeGenerics(a.Scope, impl.Generics, nil)
-		stTy := a.resolveType(genericsScope, impl.Struct)
-		if !stTy.IsStruct() {
-			a.panicf(impl.Struct.Span(), "expected struct type, got: %s", stTy.String())
+		stTy := a.resolveType(genericsScope, impl.Class)
+		if !stTy.IsClass() {
+			a.panicf(impl.Class.Span(), "expected class type, got: %s", stTy.String())
 		}
 		if err := genericsScope.AddType("Self", stTy); err != nil {
-			a.Error(impl.Struct.Span(), err.Error())
+			a.Error(impl.Class.Span(), err.Error())
 		}
-		st := stTy.Struct()
+		st := stTy.Class()
 		if st.Def.Attributes.Has("no_impl") {
-			a.panicf(impl.Span(), "struct `%s` cannot implement methods", st.Def.Name.Raw)
+			a.panicf(impl.Span(), "class `%s` cannot implement methods", st.Def.Name.Raw)
 		}
 		for _, method := range impl.Methods {
 			funcTy := a.handleFunctionSignature(genericsScope, &method)
 			funcTy.Scope = a.Scope
 			funcTy.Generics = impl.Generics
 			methodName := method.Name.Raw
-			a.RegisterStructMethod(st, funcTy)
-			implStructsChecks = append(implStructsChecks, func() {
+			a.RegisterClassMethod(st, funcTy)
+			implClassesChecks = append(implClassesChecks, func() {
 				// this hack is needed, so something like `__x_iter_range` can check if `__x_iter_range_bound` exists or not
-				a.checkStructMethods(st, methodName)
+				a.checkClassMethods(st, methodName)
 			})
 		}
 		impl.GenericsScope = genericsScope
 	}
 
-	for _, runCheck := range implStructsChecks {
+	for _, runCheck := range implClassesChecks {
 		runCheck()
 	}
 
@@ -273,27 +273,27 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 
 		genericsScope := a.setupTypeGenerics(a.Scope, implTrait.Generics, nil)
 
-		stTy := a.resolveType(genericsScope, implTrait.Struct)
-		if !stTy.IsStruct() {
-			a.panic(implTrait.Struct.Span(), "expected struct")
+		stTy := a.resolveType(genericsScope, implTrait.Class)
+		if !stTy.IsClass() {
+			a.panic(implTrait.Class.Span(), "expected class")
 		}
-		st := stTy.Struct()
+		st := stTy.Class()
 
 		if trait.Def.Attributes.Has("requires_metatable") && st.Def.Attributes.Has("no_metatable") {
-			a.panicf(implTrait.Span(), "struct `%s` cannot implement trait `%s` because it has no metatable", st.Def.Name.Raw, trait.Def.Name.Raw)
+			a.panicf(implTrait.Span(), "class `%s` cannot implement trait `%s` because it has no metatable", st.Def.Name.Raw, trait.Def.Name.Raw)
 		}
 
 		checks = append(checks, func() {
 			for _, superTrait := range trait.SuperTraits {
-				if !a.StructImplementsTrait(st, superTrait) {
-					a.panicf(implTrait.Span(), "struct `%s` must implement supertrait `%s`", st.Def.Name.Raw, superTrait.Def.Name.Raw)
+				if !a.ClassImplementsTrait(st, superTrait) {
+					a.panicf(implTrait.Span(), "class `%s` must implement supertrait `%s`", st.Def.Name.Raw, superTrait.Def.Name.Raw)
 				}
 			}
 		})
 
 		var methods = make(map[string]ast.SemFunction, len(trait.Methods))
 		for name, method := range trait.Methods {
-			stMethod := a.FindStructMethod(st, name)
+			stMethod := a.FindClassMethod(st, name)
 			if stMethod == nil {
 				if method.Def.Body != nil {
 					// a.RegisterStructMethod(st, method)
@@ -302,12 +302,12 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 				} else {
 					methods[name] = method
 					continue
-					a.panicf(implTrait.Span(), "struct `%s` does not implement trait `%s` method `%s`", st.Def.Name.Raw, trait.Def.Name.Raw, name)
+					a.panicf(implTrait.Span(), "class `%s` does not implement trait `%s` method `%s`", st.Def.Name.Raw, trait.Def.Name.Raw, name)
 				}
 			}
 			params := stMethod.Def.Params
 			if len(params) < 1 || params[0].Name.Raw != "self" {
-				a.panicf(implTrait.Span(), "struct `%s` method `%s` must have a `self` parameter as the first parameter", st.Def.Name.Raw, name)
+				a.panicf(implTrait.Span(), "class `%s` method `%s` must have a `self` parameter as the first parameter", st.Def.Name.Raw, name)
 			}
 
 			methodCopy := method
@@ -322,7 +322,7 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 			}
 		}
 
-		a.RegisterStructTraitImplementation(st, trait, methods, implTrait.Span())
+		a.RegisterClassTraitImplementation(st, trait, methods, implTrait.Span())
 	}
 
 	for _, check := range checks {
@@ -337,9 +337,9 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 		a.handleFunction(a.Scope, funcDef)
 	}
 
-	for _, implStruct := range astD.ImplStructs {
-		for _, method := range implStruct.Methods {
-			_ = a.handleFunction(implStruct.GenericsScope.(*Scope), &method)
+	for _, implClass := range astD.ImplClasses {
+		for _, method := range implClass.Methods {
+			_ = a.handleFunction(implClass.GenericsScope.(*Scope), &method)
 		}
 	}
 

@@ -10,7 +10,7 @@ const CONTINUE_PREFIX = PREFIX + "continue_"
 const BREAK_PREFIX = PREFIX + "break_"
 const RETURN_PREFIX = PREFIX + "return_"
 const FUNC_PREFIX = PREFIX + "func_"
-const STRUCT_PREFIX = PREFIX + "struct_"
+const CLASS_PREFIX = PREFIX + "class_"
 const UNREACHABLE_PREFIX = PREFIX + "unreachable_"
 const LOCAL_PREFIX = PREFIX + "local_"
 
@@ -19,4 +19,4 @@ const PUBLIC_TBL = PREFIX + "public"
 
 const RUN_IMPORT = PREFIX + "run_import"
 
-const STRUCT_MARKER_PREFIX = PREFIX + "marker_struct"
+const CLASS_MARKER_PREFIX = PREFIX + "marker_class"

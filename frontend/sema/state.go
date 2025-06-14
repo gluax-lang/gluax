@@ -6,14 +6,14 @@ import (
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
-type StructMethodEntry struct {
-	// These are the types that were passed to the struct when doing impl // e.g. `impl MyStruct<T, U>`
+type ClassMethodEntry struct {
+	// These are the types that were passed to the class when doing impl // e.g. `impl MyClass<T, U>`
 	TypeParameters []Type
 	// The method itself, which is a function
 	Method SemFunction
 }
 
-type StructTraitsMeta struct {
+type ClassTraitsMeta struct {
 	TypeParameters []Type
 	Methods        map[string]SemFunction
 	Span           Span
@@ -25,18 +25,18 @@ type State struct {
 	RootScope *Scope               // which root scope we attach to in this pass
 	Files     map[string]*Analysis // where we store the resulting analyses
 
-	MethodsByStruct map[*ast.Struct]map[string][]*StructMethodEntry
-	TraitsByStruct  map[*ast.Struct]map[*ast.SemTrait][]*StructTraitsMeta
+	MethodsByClass map[*ast.Class]map[string][]*ClassMethodEntry
+	TraitsByClass  map[*ast.Class]map[*ast.SemTrait][]*ClassTraitsMeta
 }
 
 func NewState(label string) *State {
 	return &State{
-		Label:           label,
-		Macros:          make(map[string]string),
-		RootScope:       NewScope(nil),
-		Files:           make(map[string]*Analysis),
-		MethodsByStruct: make(map[*ast.Struct]map[string][]*StructMethodEntry),
-		TraitsByStruct:  make(map[*ast.Struct]map[*ast.SemTrait][]*StructTraitsMeta),
+		Label:          label,
+		Macros:         make(map[string]string),
+		RootScope:      NewScope(nil),
+		Files:          make(map[string]*Analysis),
+		MethodsByClass: make(map[*ast.Class]map[string][]*ClassMethodEntry),
+		TraitsByClass:  make(map[*ast.Class]map[*ast.SemTrait][]*ClassTraitsMeta),
 	}
 }
 
@@ -52,8 +52,8 @@ func (a *Analysis) ValidateTypeParameterConstraints(constraints, actuals []Type)
 			for _, bound := range c.Generic().Traits {
 				var ok bool
 				switch {
-				case act.IsStruct():
-					ok = a.StructImplementsTrait(act.Struct(), bound)
+				case act.IsClass():
+					ok = a.ClassImplementsTrait(act.Class(), bound)
 				case act.IsGeneric():
 					ok = slices.Contains(act.Generic().Traits, bound)
 				case act.IsDynTrait():
@@ -91,7 +91,7 @@ func (a *Analysis) TypeParametersConflict(c1, c2 []Type) bool {
 
 		if g1 && !g2 {
 			for _, bound := range t1.Generic().Traits {
-				if !a.StructImplementsTrait(t2.Struct(), bound) {
+				if !a.ClassImplementsTrait(t2.Class(), bound) {
 					return false
 				}
 			}
@@ -100,7 +100,7 @@ func (a *Analysis) TypeParametersConflict(c1, c2 []Type) bool {
 
 		if g2 && !g1 {
 			for _, bound := range t2.Generic().Traits {
-				if !a.StructImplementsTrait(t1.Struct(), bound) {
+				if !a.ClassImplementsTrait(t1.Class(), bound) {
 					return false
 				}
 			}
@@ -116,7 +116,7 @@ func (a *Analysis) TypeParametersConflict(c1, c2 []Type) bool {
 }
 
 func (a *Analysis) CheckConflictingMethodImplementations() {
-	for _, byName := range a.State.MethodsByStruct {
+	for _, byName := range a.State.MethodsByClass {
 		for name, list := range byName {
 			for i := range list {
 				m1 := list[i]
@@ -134,7 +134,7 @@ func (a *Analysis) CheckConflictingMethodImplementations() {
 }
 
 func (a *Analysis) CheckConflictingTraitImplementations() {
-	for _, byTrait := range a.State.TraitsByStruct {
+	for _, byTrait := range a.State.TraitsByClass {
 		for tr, list := range byTrait {
 			for i := range list {
 				t1 := list[i]
@@ -151,60 +151,60 @@ func (a *Analysis) CheckConflictingTraitImplementations() {
 	}
 }
 
-func (a *Analysis) RegisterStructMethod(st *SemStruct, method SemFunction) {
-	if _, ok := a.State.MethodsByStruct[st.Def]; !ok {
-		a.State.MethodsByStruct[st.Def] = make(map[string][]*StructMethodEntry)
+func (a *Analysis) RegisterClassMethod(st *SemClass, method SemFunction) {
+	if _, ok := a.State.MethodsByClass[st.Def]; !ok {
+		a.State.MethodsByClass[st.Def] = make(map[string][]*ClassMethodEntry)
 	}
-	byName := a.State.MethodsByStruct[st.Def]
+	byName := a.State.MethodsByClass[st.Def]
 	name := method.Def.Name.Raw
-	byName[name] = append(byName[name], &StructMethodEntry{
+	byName[name] = append(byName[name], &ClassMethodEntry{
 		TypeParameters: st.Generics.Params,
 		Method:         method,
 	})
 }
 
-func (a *Analysis) RegisterStructTraitImplementation(st *SemStruct, trait *ast.SemTrait, methods map[string]SemFunction, span Span) {
-	if _, ok := a.State.TraitsByStruct[st.Def]; !ok {
-		a.State.TraitsByStruct[st.Def] = make(map[*ast.SemTrait][]*StructTraitsMeta)
+func (a *Analysis) RegisterClassTraitImplementation(st *SemClass, trait *ast.SemTrait, methods map[string]SemFunction, span Span) {
+	if _, ok := a.State.TraitsByClass[st.Def]; !ok {
+		a.State.TraitsByClass[st.Def] = make(map[*ast.SemTrait][]*ClassTraitsMeta)
 	}
-	byTrait := a.State.TraitsByStruct[st.Def]
-	byTrait[trait] = append(byTrait[trait], &StructTraitsMeta{
+	byTrait := a.State.TraitsByClass[st.Def]
+	byTrait[trait] = append(byTrait[trait], &ClassTraitsMeta{
 		TypeParameters: st.Generics.Params,
 		Methods:        methods,
 		Span:           span,
 	})
 }
 
-func (a *Analysis) FindStructMethod(st *ast.SemStruct, name string) *SemFunction {
+func (a *Analysis) FindClassMethod(st *ast.SemClass, name string) *SemFunction {
 	actual := st.Generics.Params
-	if bucket, exists := a.State.MethodsByStruct[st.Def]; exists {
+	if bucket, exists := a.State.MethodsByClass[st.Def]; exists {
 		for _, meta := range bucket[name] {
 			if !a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
 				continue
 			}
-			inst := a.HandleStructMethod(st, meta.Method, false)
+			inst := a.HandleClassMethod(st, meta.Method, false)
 			return &inst
 		}
 	}
 	if st.Super != nil {
-		method := a.FindStructMethod(st.Super, name)
+		method := a.FindClassMethod(st.Super, name)
 		if method != nil {
 			return method
 		}
 	}
-	method := a.FindStructMethodByTrait(st, name)
+	method := a.FindClassMethodByTrait(st, name)
 	if method != nil {
-		inst := a.HandleStructMethod(st, *method, false)
+		inst := a.HandleClassMethod(st, *method, false)
 		return &inst
 	}
 	return nil
 }
 
-func (a *Analysis) FindStructMethodByTrait(st *ast.SemStruct, methodName string) *SemFunction {
+func (a *Analysis) FindClassMethodByTrait(st *ast.SemClass, methodName string) *SemFunction {
 	var result *SemFunction
 	actual := st.Generics.Params
 
-	if bucket, exists := a.State.TraitsByStruct[st.Def]; exists {
+	if bucket, exists := a.State.TraitsByClass[st.Def]; exists {
 		for _, metas := range bucket {
 			for _, meta := range metas {
 				if a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
@@ -217,25 +217,25 @@ func (a *Analysis) FindStructMethodByTrait(st *ast.SemStruct, methodName string)
 		}
 	}
 
-	// Check super struct
+	// Check super class
 	if st.Super != nil {
-		return a.FindStructMethodByTrait(st.Super, methodName)
+		return a.FindClassMethodByTrait(st.Super, methodName)
 	}
 
 	return nil
 }
 
-func (a *Analysis) FindAllStructMethods(st *ast.SemStruct) map[string]*SemFunction {
+func (a *Analysis) FindAllClassMethods(st *ast.SemClass) map[string]*SemFunction {
 	actual := st.Generics.Params
 	result := make(map[string]*SemFunction)
 
-	methodsByName := a.State.MethodsByStruct[st.Def]
+	methodsByName := a.State.MethodsByClass[st.Def]
 	for name, list := range methodsByName {
 		for _, meta := range list {
 			if !a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
 				continue
 			}
-			inst := a.HandleStructMethod(st, meta.Method, false)
+			inst := a.HandleClassMethod(st, meta.Method, false)
 			result[name] = &inst
 			break // Take the first valid implementation for this method name
 		}
@@ -244,9 +244,9 @@ func (a *Analysis) FindAllStructMethods(st *ast.SemStruct) map[string]*SemFuncti
 	return result
 }
 
-func (a *Analysis) StructImplementsTrait(st *ast.SemStruct, asked *ast.SemTrait) bool {
+func (a *Analysis) ClassImplementsTrait(st *ast.SemClass, asked *ast.SemTrait) bool {
 	actual := st.Generics.Params
-	if bucket, exists := a.State.TraitsByStruct[st.Def]; exists {
+	if bucket, exists := a.State.TraitsByClass[st.Def]; exists {
 		for _, meta := range bucket[asked] {
 			if a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
 				return true
@@ -254,7 +254,7 @@ func (a *Analysis) StructImplementsTrait(st *ast.SemStruct, asked *ast.SemTrait)
 		}
 	}
 	if st.Super != nil {
-		return a.StructImplementsTrait(st.Super, asked)
+		return a.ClassImplementsTrait(st.Super, asked)
 	}
 	return false
 }

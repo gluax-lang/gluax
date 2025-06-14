@@ -45,7 +45,7 @@ type Codegen struct {
 	publicIndex int            // next index for public symbols
 	publicMap   map[string]int // from symbol's "raw" name -> integer index
 
-	generatedStructs map[string]struct{} // from decorated struct name -> struct
+	generatedClasses map[string]struct{} // from decorated class name -> class
 
 	tempVarStack []tempScope
 
@@ -252,9 +252,9 @@ func (cg *Codegen) generate() {
 
 	cg.ln("")
 
-	for _, st := range cg.Ast.Structs {
-		for _, inst := range st.GetStructStack() {
-			cg.generateStruct(inst.Type)
+	for _, st := range cg.Ast.Classes {
+		for _, inst := range st.GetClassStack() {
+			cg.generateClass(inst.Type)
 		}
 	}
 

@@ -6,7 +6,7 @@ import (
 	"github.com/gluax-lang/gluax/common"
 )
 
-// Path represents a path to a symbol/struct function/type.
+// Path represents a path to a symbol/class function/type.
 // It is a sequence of identifiers separated by "::".
 type Path struct {
 	Idents         []Ident

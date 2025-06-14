@@ -23,8 +23,8 @@ func (a *Analysis) matchTypes(t Type, other Type) bool {
 	}
 
 	switch t.Kind() {
-	case ast.SemStructKind:
-		return a.matchStructType(t.Struct(), other)
+	case ast.SemClassKind:
+		return a.matchClassType(t.Class(), other)
 	case ast.SemFunctionKind:
 		return a.matchFunctionType(t.Function(), other)
 	case ast.SemTupleKind:
@@ -49,8 +49,8 @@ func (a *Analysis) MatchTypesStrict(t Type, other Type) bool {
 		return false
 	}
 	switch t.Kind() {
-	case ast.SemStructKind:
-		return a.matchStructTypeStrict(t.Struct(), other)
+	case ast.SemClassKind:
+		return a.matchClassTypeStrict(t.Class(), other)
 	case ast.SemFunctionKind:
 		return a.matchFunctionType(t.Function(), other)
 	case ast.SemTupleKind:
@@ -70,9 +70,9 @@ func (a *Analysis) MatchTypesStrict(t Type, other Type) bool {
 	}
 }
 
-/* Struct */
+/* Class */
 
-func (a *Analysis) matchStructType(s *SemStruct, other Type) bool {
+func (a *Analysis) matchClassType(s *SemClass, other Type) bool {
 	if s.IsAnyFunc() && (other.IsFunction() || other.IsAnyFunc()) {
 		return true
 	}
@@ -81,11 +81,11 @@ func (a *Analysis) matchStructType(s *SemStruct, other Type) bool {
 		return true
 	}
 
-	if other.Kind() != ast.SemStructKind {
+	if other.Kind() != ast.SemClassKind {
 		return false
 	}
 
-	oS := other.Struct()
+	oS := other.Class()
 
 	if oS.IsSubClassOf(s) {
 		return true
@@ -125,12 +125,12 @@ func (a *Analysis) matchStructType(s *SemStruct, other Type) bool {
 	return true
 }
 
-func (a *Analysis) matchStructTypeStrict(s *SemStruct, other Type) bool {
-	if other.Kind() != ast.SemStructKind {
+func (a *Analysis) matchClassTypeStrict(s *SemClass, other Type) bool {
+	if other.Kind() != ast.SemClassKind {
 		return false
 	}
 
-	oS := other.Struct()
+	oS := other.Class()
 
 	if s.Def.Span() != oS.Def.Span() {
 		return false
@@ -219,9 +219,9 @@ func (a *Analysis) matchVarargTypeStrict(v SemVararg, other Type) bool {
 
 func (a *Analysis) matchDynTraitType(dt SemDynTrait, other Type) bool {
 	trait := dt.Trait
-	if other.IsStruct() {
-		st := other.Struct()
-		return a.StructImplementsTrait(st, trait)
+	if other.IsClass() {
+		st := other.Class()
+		return a.ClassImplementsTrait(st, trait)
 	}
 	if other.IsDynTrait() {
 		otherTrait := other.DynTrait().Trait

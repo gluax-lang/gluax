@@ -13,8 +13,8 @@ type SemTypeKind uint8
 
 func (k SemTypeKind) String() string {
 	switch k {
-	case SemStructKind:
-		return "struct"
+	case SemClassKind:
+		return "class"
 	case SemFunctionKind:
 		return "function"
 	case SemTupleKind:
@@ -36,7 +36,7 @@ func (k SemTypeKind) String() string {
 
 const (
 	_ SemTypeKind = iota
-	SemStructKind
+	SemClassKind
 	SemFunctionKind
 	SemTupleKind
 	SemVarargKind
@@ -92,14 +92,14 @@ func (t SemType) OptionInnerType() SemType {
 	if !t.IsOption() {
 		panic("not an option")
 	}
-	return t.Struct().InnerType()
+	return t.Class().InnerType()
 }
 
-func (t *SemType) Struct() *SemStruct {
-	if t.Kind() != SemStructKind {
-		panic("not a struct")
+func (t *SemType) Class() *SemClass {
+	if t.Kind() != SemClassKind {
+		panic("not a class")
 	}
-	return t.data.(*SemStruct)
+	return t.data.(*SemClass)
 }
 
 func (t SemType) Function() SemFunction {
@@ -144,7 +144,7 @@ func (t SemType) Unreachable() SemUnreachable {
 	return t.data.(SemUnreachable)
 }
 
-func (t SemType) IsStruct() bool      { return t.Kind() == SemStructKind }
+func (t SemType) IsClass() bool       { return t.Kind() == SemClassKind }
 func (t SemType) IsFunction() bool    { return t.Kind() == SemFunctionKind }
 func (t SemType) IsUnreachable() bool { return t.Kind() == SemUnreachableKind }
 func (t SemType) IsError() bool       { return t.Kind() == SemErrorKind }
@@ -153,17 +153,17 @@ func (t SemType) IsTuple() bool       { return t.Kind() == SemTupleKind }
 func (t SemType) IsVararg() bool      { return t.Kind() == SemVarargKind }
 func (t SemType) IsDynTrait() bool    { return t.Kind() == SemDynTraitKind }
 
-func (t SemType) asStructName() *string {
-	// has to be a struct
-	if t.Kind() != SemStructKind {
+func (t SemType) asClassName() *string {
+	// has to be a class
+	if t.Kind() != SemClassKind {
 		return nil
 	}
-	name := t.Struct().Def.Name.Raw
+	name := t.Class().Def.Name.Raw
 	return &name
 }
 
 func (t SemType) isNamed(wanted string) bool {
-	name := t.asStructName()
+	name := t.asClassName()
 	return name != nil && *name == wanted
 }
 
@@ -179,25 +179,25 @@ func (t SemType) IsNumber() bool  { return t.isNamed("number") }
 func (t SemType) IsString() bool  { return t.isNamed("string") }
 func (t SemType) IsLogical() bool { return t.IsBool() || t.IsOption() }
 
-/* StructType */
+/* ClassType */
 
-type SemStructField struct {
+type SemaClassField struct {
 	Ty  SemType
-	Def StructField
+	Def ClassField
 }
 
-func NewSemStructField(def StructField, ty SemType) SemStructField {
-	return SemStructField{
+func NewSemClassField(def ClassField, ty SemType) SemaClassField {
+	return SemaClassField{
 		Ty:  ty,
 		Def: def,
 	}
 }
 
-func (f SemStructField) IsPublic() bool {
+func (f SemaClassField) IsPublic() bool {
 	return f.Def.Public
 }
 
-func (f SemStructField) AstString() string {
+func (f SemaClassField) AstString() string {
 	var sb strings.Builder
 	if f.IsPublic() {
 		sb.WriteString("pub ")
@@ -208,52 +208,52 @@ func (f SemStructField) AstString() string {
 	return sb.String()
 }
 
-type SemStruct struct {
-	Def      *Struct
+type SemClass struct {
+	Def      *Class
 	Generics SemGenerics
-	Super    *SemStruct
-	Fields   map[string]SemStructField
+	Super    *SemClass
+	Fields   map[string]SemaClassField
 	Scope    any
 }
 
-func NewSemStruct(def *Struct) *SemStruct {
+func NewSemClass(def *Class) *SemClass {
 	generics := SemGenerics{}
-	fields := map[string]SemStructField{}
-	return &SemStruct{
+	fields := map[string]SemaClassField{}
+	return &SemClass{
 		Def:      def,
 		Generics: generics,
 		Fields:   fields,
 	}
 }
 
-func (t *SemStruct) TypeKind() SemTypeKind { return SemStructKind }
+func (t *SemClass) TypeKind() SemTypeKind { return SemClassKind }
 
-func (t *SemStruct) Ref() *SemStruct {
+func (t *SemClass) Ref() *SemClass {
 	return t
 }
 
-func (t *SemStruct) IsGeneric() bool {
+func (t *SemClass) IsGeneric() bool {
 	return len(t.Def.Generics.Params) > 0
 }
 
-func (t *SemStruct) InnerType() SemType {
+func (t *SemClass) InnerType() SemType {
 	return t.Generics.Params[0]
 }
 
-func (t *SemStruct) InnerType2() (SemType, SemType) {
+func (t *SemClass) InnerType2() (SemType, SemType) {
 	return t.Generics.Params[0], t.Generics.Params[1]
 }
 
-func (s SemStruct) String() string {
+func (s SemClass) String() string {
 	if s.IsOption() {
 		return "?" + s.InnerType().String()
 	}
 	return s.Def.Name.Raw + s.Generics.String()
 }
 
-func (s SemStruct) AstString() string {
+func (s SemClass) AstString() string {
 	var sb strings.Builder
-	sb.WriteString("struct ")
+	sb.WriteString("class ")
 	sb.WriteString(s.Def.Name.Raw)
 	sb.WriteString(s.Generics.String())
 	fieldsLen := len(s.Fields)
@@ -276,32 +276,32 @@ func (s SemStruct) AstString() string {
 	return sb.String()
 }
 
-func (s SemStruct) IsOption() bool {
+func (s SemClass) IsOption() bool {
 	return s.Def.Name.Raw == "option"
 }
 
-func (s SemStruct) IsAnyFunc() bool {
+func (s SemClass) IsAnyFunc() bool {
 	return s.Def.Name.Raw == "anyfunc"
 }
 
-func (s SemStruct) IsTable() bool {
+func (s SemClass) IsTable() bool {
 	return s.Def.Name.Raw == "table"
 }
 
-func (s SemStruct) GetField(name string) (SemStructField, bool) {
+func (s SemClass) GetField(name string) (SemaClassField, bool) {
 	if field, ok := s.Fields[name]; ok {
 		return field, true
 	}
-	return SemStructField{}, false
+	return SemaClassField{}, false
 }
 
-func (s SemStruct) AllFields() map[string]SemStructField {
-	allFields := make(map[string]SemStructField, len(s.Fields))
+func (s SemClass) AllFields() map[string]SemaClassField {
+	allFields := make(map[string]SemaClassField, len(s.Fields))
 	maps.Copy(allFields, s.Fields)
 	return allFields
 }
 
-func (s SemStruct) IsSubClassOf(other *SemStruct) bool {
+func (s SemClass) IsSubClassOf(other *SemClass) bool {
 	if s.Super == nil {
 		return false
 	}
@@ -318,7 +318,7 @@ type SemFunction struct {
 	Params []SemType
 	Return SemType
 
-	Struct   *SemStruct
+	Class    *SemClass
 	Scope    any // Scope for this function, used for generics resolution and other shit
 	Generics Generics
 }

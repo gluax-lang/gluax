@@ -32,23 +32,23 @@ func (a *Analysis) setupTypeGenerics(scope *Scope, generics ast.Generics, concre
 	return scope
 }
 
-func (a *Analysis) setupStruct(def *ast.Struct, concrete []Type) *SemStruct {
+func (a *Analysis) setupClass(def *ast.Class, concrete []Type) *SemClass {
 	for _, ty := range concrete {
 		if !isInnerTypeRuleCompliant(ty) {
-			a.panicf(a.GetStructSetupSpan(def.Span()), "type `%s` cannot be used as a generic type", ty.String())
+			a.panicf(a.GetClassSetupSpan(def.Span()), "type `%s` cannot be used as a generic type", ty.String())
 		}
 	}
 	stScope := def.Scope.(*Scope).Child(false)
-	st := ast.NewSemStruct(def)
+	st := ast.NewSemClass(def)
 	st.Scope = stScope
-	if a.GetStruct(def, concrete) == nil {
-		def.AddStruct(st, concrete)
+	if a.GetClass(def, concrete) == nil {
+		def.AddClass(st, concrete)
 	}
 	a.buildGenericsTable(stScope, st, concrete)
 	return st
 }
 
-func (a *Analysis) HandleStructMethod(st *ast.SemStruct, method ast.SemFunction, withBody bool) ast.SemFunction {
+func (a *Analysis) HandleClassMethod(st *ast.SemClass, method ast.SemFunction, withBody bool) ast.SemFunction {
 	genericsScope := a.setupTypeGenerics(method.Scope.(*Scope), method.Generics, st.Generics.Params)
 	{
 		stTy := ast.NewSemType(st, st.Def.Name.Span())
@@ -64,11 +64,11 @@ func (a *Analysis) HandleStructMethod(st *ast.SemStruct, method ast.SemFunction,
 	}
 	funcTy.Generics = method.Generics
 	funcTy.Scope = method.Scope
-	funcTy.Struct = st
+	funcTy.Class = st
 	return funcTy
 }
 
-func (a *Analysis) buildGenericsTable(scope *Scope, st *SemStruct, concrete []Type) {
+func (a *Analysis) buildGenericsTable(scope *Scope, st *SemClass, concrete []Type) {
 	params := make([]Type, 0, len(st.Def.Generics.Params))
 	for i, g := range st.Def.Generics.Params {
 		if len(g.Constraints) > 0 {
@@ -90,14 +90,14 @@ func (a *Analysis) buildGenericsTable(scope *Scope, st *SemStruct, concrete []Ty
 			binding = concrete[i]
 			param = binding
 			if len(g.Constraints) > 0 {
-				if binding.IsStruct() {
-					st := binding.Struct()
+				if binding.IsClass() {
+					st := binding.Class()
 					for _, constraint := range g.Constraints {
-						// If the binding is a struct, we need to ensure it implements the trait
+						// If the binding is a class, we need to ensure it implements the trait
 						// specified in the constraint.
-						if !a.StructImplementsTrait(st, constraint.ResolvedSymbol.Trait()) {
-							a.panicf(a.GetStructSetupSpan(binding.Span()),
-								"struct `%s` does not implement trait `%s`", binding.String(), constraint.ResolvedSymbol.Trait().Def.Name)
+						if !a.ClassImplementsTrait(st, constraint.ResolvedSymbol.Trait()) {
+							a.panicf(a.GetClassSetupSpan(binding.Span()),
+								"class `%s` does not implement trait `%s`", binding.String(), constraint.ResolvedSymbol.Trait().Def.Name)
 						}
 					}
 				} else if binding.IsGeneric() {
@@ -112,12 +112,12 @@ func (a *Analysis) buildGenericsTable(scope *Scope, st *SemStruct, concrete []Ty
 							}
 						}
 						if !implements {
-							a.panicf(a.GetStructSetupSpan(binding.Span()),
+							a.panicf(a.GetClassSetupSpan(binding.Span()),
 								"generic `%s` does not implement trait `%s`", generic.Ident.Raw, trait.Def.Name)
 						}
 					}
 				} else {
-					a.panicf(a.GetStructSetupSpan(binding.Span()), "`%s` cannot be used as a generic type", binding.String())
+					a.panicf(a.GetClassSetupSpan(binding.Span()), "`%s` cannot be used as a generic type", binding.String())
 				}
 			}
 		}
@@ -127,7 +127,7 @@ func (a *Analysis) buildGenericsTable(scope *Scope, st *SemStruct, concrete []Ty
 	st.Generics.Params = params
 }
 
-func (a *Analysis) collectStructFields(st *SemStruct) {
+func (a *Analysis) collectClassFields(st *SemClass) {
 	if st.Super != nil {
 		for _, field := range st.Super.Fields {
 			name := field.Def.Name.Raw
@@ -140,47 +140,47 @@ func (a *Analysis) collectStructFields(st *SemStruct) {
 		}
 		stScope := st.Scope.(*Scope)
 		ty := a.resolveType(stScope, field.Type)
-		st.Fields[field.Name.Raw] = ast.NewSemStructField(field, ty)
+		st.Fields[field.Name.Raw] = ast.NewSemClassField(field, ty)
 	}
 }
 
-func (a *Analysis) instantiateStruct(def *ast.Struct, concrete []Type) *SemStruct {
-	if st := a.GetStruct(def, concrete); st != nil {
+func (a *Analysis) instantiateClass(def *ast.Class, concrete []Type) *SemClass {
+	if st := a.GetClass(def, concrete); st != nil {
 		return st
 	}
 
 	if len(concrete) != def.Generics.Len() {
-		a.panicf(a.GetStructSetupSpan(def.Span()),
-			"struct `%s` expects %d generic argument(s), but %d provided", def.Name.Raw, def.Generics.Len(), len(concrete))
+		a.panicf(a.GetClassSetupSpan(def.Span()),
+			"class `%s` expects %d generic argument(s), but %d provided", def.Name.Raw, def.Generics.Len(), len(concrete))
 	}
 
-	st := a.setupStruct(def, concrete)
+	st := a.setupClass(def, concrete)
 
 	stScope := st.Scope.(*Scope)
 
 	if def.Super != nil {
 		superT := a.resolveType(st.Scope.(*Scope), *def.Super)
-		st.Super = superT.Struct()
+		st.Super = superT.Class()
 	}
 
 	stScope.ForceAddType("Self", ast.NewSemType(st, def.Span()))
-	a.collectStructFields(st)
+	a.collectClassFields(st)
 
 	return st
 }
 
-func (a *Analysis) resolveStruct(scope *Scope, st *ast.SemStruct, generics []ast.Type, span Span) *ast.SemStruct {
+func (a *Analysis) resolveClass(scope *Scope, st *ast.SemClass, generics []ast.Type, span Span) *ast.SemClass {
 	if len(generics) == 0 {
 		if !st.Def.Generics.IsEmpty() {
 			if st.Generics.UnboundCount() == st.Generics.Len() {
-				a.panicf(span, "struct `%s` is generic but no generic arguments were provided", st.Def.Name.Raw)
+				a.panicf(span, "class `%s` is generic but no generic arguments were provided", st.Def.Name.Raw)
 			}
 		}
 		return st
 	}
 
 	if st.Def.Generics.IsEmpty() {
-		a.panicf(span, "struct `%s` is not generic but generics were provided", st.Def.Name.Raw)
+		a.panicf(span, "class `%s` is not generic but generics were provided", st.Def.Name.Raw)
 	}
 
 	if len(generics) != st.Def.Generics.Len() {
@@ -192,13 +192,13 @@ func (a *Analysis) resolveStruct(scope *Scope, st *ast.SemStruct, generics []ast
 		concrete = append(concrete, a.resolveType(scope, g))
 	}
 
-	st = a.instantiateStruct(st.Def, concrete)
+	st = a.instantiateClass(st.Def, concrete)
 
 	return st
 }
 
-func (a *Analysis) GetStruct(def *ast.Struct, concrete []Type) *SemStruct {
-	stack := def.GetStructStack()
+func (a *Analysis) GetClass(def *ast.Class, concrete []Type) *SemClass {
+	stack := def.GetClassStack()
 	for _, inst := range stack {
 		if len(inst.Args) != len(concrete) {
 			continue
@@ -212,7 +212,7 @@ func (a *Analysis) GetStruct(def *ast.Struct, concrete []Type) *SemStruct {
 			}
 		}
 		if same {
-			return inst.Type.Ref() // reuse cached *StructType
+			return inst.Type.Ref() // reuse cached *ClassType
 		}
 	}
 	return nil
@@ -251,24 +251,24 @@ func (a *Analysis) unify(
 		return actual
 	}
 
-	// If base is a struct => unify generics param-by-param
-	if base.IsStruct() {
-		bs := base.Struct()
-		// actual must be a struct
-		if !actual.IsStruct() {
-			a.panicf(span, "type mismatch: expected struct `%s`, got `%s`", bs.String(), actual.String())
+	// If base is a class => unify generics param-by-param
+	if base.IsClass() {
+		bs := base.Class()
+		// actual must be a class
+		if !actual.IsClass() {
+			a.panicf(span, "type mismatch: expected class `%s`, got `%s`", bs.String(), actual.String())
 		}
-		as := actual.Struct()
+		as := actual.Class()
 
 		// same def
 		if bs.Def != as.Def {
-			a.panicf(span, "type mismatch: expected struct `%s`, got `%s`", bs.Def.Name.Raw, as.Def.Name.Raw)
+			a.panicf(span, "type mismatch: expected class `%s`, got `%s`", bs.Def.Name.Raw, as.Def.Name.Raw)
 		}
 		// unify each generic param
 		if len(bs.Generics.Params) != len(as.Generics.Params) {
 			a.panicf(span,
 
-				"struct `%s` has %d generic param(s), but got %d in `%s`",
+				"class `%s` has %d generic param(s), but got %d in `%s`",
 				bs.Def.Name.Raw,
 				len(bs.Generics.Params),
 				len(as.Generics.Params),
@@ -283,9 +283,9 @@ func (a *Analysis) unify(
 			specialized := a.unify(pbase, pact, placeholders, span)
 			newParams[i] = specialized
 		}
-		// after unifying all generics, reconstruct the struct type with the specialized generics
-		specializedStruct := a.instantiateStruct(bs.Def, newParams)
-		return ast.NewSemType(specializedStruct, base.Span())
+		// after unifying all generics, reconstruct the class type with the specialized generics
+		specializedClass := a.instantiateClass(bs.Def, newParams)
+		return ast.NewSemType(specializedClass, base.Span())
 	}
 
 	if base.IsUnreachable() {
@@ -296,7 +296,7 @@ func (a *Analysis) unify(
 		return base
 	}
 
-	// For everything else (e.g. base is a string/number/bool/nil literal struct),
+	// For everything else (e.g. base is a string/number/bool/nil literal class),
 	// just see if they strictly match. If not, panic.
 	if !a.MatchTypesStrict(base, actual) {
 		a.panicf(span, "mismatched types: expected `%s`, got `%s`", base.String(), actual.String())
@@ -305,7 +305,7 @@ func (a *Analysis) unify(
 	return base
 }
 
-func (a *Analysis) canAccessStructMember(st *SemStruct, memberPublic bool) bool {
+func (a *Analysis) canAccessClassMember(st *SemClass, memberPublic bool) bool {
 	if memberPublic {
 		return true
 	}

@@ -31,17 +31,17 @@ func (pa *ProjectAnalysis) StripWorkspace(path string) string {
 }
 
 type Analysis struct {
-	Src                    string // source file name
-	Workspace              string // workspace root
-	Scope                  *Scope // root scope
-	Diags                  []Diagnostic
-	InlayHints             []InlayHint
-	TempIdx                *int
-	Project                *ProjectAnalysis
-	Ast                    *ast.Ast
-	SpanSymbols            map[Span]ast.Symbol // map of spans to symbols for hover and diagnostics
-	State                  *State              // current state of the analysis
-	currentStructSetupSpan *Span               // used to track the span of the current struct setup
+	Src                   string // source file name
+	Workspace             string // workspace root
+	Scope                 *Scope // root scope
+	Diags                 []Diagnostic
+	InlayHints            []InlayHint
+	TempIdx               *int
+	Project               *ProjectAnalysis
+	Ast                   *ast.Ast
+	SpanSymbols           map[Span]ast.Symbol // map of spans to symbols for hover and diagnostics
+	State                 *State              // current state of the analysis
+	currentClassSetupSpan *Span               // used to track the span of the current class setup
 }
 
 func (a *Analysis) AddSpanSymbol(span Span, sym ast.Symbol) {
@@ -54,23 +54,23 @@ func (a *Analysis) AddSpanSymbol(span Span, sym ast.Symbol) {
 	a.SpanSymbols[span] = sym
 }
 
-func (a *Analysis) SetStructSetupSpan(span Span) bool {
-	if a.currentStructSetupSpan == nil {
-		a.currentStructSetupSpan = &span
+func (a *Analysis) SetClassSetupSpan(span Span) bool {
+	if a.currentClassSetupSpan == nil {
+		a.currentClassSetupSpan = &span
 		return true
 	}
 	return false
 }
 
-func (a *Analysis) ClearStructSetupSpan() {
-	a.currentStructSetupSpan = nil
+func (a *Analysis) ClearClassSetupSpan() {
+	a.currentClassSetupSpan = nil
 }
 
-func (a *Analysis) GetStructSetupSpan(def Span) Span {
-	if a.currentStructSetupSpan == nil {
+func (a *Analysis) GetClassSetupSpan(def Span) Span {
+	if a.currentClassSetupSpan == nil {
 		return def
 	}
-	return *a.currentStructSetupSpan
+	return *a.currentClassSetupSpan
 }
 
 func (a *Analysis) handleAst(ast *ast.Ast) {
@@ -154,8 +154,8 @@ func (a *Analysis) getBuiltinType(name string) Type {
 	if ty == nil {
 		a.panicf(common.SpanDefault(), "unknown type: %s", name)
 	}
-	if ty.Kind() != ast.SemStructKind {
-		a.panicf(common.SpanDefault(), "expected struct type, got: %s", ty.Kind())
+	if ty.Kind() != ast.SemClassKind {
+		a.panicf(common.SpanDefault(), "expected class type, got: %s", ty.Kind())
 	}
 	return *ty
 }
@@ -181,29 +181,29 @@ func (a *Analysis) anyType() Type {
 }
 
 func (a *Analysis) vecType(t Type, span Span) Type {
-	if a.SetStructSetupSpan(span) {
-		defer a.ClearStructSetupSpan()
+	if a.SetClassSetupSpan(span) {
+		defer a.ClearClassSetupSpan()
 	}
 	vec := a.getBuiltinType("vec")
-	st := vec.Struct()
-	newSt := a.instantiateStruct(st.Def, []Type{t})
+	st := vec.Class()
+	newSt := a.instantiateClass(st.Def, []Type{t})
 	return ast.NewSemType(newSt, span)
 }
 
 func (a *Analysis) mapType(key, value Type, span Span) Type {
-	if a.SetStructSetupSpan(span) {
-		defer a.ClearStructSetupSpan()
+	if a.SetClassSetupSpan(span) {
+		defer a.ClearClassSetupSpan()
 	}
 	mapTy := a.getBuiltinType("map")
-	st := mapTy.Struct()
-	newSt := a.instantiateStruct(st.Def, []Type{key, value})
+	st := mapTy.Class()
+	newSt := a.instantiateClass(st.Def, []Type{key, value})
 	return ast.NewSemType(newSt, span)
 }
 
 func (a *Analysis) optionType(t Type, span Span) Type {
 	option := a.getBuiltinType("option")
-	st := option.Struct()
-	newSt := a.instantiateStruct(st.Def, []Type{t})
+	st := option.Class()
+	newSt := a.instantiateClass(st.Def, []Type{t})
 	return ast.NewSemType(newSt, span)
 }
 
