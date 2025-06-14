@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/gluax-lang/gluax/frontend/sema"
@@ -46,8 +47,14 @@ func GenerateProject(pA *sema.ProjectAnalysis) (string, string) {
 }
 
 func (cg *Codegen) handleFiles(files map[string]*sema.Analysis) {
-	for path, analysis := range files {
-		addImport(cg, path, analysis)
+	paths := make([]string, 0, len(files))
+	for path := range files {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	// Process files in sorted order
+	for _, path := range paths {
+		addImport(cg, path, files[path])
 	}
 }
 
