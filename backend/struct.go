@@ -92,7 +92,7 @@ func (cg *Codegen) generateClass(st *ast.SemClass) {
 	cg.popIndent()
 	cg.ln("};")
 	if !st.Def.Attributes.Has("no__index") {
-		cg.ln("%s.__index = %s;\n", name, name)
+		cg.ln("%s.__index = %s;", name, name)
 		if st.Super != nil {
 			superName := cg.decorateClassName(st.Super)
 			cg.ln("setmetatable(%s, %s);", name, superName)

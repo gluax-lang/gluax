@@ -256,6 +256,7 @@ func (cg *Codegen) generate() {
 		for _, inst := range st.GetClassStack() {
 			cg.generateClass(inst.Type)
 		}
+		cg.ln("")
 	}
 
 	for _, funDef := range cg.Ast.Funcs {
