@@ -258,11 +258,6 @@ func (cg *Codegen) generate() {
 		}
 	}
 
-	for _, let := range cg.Ast.Lets {
-		cg.genLet(let)
-		cg.ln("")
-	}
-
 	for _, funDef := range cg.Ast.Funcs {
 		fun := funDef.Sem()
 		name := cg.decorateFuncName(fun)
@@ -270,6 +265,11 @@ func (cg *Codegen) generate() {
 			cg.currentTempScope().all = append(cg.currentTempScope().all, name)
 		}
 		cg.ln("%s = %s;", name, cg.genFunction(funDef.Sem()))
+		cg.ln("")
+	}
+
+	for _, let := range cg.Ast.Lets {
+		cg.genLet(let)
 		cg.ln("")
 	}
 }
