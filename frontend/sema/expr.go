@@ -52,6 +52,8 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 	case ast.ExprKindPath:
 		valueTy := a.resolvePathValue(scope, expr.Path())
 		retTy = valueTy.Type()
+	case ast.ExprKindQPath:
+		retTy = a.handleQPathExpr(scope, expr.QPath())
 	case ast.ExprKindParenthesized:
 		flow = a.handleExprWithFlow(scope, &expr.Parenthesized().Value)
 		retTy = expr.Parenthesized().Value.Type()
@@ -90,6 +92,8 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 		retTy = a.handleVecInit(scope, expr.VecInit())
 	case ast.ExprKindMapInit:
 		retTy = a.handleMapInit(scope, expr.MapInit())
+	default:
+		panic("unreachable: unknown expression kind " + expr.Kind().String())
 	}
 	expr.SetType(retTy)
 	return flow
@@ -97,6 +101,28 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 
 func (a *Analysis) handleExpr(scope *Scope, expr *ast.Expr) {
 	_ = a.handleExprWithFlow(scope, expr)
+}
+
+func (a *Analysis) handleQPathExpr(scope *Scope, qPath *ast.QPath) Type {
+	methodName := qPath.MethodName.Raw
+
+	toCastTy := a.resolveType(scope, qPath.Type)
+	if toCastTy.IsClass() {
+		class := toCastTy.Class()
+		as := a.resolvePathTrait(scope, &qPath.As)
+		if !a.ClassImplementsTrait(class, as) {
+			a.panicf(qPath.Type.Span(), "class `%s` does not implement trait `%s`", class.Def.Name.Raw, as.Def.Name.Raw)
+		}
+		methodP := a.FindClassMethodForTraitOnly(class, as, methodName)
+		if methodP == nil {
+			a.panicf(qPath.Type.Span(), "no method found for `%s` in trait `%s`", methodName, as.Def.Name.Raw)
+		}
+		qPath.ResolvedMethod = methodP
+		return ast.NewSemType(*methodP, qPath.Span())
+	} else {
+		a.panicf(qPath.Type.Span(), "expected class type, got: %s", toCastTy.String())
+	}
+	return a.anyType()
 }
 
 func (a *Analysis) handleBinaryExpr(scope *Scope, binE *ast.ExprBinary) Type {
@@ -600,29 +626,41 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 	case toCallTy.IsClass():
 		st := toCallTy.Class()
 		toCallName = st.String()
-		methodPtr := a.FindClassMethod(st, call.Method.Raw)
-		if methodPtr != nil {
-			method = *methodPtr
+		methods := a.FindClassOrTraitMethod(st, call.Method.Raw)
+		if len(methods) == 1 {
+			method = methods[0]
 			exists = true
+		} else if len(methods) > 1 {
+			a.panicf(call.Method.Span(), "ambiguous method call `%s` in class `%s`", call.Method.Raw, toCallName)
 		}
 	case toCallTy.IsGeneric():
 		generic := toCallTy.Generic()
 		toCallName = generic.String()
-		found := false
 		for _, trait := range generic.Traits {
-			method, exists = a.GetTraitMethod(trait, call.Method.Raw)
 			if exists {
-				found = true
-				break
+				a.panicf(call.Method.Span(), "ambiguous method call `%s` in generic type `%s`", call.Method.Raw, toCallName)
+			}
+			methods := a.GetTraitMethods(trait, call.Method.Raw)
+			if len(methods) == 1 {
+				method = methods[0]
+				exists = true
+			} else if len(methods) > 1 {
+				a.panicf(call.Method.Span(), "ambiguous method call `%s` in generic type `%s`", call.Method.Raw, toCallName)
 			}
 		}
-		if !found {
+		if !exists {
 			a.panicf(call.Method.Span(), "no method named `%s` in generic type `%s`", call.Method.Raw, toCallName)
 		}
 	case toCallTy.IsDynTrait():
 		dynTrait := toCallTy.DynTrait()
 		toCallName = dynTrait.String()
-		method, exists = a.GetTraitMethod(dynTrait.Trait, call.Method.Raw)
+		methods := a.GetTraitMethods(dynTrait.Trait, call.Method.Raw)
+		if len(methods) == 1 {
+			method = methods[0]
+			exists = true
+		} else if len(methods) > 1 {
+			a.panicf(call.Method.Span(), "ambiguous method call `%s` in dynamic trait `%s`", call.Method.Raw, toCallName)
+		}
 	default:
 		a.panicf(call.Span(), "cannot call method on non-class/dyn-trait type `%s`", toCallTy.String())
 	}

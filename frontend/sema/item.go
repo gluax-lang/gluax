@@ -199,39 +199,6 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 		a.AddValueVisibility(a.Scope, funcDef.Name.Raw, ast.NewValue(funcSem), funcDef.Name.Span(), funcDef.Public)
 	}
 
-	var implClassesChecks []func()
-	for _, impl := range astD.ImplClasses {
-		impl.Scope = a.Scope
-		genericsScope := a.setupTypeGenerics(a.Scope, impl.Generics, nil)
-		stTy := a.resolveType(genericsScope, impl.Class)
-		if !stTy.IsClass() {
-			a.panicf(impl.Class.Span(), "expected class type, got: %s", stTy.String())
-		}
-		if err := genericsScope.AddType("Self", stTy); err != nil {
-			a.Error(impl.Class.Span(), err.Error())
-		}
-		st := stTy.Class()
-		if st.Def.Attributes.Has("no_impl") {
-			a.panicf(impl.Span(), "class `%s` cannot implement methods", st.Def.Name.Raw)
-		}
-		for _, method := range impl.Methods {
-			funcTy := a.handleFunctionSignature(genericsScope, &method)
-			funcTy.Scope = a.Scope
-			funcTy.Generics = impl.Generics
-			methodName := method.Name.Raw
-			a.RegisterClassMethod(st, funcTy)
-			implClassesChecks = append(implClassesChecks, func() {
-				// this hack is needed, so something like `__x_iter_range` can check if `__x_iter_range_bound` exists or not
-				a.checkClassMethods(st, methodName)
-			})
-		}
-		impl.GenericsScope = genericsScope
-	}
-
-	for _, runCheck := range implClassesChecks {
-		runCheck()
-	}
-
 	var traitsChecks []func()
 	for _, traitDef := range astD.Traits {
 		trait := traitDef.Sem
@@ -239,94 +206,147 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 		SelfScope := scope.Child(false)
 		SelfScope.ForceAddType("Self", ast.NewSemDynTrait(trait, traitDef.Name.Span()))
 		for _, method := range traitDef.Methods {
+			name := method.Name.Raw
+			if _, exists := trait.Methods[name]; exists {
+				a.panicf(method.Name.Span(), "duplicate method `%s` in trait `%s`", name, traitDef.Name.Raw)
+			}
 			params := method.Params
 			if len(params) < 1 || params[0].Name.Raw != "self" {
 				a.panicf(method.Name.Span(), "trait `%s` method `%s` must have a `self` parameter as the first parameter", traitDef.Name.Raw, method.Name.Raw)
 			}
 			funcTy := a.handleFunctionSignature(SelfScope, &method)
 			funcTy.Scope = scope
-			trait.Methods[method.Name.Raw] = funcTy
+			trait.Methods[name] = funcTy
 			traitsChecks = append(traitsChecks, func() {
-				trait.Methods[method.Name.Raw] = a.handleFunction(SelfScope, &method)
+				trait.Methods[name] = a.handleFunction(SelfScope, &method)
 			})
 		}
 	}
 
-	for _, traitDef := range astD.Traits {
-		trait := traitDef.Sem
-		for name, method := range trait.Methods {
-			for _, superTrait := range trait.SuperTraits {
-				if _, exists := a.GetTraitMethod(superTrait, name); exists {
-					a.panicf(method.Def.Name.Span(), "cannot redefine method `%s`: already defined in supertrait `%s`", name, superTrait.Def.Name.Raw)
+	{
+		var checks []func()
+
+		for _, implTrait := range astD.ImplTraits {
+			traitPath := a.resolvePathSymbol(a.Scope, &implTrait.Trait)
+			if !traitPath.IsTrait() {
+				a.panic(implTrait.Trait.Span(), "expected trait")
+			}
+			trait := traitPath.Trait()
+
+			genericsScope := a.setupTypeGenerics(a.Scope, implTrait.Generics, nil)
+
+			stTy := a.resolveType(genericsScope, implTrait.Class)
+			if !stTy.IsClass() {
+				a.panic(implTrait.Class.Span(), "expected class")
+			}
+			if err := genericsScope.AddType("Self", stTy); err != nil {
+				a.Error(stTy.Span(), err.Error())
+			}
+			st := stTy.Class()
+
+			if trait.Def.Attributes.Has("requires_metatable") && st.Def.Attributes.Has("no_metatable") {
+				a.panicf(implTrait.Span(), "class `%s` cannot implement trait `%s` because it has no metatable", st.Def.Name.Raw, trait.Def.Name.Raw)
+			}
+
+			checks = append(checks, func() {
+				for _, superTrait := range trait.SuperTraits {
+					if !a.ClassImplementsTrait(st, superTrait) {
+						a.panicf(implTrait.Span(), "class `%s` must implement supertrait `%s`", st.Def.Name.Raw, superTrait.Def.Name.Raw)
+					}
+				}
+			})
+
+			implMethods := make(map[string]ast.SemFunction, len(implTrait.Methods))
+			for _, method := range implTrait.Methods {
+				if _, exists := implMethods[method.Name.Raw]; exists {
+					a.panicf(method.Name.Span(), "duplicate method `%s` in trait implementation", method.Name.Raw)
+				}
+				funcTy := a.handleFunctionSignature(genericsScope, &method)
+				funcTy.Scope = a.Scope
+				funcTy.Generics = implTrait.Generics
+				implMethods[method.Name.Raw] = funcTy
+			}
+
+			for name, method := range implMethods {
+				if _, exists := trait.Methods[name]; !exists {
+					a.panicf(method.Def.Name.Span(), "method `%s` is not a member of trait `%s`", name, trait.Def.Name.Raw)
 				}
 			}
+
+			var methods = make(map[string]ast.SemFunction, len(trait.Methods))
+			for name, method := range trait.Methods {
+				stMethod, exists := implMethods[name]
+				if !exists {
+					if method.Def.Body != nil {
+						// a.RegisterStructMethod(st, method)
+						methods[name] = method
+						continue
+					} else {
+						a.panicf(implTrait.Span(), "class `%s` does not implement trait `%s` method `%s`", st.Def.Name.Raw, trait.Def.Name.Raw, name)
+					}
+				}
+				params := stMethod.Def.Params
+				if len(params) < 1 || params[0].Name.Raw != "self" {
+					a.panicf(implTrait.Span(), "class `%s` method `%s` must have a `self` parameter as the first parameter", st.Def.Name.Raw, name)
+				}
+
+				methodCopy := method
+				methodCopy.Params = append([]Type{}, method.Params[1:]...)
+
+				stMethodCopy := stMethod
+				stMethodCopy.Params = append([]Type{}, stMethod.Params[1:]...)
+
+				stMethodTy := ast.NewSemType(stMethodCopy, st.Def.Name.Span())
+				if !a.matchFunctionType(methodCopy, stMethodTy) {
+					a.panicf(implTrait.Span(), "method `%s` doesn't match trait `%s`: expected %s, got %s", name, trait.Def.Name.Raw, method.String(), stMethodTy.String())
+				}
+
+				stMethod.Trait = trait
+				methods[name] = stMethod
+			}
+
+			a.RegisterClassTraitImplementation(st, trait, methods, implTrait.Span())
+		}
+
+		for _, check := range checks {
+			check()
 		}
 	}
 
-	var checks []func()
-	for _, implTrait := range astD.ImplTraits {
-		traitPath := a.resolvePathSymbol(a.Scope, &implTrait.Trait)
-		if !traitPath.IsTrait() {
-			a.panic(implTrait.Trait.Span(), "expected trait")
-		}
-		trait := traitPath.Trait()
+	{
+		var checks []func()
 
-		genericsScope := a.setupTypeGenerics(a.Scope, implTrait.Generics, nil)
-
-		stTy := a.resolveType(genericsScope, implTrait.Class)
-		if !stTy.IsClass() {
-			a.panic(implTrait.Class.Span(), "expected class")
-		}
-		st := stTy.Class()
-
-		if trait.Def.Attributes.Has("requires_metatable") && st.Def.Attributes.Has("no_metatable") {
-			a.panicf(implTrait.Span(), "class `%s` cannot implement trait `%s` because it has no metatable", st.Def.Name.Raw, trait.Def.Name.Raw)
-		}
-
-		checks = append(checks, func() {
-			for _, superTrait := range trait.SuperTraits {
-				if !a.ClassImplementsTrait(st, superTrait) {
-					a.panicf(implTrait.Span(), "class `%s` must implement supertrait `%s`", st.Def.Name.Raw, superTrait.Def.Name.Raw)
-				}
+		for _, impl := range astD.ImplClasses {
+			impl.Scope = a.Scope
+			genericsScope := a.setupTypeGenerics(a.Scope, impl.Generics, nil)
+			stTy := a.resolveType(genericsScope, impl.Class)
+			if !stTy.IsClass() {
+				a.panicf(impl.Class.Span(), "expected class type, got: %s", stTy.String())
 			}
-		})
-
-		var methods = make(map[string]ast.SemFunction, len(trait.Methods))
-		for name, method := range trait.Methods {
-			stMethod := a.FindClassMethod(st, name)
-			if stMethod == nil {
-				if method.Def.Body != nil {
-					// a.RegisterStructMethod(st, method)
-					methods[name] = method
-					continue
-				} else {
-					methods[name] = method
-					continue
-					a.panicf(implTrait.Span(), "class `%s` does not implement trait `%s` method `%s`", st.Def.Name.Raw, trait.Def.Name.Raw, name)
-				}
+			if err := genericsScope.AddType("Self", stTy); err != nil {
+				a.Error(impl.Class.Span(), err.Error())
 			}
-			params := stMethod.Def.Params
-			if len(params) < 1 || params[0].Name.Raw != "self" {
-				a.panicf(implTrait.Span(), "class `%s` method `%s` must have a `self` parameter as the first parameter", st.Def.Name.Raw, name)
+			st := stTy.Class()
+			if st.Def.Attributes.Has("no_impl") {
+				a.panicf(impl.Span(), "class `%s` cannot implement methods", st.Def.Name.Raw)
 			}
-
-			methodCopy := method
-			methodCopy.Params = append([]Type{}, method.Params[1:]...)
-
-			stMethodCopy := *stMethod
-			stMethodCopy.Params = append([]Type{}, stMethod.Params[1:]...)
-
-			stMethodTy := ast.NewSemType(stMethodCopy, st.Def.Name.Span())
-			if !a.matchFunctionType(methodCopy, stMethodTy) {
-				a.panicf(implTrait.Span(), "method `%s` doesn't match trait `%s`: expected %s, got %s", name, trait.Def.Name.Raw, method.String(), stMethodTy.String())
+			for _, method := range impl.Methods {
+				funcTy := a.handleFunctionSignature(genericsScope, &method)
+				funcTy.Scope = a.Scope
+				funcTy.Generics = impl.Generics
+				methodName := method.Name.Raw
+				a.RegisterClassMethod(st, funcTy)
+				checks = append(checks, func() {
+					// this hack is needed, so something like `__x_iter_range` can check if `__x_iter_range_bound` exists or not
+					a.checkClassMethods(st, methodName)
+				})
 			}
+			impl.GenericsScope = genericsScope
 		}
 
-		a.RegisterClassTraitImplementation(st, trait, methods, implTrait.Span())
-	}
-
-	for _, check := range checks {
-		check()
+		for _, runCheck := range checks {
+			runCheck()
+		}
 	}
 
 	for _, let := range astD.Lets {
@@ -361,17 +381,17 @@ func (a *Analysis) handleUse(scope *Scope, it *ast.Use) {
 	}
 }
 
-func (a *Analysis) GetTraitMethod(trait *ast.SemTrait, name string) (ast.SemFunction, bool) {
-	method, exists := trait.Methods[name]
-	if exists {
-		return method, true
-	}
-	for _, super := range trait.SuperTraits {
-		if superMethod, exists := a.GetTraitMethod(super, name); exists {
-			return superMethod, true
+func (a *Analysis) GetTraitMethods(trait *ast.SemTrait, name string) []ast.SemFunction {
+	var found []ast.SemFunction
+	for _, method := range trait.Methods {
+		if method.Def.Name.Raw == name {
+			found = append(found, method)
 		}
 	}
-	return ast.SemFunction{}, false
+	for _, super := range trait.SuperTraits {
+		found = append(found, a.GetTraitMethods(super, name)...)
+	}
+	return found
 }
 
 func causesTraitCycle(trait *ast.SemTrait, super *ast.SemTrait) bool {

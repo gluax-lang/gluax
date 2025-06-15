@@ -187,41 +187,66 @@ func (a *Analysis) FindClassMethod(st *ast.SemClass, name string) *SemFunction {
 		}
 	}
 	if st.Super != nil {
-		method := a.FindClassMethod(st.Super, name)
-		if method != nil {
-			return method
-		}
-	}
-	method := a.FindClassMethodByTrait(st, name)
-	if method != nil {
-		inst := a.HandleClassMethod(st, *method, false)
-		return &inst
+		return a.FindClassMethod(st.Super, name)
 	}
 	return nil
 }
 
-func (a *Analysis) FindClassMethodByTrait(st *ast.SemClass, methodName string) *SemFunction {
-	var result *SemFunction
-	actual := st.Generics.Params
+func (a *Analysis) FindClassOrTraitMethod(st *ast.SemClass, name string) []SemFunction {
+	method := a.FindClassMethod(st, name)
+	if method != nil {
+		return []SemFunction{*method}
+	}
+	return a.FindClassMethodByTrait(st, name)
+}
 
+func (a *Analysis) FindClassMethodByTrait(st *ast.SemClass, methodName string) []SemFunction {
+	actual := st.Generics.Params
+	foundTraits := make(map[*ast.SemTrait]struct{})
+	var results []SemFunction
+
+	// collect methods from traits, only once per trait
+	var collectMethods func(cls *ast.SemClass)
+	collectMethods = func(cls *ast.SemClass) {
+		if cls == nil {
+			return
+		}
+		if bucket, exists := a.State.TraitsByClass[cls.Def]; exists {
+			for trait, metas := range bucket {
+				if _, already := foundTraits[trait]; already {
+					continue // already found in subclass
+				}
+				for _, meta := range metas {
+					if a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
+						if method, exists := meta.Methods[methodName]; exists {
+							results = append(results, method)
+							foundTraits[trait] = struct{}{}
+							break // only one per trait
+						}
+					}
+				}
+			}
+		}
+		collectMethods(cls.Super)
+	}
+
+	collectMethods(st)
+	return results
+}
+
+func (a *Analysis) FindClassMethodForTraitOnly(st *ast.SemClass, trait *ast.SemTrait, methodName string) *SemFunction {
+	actual := st.Generics.Params
 	if bucket, exists := a.State.TraitsByClass[st.Def]; exists {
-		for _, metas := range bucket {
+		if metas, ok := bucket[trait]; ok {
 			for _, meta := range metas {
 				if a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
 					if method, exists := meta.Methods[methodName]; exists {
-						result = &method
-						return result
+						return &method
 					}
 				}
 			}
 		}
 	}
-
-	// Check super class
-	if st.Super != nil {
-		return a.FindClassMethodByTrait(st.Super, methodName)
-	}
-
 	return nil
 }
 

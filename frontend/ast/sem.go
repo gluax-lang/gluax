@@ -319,7 +319,8 @@ type SemFunction struct {
 	Return SemType
 
 	Class    *SemClass
-	Scope    any // Scope for this function, used for generics resolution and other shit
+	Trait    *SemTrait // Trait this function is defined in, if any
+	Scope    any       // Scope for this function, used for generics resolution and other shit
 	Generics Generics
 }
 

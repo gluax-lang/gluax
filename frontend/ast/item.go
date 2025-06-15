@@ -150,11 +150,12 @@ type ImplTraitForClass struct {
 	Generics Generics
 	Trait    Path
 	Class    Type // the type this trait is implemented for
+	Methods  []Function
 	span     common.Span
 }
 
-func NewImplTraitForClass(g Generics, trait Path, st Type, span common.Span) *ImplTraitForClass {
-	return &ImplTraitForClass{Generics: g, Trait: trait, Class: st, span: span}
+func NewImplTraitForClass(g Generics, trait Path, st Type, Methods []Function, span common.Span) *ImplTraitForClass {
+	return &ImplTraitForClass{Generics: g, Trait: trait, Class: st, Methods: Methods, span: span}
 }
 
 func (it *ImplTraitForClass) isItem() {}

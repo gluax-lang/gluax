@@ -124,10 +124,24 @@ func (p *parser) parseImpl() ast.Item {
 
 		st := p.parseType()
 
-		p.expect(";")
+		p.expect("{")
+
+		var methods []ast.Function
+
+		for !p.Token.Is("}") {
+			var attributes []ast.Attribute
+			for p.Token.Is("#") {
+				attributes = append(attributes, p.parseAttribute())
+			}
+			method := p.parseClassMethod(false)
+			method.Attributes = attributes
+			methods = append(methods, method)
+		}
+
+		p.expect("}")
 
 		span := SpanFrom(spanStart, p.prevSpan())
-		return ast.NewImplTraitForClass(generics, *trait, st, span)
+		return ast.NewImplTraitForClass(generics, *trait, st, methods, span)
 	}
 
 	p.expect("{")

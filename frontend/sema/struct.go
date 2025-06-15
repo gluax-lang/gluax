@@ -65,6 +65,7 @@ func (a *Analysis) HandleClassMethod(st *ast.SemClass, method ast.SemFunction, w
 	funcTy.Generics = method.Generics
 	funcTy.Scope = method.Scope
 	funcTy.Class = st
+	funcTy.Trait = method.Trait
 	return funcTy
 }
 

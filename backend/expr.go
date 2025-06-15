@@ -117,6 +117,8 @@ func (cg *Codegen) genExprX(e ast.Expr) string {
 			return "(" + val + " ~= nil)"
 		}
 		return val
+	case ast.ExprKindQPath:
+		return cg.genQPathExpr(e.QPath())
 	case ast.ExprKindFunction:
 		f := e.Type().Function()
 		return "(" + cg.genFunction(&f) + ")"
@@ -188,6 +190,10 @@ func (cg *Codegen) genPathExpr(path *ast.Path) string {
 		return path.String()
 	}
 	panic("unreachable")
+}
+
+func (cg *Codegen) genQPathExpr(qp *ast.QPath) string {
+	return cg.decorateFuncName(qp.ResolvedMethod)
 }
 
 func (cg *Codegen) genBinaryExpr(binE *ast.ExprBinary) string {

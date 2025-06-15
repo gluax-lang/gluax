@@ -18,6 +18,7 @@ const (
 	ExprKindVararg
 	ExprKindFunction
 	ExprKindPath
+	ExprKindQPath
 	ExprKindBinary
 	ExprKindUnary
 	ExprKindPostfix
@@ -29,7 +30,6 @@ const (
 	ExprKindForIn
 	ExprKindParenthesized
 	ExprKindClassInit
-	ExprKindPathCall
 	ExprKindTuple
 	ExprKindUnsafeCast
 	ExprKindRunRaw
@@ -65,8 +65,6 @@ func (k ExprKind) String() string {
 		return "parenthesized"
 	case ExprKindClassInit:
 		return "class init"
-	case ExprKindPathCall:
-		return "class static call"
 	case ExprKindFunction:
 		return "function"
 	case ExprKindPath:
@@ -87,6 +85,8 @@ func (k ExprKind) String() string {
 		return "vec init"
 	case ExprKindMapInit:
 		return "map init"
+	case ExprKindQPath:
+		return "qualified path"
 	default:
 		panic("unreachable")
 	}

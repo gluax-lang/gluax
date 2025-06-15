@@ -160,8 +160,9 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 			funP := cg.Analysis.FindClassMethod(st, call.Method.Raw)
 			fun = *funP
 		case toCallTy.IsDynTrait():
-			dt := toCallTy.DynTrait()
-			fun, _ = cg.Analysis.GetTraitMethod(dt.Trait, call.Method.Raw)
+			_ = toCallTy.DynTrait()
+			panic("todo")
+			// fun, _ = cg.Analysis.GetTraitMethod(dt.Trait, call.Method.Raw)
 		}
 	} else {
 		fun = toCallTy.Function()
