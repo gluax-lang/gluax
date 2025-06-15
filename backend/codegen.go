@@ -259,6 +259,23 @@ func (cg *Codegen) generate() {
 		cg.ln("")
 	}
 
+	for _, tr := range cg.Ast.Traits {
+		cg.genTrait(tr)
+		cg.ln("")
+	}
+
+	{
+		generated := make(map[*ast.SemTrait]struct{}, len(cg.Ast.ImplTraits))
+		for _, tImpl := range cg.Ast.ImplTraits {
+			trait := tImpl.ResolvedTrait
+			if _, exists := generated[trait]; exists {
+				continue // already generated this trait implementation
+			}
+			generated[trait] = struct{}{}
+			cg.genTraitImpl(tImpl.ResolvedTrait)
+		}
+	}
+
 	for _, funDef := range cg.Ast.Funcs {
 		fun := funDef.Sem()
 		name := cg.decorateFuncName(fun)

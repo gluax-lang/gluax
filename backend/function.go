@@ -15,6 +15,10 @@ func (cg *Codegen) decorateFuncName(f *ast.SemFunction) string {
 		}
 		return raw
 	}
+	if f.Trait != nil {
+		dTName := cg.decorateTraitName(f.Trait.Def, f.Class)
+		return dTName + "." + f.Def.Name.Raw
+	}
 	if f.Class != nil {
 		stName := cg.decorateClassName(f.Class)
 		return stName + "." + f.Def.Name.Raw
@@ -33,18 +37,21 @@ func (cg *Codegen) decorateFuncName(f *ast.SemFunction) string {
 	return baseName + fmt.Sprintf(" --[[%s]]", f.String())
 }
 
+func (cg *Codegen) genFunctionParams(f ast.Function) []string {
+	params := make([]string, len(f.Params))
+	for i, p := range f.Params {
+		params[i] = p.String()
+	}
+	return params
+}
+
 func (cg *Codegen) genFunction(f *ast.SemFunction) string {
 	def := f.Def
 	oldBuf := cg.newBuf()
 
 	// Generate function signature
 	cg.writeString("function(")
-	for i, p := range def.Params {
-		if i > 0 {
-			cg.writeString(", ")
-		}
-		cg.writeString(p.String())
-	}
+	cg.writeString(strings.Join(cg.genFunctionParams(f.Def), ", "))
 	cg.writeByte(')')
 	cg.writeByte('\n')
 	cg.pushIndent()

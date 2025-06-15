@@ -219,10 +219,10 @@ func (a *Analysis) matchVarargTypeStrict(v SemVararg, other Type) bool {
 
 func (a *Analysis) matchDynTraitType(dt SemDynTrait, other Type) bool {
 	trait := dt.Trait
-	if other.IsClass() {
-		st := other.Class()
-		return a.ClassImplementsTrait(st, trait)
-	}
+	// if other.IsClass() {
+	// 	st := other.Class()
+	// 	return a.ClassImplementsTrait(st, trait)
+	// }
 	if other.IsDynTrait() {
 		otherTrait := other.DynTrait().Trait
 		// Check if otherTrait implements trait (not the other way around)

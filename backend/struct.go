@@ -66,10 +66,8 @@ func classHeaders(cg *Codegen) {
 }
 
 func (cg *Codegen) generateClass(st *ast.SemClass) {
-	for _, g := range st.Generics.Params {
-		if g.IsGeneric() {
-			return // we don't generate classes with generics, because they are not concrete types
-		}
+	if !st.IsFullyConcrete() {
+		return // we don't generate classes with generics, because they will never be used
 	}
 	name := cg.decorateClassName(st)
 	{

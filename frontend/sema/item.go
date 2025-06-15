@@ -232,6 +232,7 @@ func (a *Analysis) handleItems(astD *ast.Ast) {
 				a.panic(implTrait.Trait.Span(), "expected trait")
 			}
 			trait := traitPath.Trait()
+			implTrait.ResolvedTrait = trait
 
 			genericsScope := a.setupTypeGenerics(a.Scope, implTrait.Generics, nil)
 

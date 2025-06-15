@@ -311,6 +311,15 @@ func (s SemClass) IsSubClassOf(other *SemClass) bool {
 	return s.Super.IsSubClassOf(other)
 }
 
+func (c SemClass) IsFullyConcrete() bool {
+	for _, g := range c.Generics.Params {
+		if g.IsGeneric() {
+			return false
+		}
+	}
+	return true
+}
+
 /* FunctionType */
 
 type SemFunction struct {

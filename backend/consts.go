@@ -1,22 +1,41 @@
 package codegen
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/gluax-lang/gluax/frontend"
 )
 
-const PREFIX = frontend.PreservedPrefix
-const TEMP_PREFIX = PREFIX + "t_%d"
-const CONTINUE_PREFIX = PREFIX + "continue_"
-const BREAK_PREFIX = PREFIX + "break_"
-const RETURN_PREFIX = PREFIX + "return_"
-const FUNC_PREFIX = PREFIX + "func_"
-const CLASS_PREFIX = PREFIX + "class_"
-const UNREACHABLE_PREFIX = PREFIX + "unreachable_"
-const LOCAL_PREFIX = PREFIX + "local_"
+var definedConsts = make(map[string]bool)
 
-const IMPORTS_TBL = PREFIX + "imports"
-const PUBLIC_TBL = PREFIX + "public"
+func defineConst(suffix string) string {
+	for existing := range definedConsts {
+		if strings.HasPrefix(suffix, existing) {
+			panic(fmt.Sprintf("constant suffix %q starts with existing suffix %q", suffix, existing))
+		}
+		if strings.HasPrefix(existing, suffix) {
+			panic(fmt.Sprintf("existing suffix %q starts with new suffix %q", existing, suffix))
+		}
+	}
+	definedConsts[suffix] = true
+	return frontend.PreservedPrefix + suffix
+}
 
-const RUN_IMPORT = PREFIX + "run_import"
+var TEMP_PREFIX = defineConst("temp_%d")
+var CONTINUE_PREFIX = defineConst("continue_")
+var BREAK_PREFIX = defineConst("break_")
+var RETURN_PREFIX = defineConst("return_")
+var FUNC_PREFIX = defineConst("func_")
+var CLASS_PREFIX = defineConst("class_")
+var TRAIT_PREFIX = defineConst("trait_")
+var UNREACHABLE_PREFIX = defineConst("unreachable_")
+var LOCAL_PREFIX = defineConst("local_")
+var DYNTRAIT_PREFIX = defineConst("dyn_trait_")
 
-const CLASS_MARKER_PREFIX = PREFIX + "marker_class"
+var IMPORTS_TBL = defineConst("imports")
+var PUBLIC_TBL = defineConst("public")
+
+var RUN_IMPORT = defineConst("run_import")
+
+var CLASS_MARKER_PREFIX = defineConst("marker_class")

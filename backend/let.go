@@ -16,7 +16,7 @@ func (cg *Codegen) decorateLetName(l *ast.Let, n int) string {
 		}
 		return raw
 	}
-	if l.Public {
+	if l.IsItem {
 		id := fmt.Sprintf("_%d", name.Span().ID)
 		return cg.getPublic(LOCAL_PREFIX + raw + id)
 	}
@@ -27,11 +27,12 @@ func (cg *Codegen) genLetLHS(l *ast.Let) []string {
 	lhs := make([]string, len(l.Names))
 	for i := range l.Names {
 		lhs[i] = cg.decorateLetName(l, i)
-		if l.Public {
-			lhs[i] += fmt.Sprintf(" --[[%s]]", l.Names[i].Raw)
-		} else if l.IsItem {
-			cg.currentTempScope().all = append(cg.currentTempScope().all, lhs[i])
+		if l.IsItem {
+			lhs[i] += fmt.Sprintf(" --[[let %s]]", l.Names[i].Raw)
 		}
+		//  else if l.IsItem {
+		// 	cg.currentTempScope().all = append(cg.currentTempScope().all, lhs[i])
+		// }
 	}
 	return lhs
 }

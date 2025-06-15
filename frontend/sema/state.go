@@ -283,3 +283,72 @@ func (a *Analysis) ClassImplementsTrait(st *ast.SemClass, asked *ast.SemTrait) b
 	}
 	return false
 }
+
+func (a *Analysis) CollectAllTraitMethods(st *ast.SemClass) map[*ast.SemTrait][]SemFunction {
+	result := make(map[*ast.SemTrait][]SemFunction)
+	actual := st.Generics.Params
+
+	var collect func(cls *ast.SemClass)
+	collect = func(cls *ast.SemClass) {
+		if cls == nil {
+			return
+		}
+		if bucket, exists := a.State.TraitsByClass[cls.Def]; exists {
+			for trait, metas := range bucket {
+				for _, meta := range metas {
+					if a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
+						methods := make([]SemFunction, 0, len(meta.Methods))
+						for _, method := range meta.Methods {
+							methods = append(methods, method)
+						}
+						result[trait] = append(result[trait], methods...)
+					}
+				}
+			}
+		}
+		collect(cls.Super)
+	}
+
+	collect(st)
+	return result
+}
+
+func (a *Analysis) GetClassesImplementingTrait(trait *ast.SemTrait) map[*ast.SemClass][]SemFunction {
+	result := make(map[*ast.SemClass][]SemFunction)
+
+	// Iterate through all classes that have trait implementations
+	for classDef, traitMap := range a.State.TraitsByClass {
+		// Check if this class implements the requested trait
+		if metas, exists := traitMap[trait]; exists {
+			// Get the class stack to find all instantiated classes
+			classStack := classDef.GetClassStack()
+
+			for _, classInstance := range classStack {
+				semClass := classInstance.Type
+				actual := semClass.Generics.Params
+
+				// Check each implementation of the trait for this class
+				for _, meta := range metas {
+					if a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
+						// Collect all methods from this trait implementation
+						methods := make([]SemFunction, 0, len(meta.Methods))
+						for _, method := range meta.Methods {
+							methods = append(methods, method)
+						}
+
+						// Add to result, merging if class already exists
+						if _, exists := result[semClass]; exists {
+							// result[semClass] = append(existing, methods...)
+							panic("shouldnt happen?")
+						} else {
+							result[semClass] = methods
+						}
+						break // Only take the first valid implementation per class
+					}
+				}
+			}
+		}
+	}
+
+	return result
+}

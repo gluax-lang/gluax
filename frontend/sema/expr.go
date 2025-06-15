@@ -117,6 +117,7 @@ func (a *Analysis) handleQPathExpr(scope *Scope, qPath *ast.QPath) Type {
 		if methodP == nil {
 			a.panicf(qPath.Type.Span(), "no method found for `%s` in trait `%s`", methodName, as.Def.Name.Raw)
 		}
+		methodP.Class = class
 		qPath.ResolvedMethod = methodP
 		return ast.NewSemType(*methodP, qPath.Span())
 	} else {
@@ -775,7 +776,7 @@ func (a *Analysis) handleVecInit(scope *Scope, vecInit *ast.ExprVecInit) Type {
 		if !ty.IsValid() {
 			ty = val.Type()
 		} else {
-			a.StrictMatches(ty, val.Type(), val.Span())
+			a.Matches(ty, val.Type(), val.Span())
 		}
 	}
 	if !ty.IsValid() {
@@ -802,13 +803,13 @@ func (a *Analysis) handleMapInit(scope *Scope, mapInit *ast.ExprMapInit) Type {
 		if !keyTy.IsValid() {
 			keyTy = field.Key.Type()
 		} else {
-			a.StrictMatches(keyTy, field.Key.Type(), field.Key.Span())
+			a.Matches(keyTy, field.Key.Type(), field.Key.Span())
 		}
 		a.handleExpr(scope, &field.Value)
 		if !valueTy.IsValid() {
 			valueTy = field.Value.Type()
 		} else {
-			a.StrictMatches(valueTy, field.Value.Type(), field.Value.Span())
+			a.Matches(valueTy, field.Value.Type(), field.Value.Span())
 		}
 	}
 	if !keyTy.IsValid() {

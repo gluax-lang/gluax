@@ -22,6 +22,8 @@ func SetItemPublic(item Item, b bool) {
 		v.Public = b
 	case *Function:
 		v.Public = b
+	case *Trait:
+		v.Public = b
 	}
 }
 
@@ -147,11 +149,12 @@ func (t Trait) Span() common.Span {
 
 /* Impl Trait for Class */
 type ImplTraitForClass struct {
-	Generics Generics
-	Trait    Path
-	Class    Type // the type this trait is implemented for
-	Methods  []Function
-	span     common.Span
+	Generics      Generics
+	Trait         Path
+	Class         Type // the type this trait is implemented for
+	Methods       []Function
+	ResolvedTrait *SemTrait
+	span          common.Span
 }
 
 func NewImplTraitForClass(g Generics, trait Path, st Type, Methods []Function, span common.Span) *ImplTraitForClass {
