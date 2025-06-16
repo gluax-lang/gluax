@@ -32,7 +32,7 @@ func (a *Analysis) setupTypeGenerics(scope *Scope, generics ast.Generics, concre
 	return scope
 }
 
-func (a *Analysis) setupClass(def *ast.Class, concrete []Type) *SemClass {
+func (a *Analysis) setupClass(def *ast.Class, concrete []Type, buildGenerics bool) *SemClass {
 	for _, ty := range concrete {
 		if !isInnerTypeRuleCompliant(ty) {
 			a.panicf(a.GetClassSetupSpan(def.Span()), "type `%s` cannot be used as a generic type", ty.String())
@@ -44,7 +44,9 @@ func (a *Analysis) setupClass(def *ast.Class, concrete []Type) *SemClass {
 	if a.GetClass(def, concrete) == nil {
 		def.AddClass(st, concrete)
 	}
-	a.buildGenericsTable(stScope, st, concrete)
+	if buildGenerics {
+		a.buildGenericsTable(stScope, st, concrete)
+	}
 	return st
 }
 
@@ -155,7 +157,7 @@ func (a *Analysis) instantiateClass(def *ast.Class, concrete []Type) *SemClass {
 			"class `%s` expects %d generic argument(s), but %d provided", def.Name.Raw, def.Generics.Len(), len(concrete))
 	}
 
-	st := a.setupClass(def, concrete)
+	st := a.setupClass(def, concrete, true)
 
 	stScope := st.Scope.(*Scope)
 

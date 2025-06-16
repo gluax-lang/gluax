@@ -11,9 +11,6 @@ func (a *Analysis) handleLet(scope *Scope, it *ast.Let) {
 
 	// For each LHS identifier, optionally match the explicit type, or add inlay-hint
 	for i, ident := range it.Names {
-		if it.IsItem && ident.Raw == "_" {
-			a.panic(ident.Span(), "cannot use `_` in top-level")
-		}
 		ty := rhsTypes[i]
 		exprSpan := rhsSpans[i]
 
@@ -29,8 +26,14 @@ func (a *Analysis) handleLet(scope *Scope, it *ast.Let) {
 
 		// Add the new variable to the current scope
 		variable := ast.NewVariable(*it, i, ty)
-		value := ast.NewValue(variable)
-		a.AddValueVisibility(scope, ident.Raw, value, ident.Span(), it.Public)
+		if it.IsItem {
+			value := scope.GetValue(ident.Raw)
+			ast.SetValueTo(value, variable)
+		} else {
+			value := ast.NewValue(variable)
+			a.AddValueVisibility(scope, ident.Raw, value, ident.Span(), it.Public)
+		}
+
 		a.AddSpanSymbol(ident.Span(), *scope.GetSymbol(ident.Raw))
 	}
 }

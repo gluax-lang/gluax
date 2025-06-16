@@ -122,26 +122,14 @@ func (pa *ProjectAnalysis) newAnalysis(path string) *Analysis {
 	}
 }
 
-func (pa *ProjectAnalysis) AnalyzeFile(path string) (analysis *Analysis, hardError bool) {
-	path = common.FilePathClean(path)
-	m := pa.getStateFiles()
-
-	// println(false, path)
-	if existing, ok := m[path]; ok {
-		// Already analyzed under this pass (SERVER or CLIENT)
-		return existing, false
-	}
-
-	// Otherwise, create a new Analysis
-	analysis = pa.newAnalysis(path)
-	m[path] = analysis // store it so we don't re-analyze under same state
+func (pa *ProjectAnalysis) parseFile(path string) (*Analysis, error) {
+	analysis := pa.newAnalysis(path)
 
 	// Load file content (override or from disk)
 	code, err := pa.ReadFile(path)
 	if err != nil {
-		hardError = true
 		analysis.Errorf(common.SpanDefault(), "Failed to load file: %v", err)
-		return
+		return analysis, fmt.Errorf("failed to load file: %w", err)
 	}
 
 	macros := map[string]string{
@@ -149,43 +137,95 @@ func (pa *ProjectAnalysis) AnalyzeFile(path string) (analysis *Analysis, hardErr
 	}
 	preprocessed, diag := preprocess.Preprocess(code, macros)
 	if diag != nil {
-		hardError = true
 		analysis.Diags = append(analysis.Diags, *diag)
-		return
+		return analysis, fmt.Errorf("preprocessing failed")
 	}
 
 	toks, diag := lexer.Lex(path, preprocessed)
 	if diag != nil {
-		hardError = true
 		analysis.Diags = append(analysis.Diags, *diag)
-		return
+		return analysis, fmt.Errorf("lexing failed")
 	}
 
 	astRoot, diag := parser.Parse(toks, pa.processingGlobals)
 	if diag != nil {
-		hardError = true
 		analysis.Diags = append(analysis.Diags, *diag)
-		return
+		return analysis, fmt.Errorf("parsing failed")
 	}
+
 	analysis.Ast = astRoot
+	return analysis, nil
+}
 
-	defer func() {
-		if r := recover(); r != nil {
-			hardError = true
-			if errStr, ok := r.(string); ok {
-				if errStr != "" {
-					log.Printf("panic: %v\n%s", errStr, debug.Stack())
-					analysis.Error(common.SpanDefault(), errStr)
-				}
-			} else {
-				log.Printf("panic: %v\n%s", r, debug.Stack())
-				analysis.Errorf(common.SpanDefault(), "%v", r)
-			}
+// AnalyzeFromEntryPoint takes a single file path, discovers all its dependencies,
+// runs the full multi-phase analysis on the entire graph
+func (pa *ProjectAnalysis) AnalyzeFromEntryPoint(entryPointPath string) error {
+	stateFiles := pa.getStateFiles()
+
+	queue := []string{entryPointPath}
+
+	filesInGraph := make([]*Analysis, 0, 10)
+
+	// we use a loop instead of recursion to avoid stack overflows
+	i := 0
+	for i < len(queue) {
+		path := queue[i]
+		i++
+
+		// if the file has already been processed in the current state then skip it
+		if _, ok := stateFiles[path]; ok {
+			continue
 		}
-	}()
 
-	analysis.handleAst(astRoot)
-	return
+		analysis, err := pa.parseFile(path)
+		if err != nil {
+			stateFiles[path] = analysis
+			continue
+		}
+
+		stateFiles[path] = analysis
+		filesInGraph = append(filesInGraph, analysis)
+
+		// add this file's imports to the queue to be parsed.
+		for _, imp := range analysis.Ast.Imports {
+			resolvedPath, resolveErr := analysis.resolveImportPath(analysis.Src, imp.Path.Raw)
+			if resolveErr != nil {
+				analysis.Errorf(imp.Path.Span(), "import error: %v", resolveErr)
+				continue
+			}
+			queue = append(queue, resolvedPath)
+		}
+	}
+
+	runPhase := func(phaseFunc func(*Analysis)) {
+		for _, analysis := range filesInGraph {
+			defer func() {
+				if r := recover(); r != nil {
+					if errStr, ok := r.(string); ok {
+						if errStr != "" {
+							log.Printf("panic: %v\n%s", errStr, debug.Stack())
+							analysis.Error(common.SpanDefault(), errStr)
+						}
+					} else {
+						log.Printf("panic: %v\n%s", r, debug.Stack())
+						analysis.Errorf(common.SpanDefault(), "%v", r)
+					}
+				}
+			}()
+			phaseFunc(analysis)
+		}
+	}
+
+	runPhase(func(a *Analysis) {
+		for _, imp := range a.Ast.Imports {
+			a.handleImport(a.Scope, imp)
+		}
+	})
+	runPhase(func(a *Analysis) { a.populateDeclarations() })
+	runPhase(func(a *Analysis) { a.resolveImplementations() })
+	runPhase(func(a *Analysis) { a.analyzeImplementations() })
+
+	return nil
 }
 
 func (pa *ProjectAnalysis) ReadFile(path string) (string, error) {
@@ -237,7 +277,11 @@ func (pa *ProjectAnalysis) importGlobals() {
 	pa.processingGlobals = true
 	globalsA := pa.newAnalysis("globals")
 	for _, path := range pa.globalsList() {
-		analysis, _ := pa.AnalyzeFile(path)
+		if err := pa.AnalyzeFromEntryPoint(path); err != nil {
+			log.Printf("Failed to analyze globals file %s: %v", path, err)
+			continue
+		}
+		analysis := pa.getStateFiles()[path]
 		inferredName := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 		if !lexer.IsValidIdent(inferredName) {
 			analysis.Errorf(common.SpanDefault(), "`%s` is not a valid identifier to use, rename it", inferredName)
@@ -315,7 +359,9 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
 
 	pa.importGlobals()
 
-	analysis, _ := pa.AnalyzeFile(mainPath)
+	if err := pa.AnalyzeFromEntryPoint(mainPath); err != nil {
+		return fmt.Errorf("failed to analyze package starting from %s: %w", mainPath, err)
+	}
 
 	state := pa.currentState
 	// don't leak full path
@@ -332,6 +378,7 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
 	pa.workspace, pa.Config, pa.currentState.RootScope = oldWs, oldConfig, oldRootScope
 
 	if !isMain {
+		analysis := state.Files[pa.PathRelativeToWorkspace(mainPath)]
 		imp := createImport(packageName, analysis)
 		err := state.RootScope.AddImport(packageName, imp, common.SpanDefault(), true)
 		if err != nil {
@@ -344,7 +391,9 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
 
 func (pa *ProjectAnalysis) processState(state *State, workspace string) error {
 	pa.currentState = state
-	_, _ = pa.AnalyzeFile("types")
+	if err := pa.AnalyzeFromEntryPoint("types"); err != nil {
+		return fmt.Errorf("failed to analyze built-in types: %w", err)
+	}
 	// if we are processing std, then don't process std twice
 	if !pa.Config.Std {
 		// keeping these comments for future reference

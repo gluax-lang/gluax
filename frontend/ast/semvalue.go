@@ -97,6 +97,13 @@ func (v Value) SingleVariable() SingleVariable {
 	return v.data.(SingleVariable)
 }
 
+func SetValueTo[T valueData](v *Value, data T) {
+	if v == nil {
+		panic("nil Value pointer")
+	}
+	v.data = data
+}
+
 type Variable struct {
 	Def  Let
 	N    int // number of the variable in the let statement, Def.Names[N]

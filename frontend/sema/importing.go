@@ -54,8 +54,8 @@ func (a *Analysis) handleImport(scope *Scope, it *ast.Import) {
 	}
 
 	// Now analyze that file via the project:
-	importedAnalysis, hardError := a.Project.AnalyzeFile(resolved)
-	if hardError {
+	importedAnalysis, ok := a.Project.getStateFiles()[resolved]
+	if !ok {
 		a.Errorf(it.Path.Span(), "failed to import")
 		return
 	}

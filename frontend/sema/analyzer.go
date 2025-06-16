@@ -73,11 +73,6 @@ func (a *Analysis) GetClassSetupSpan(def Span) Span {
 	return *a.currentClassSetupSpan
 }
 
-func (a *Analysis) handleAst(ast *ast.Ast) {
-	a.Ast = ast
-	a.handleItems(ast)
-}
-
 func (a *Analysis) Error(span Span, msg string) {
 	// println("\n-------------------------------------")
 	// println(msg)
@@ -230,4 +225,280 @@ func (a *Analysis) MatchesPanic(ty, other Type, span Span) {
 	if !a.matchTypes(ty, other) {
 		a.panicf(span, "mismatched types, expected `%s`, got `%s`", ty.String(), other.String())
 	}
+}
+
+func (a *Analysis) populateDeclarations() {
+	astD := a.Ast
+	for _, traitDef := range astD.Traits {
+		traitDef.Scope = a.Scope
+		trait := ast.NewSemTrait(traitDef)
+		trait.Scope = a.Scope.Child(false)
+		if err := a.Scope.AddTrait(traitDef.Name.Raw, &trait, traitDef.Span(), traitDef.Public); err != nil {
+			a.Error(traitDef.Span(), err.Error())
+		}
+		traitDef.Sem = &trait
+	}
+
+	for _, stDef := range astD.Classes {
+		stDef.Scope = a.Scope
+		st := a.setupClass(stDef, nil, false)
+		stSem := ast.NewSemType(st, stDef.Name.Span())
+		a.AddTypeVisibility(a.Scope, stDef.Name.Raw, stSem, stDef.Public)
+	}
+
+	for _, funcDef := range astD.Funcs {
+		funcSem := a.handleFunctionSignature(a.Scope, funcDef)
+		funcDef.SetSem(&funcSem)
+		a.AddValueVisibility(a.Scope, funcDef.Name.Raw, ast.NewValue(funcSem), funcDef.Name.Span(), funcDef.Public)
+	}
+
+	for _, letDef := range astD.Lets {
+		for i, ident := range letDef.Names {
+			if ident.Raw == "_" {
+				a.panic(ident.Span(), "cannot use `_` in top level let binding")
+			}
+
+			ty := a.resolveType(a.Scope, *letDef.Types[i])
+			variable := ast.NewVariable(*letDef, i, ty)
+			val := ast.NewValue(variable)
+			a.AddValueVisibility(a.Scope, ident.Raw, val, ident.Span(), letDef.Public)
+		}
+	}
+}
+
+func (a *Analysis) resolveImplementations() {
+	for _, use := range a.Ast.Uses {
+		a.handleUse(a.Scope, use)
+	}
+
+	for _, traitDef := range a.Ast.Traits {
+		for _, super := range traitDef.SuperTraits {
+			superDef := a.resolvePathSymbol(a.Scope, &super)
+			if !superDef.IsTrait() {
+				a.panic(super.Span(), "expected trait")
+			}
+			trait := traitDef.Sem
+			superTrait := superDef.Trait()
+			if causesTraitCycle(trait, superTrait) {
+				a.panicf(super.Span(), "cyclic supertrait: trait `%s` is (directly or indirectly) a supertrait of itself", trait.Def.Name.Raw)
+			}
+			trait.SuperTraits = append(trait.SuperTraits, superTrait)
+		}
+	}
+
+	for _, stDef := range a.Ast.Classes {
+		st := a.GetClass(stDef, nil)
+		a.buildGenericsTable(st.Scope.(*Scope), st, nil)
+
+		SelfSt := a.setupClass(stDef, nil, true)
+		for i, g := range SelfSt.Def.Generics.Params {
+			traits := getGenericParamTraits(g)
+			SelfSt.Generics.Params[i] = ast.NewSemGenericType(g.Name, traits, true)
+		}
+		SelfStTy := ast.NewSemType(SelfSt, stDef.Span())
+		SelfStScope := SelfSt.Scope.(*Scope)
+		SelfStScope.ForceAddType("Self", SelfStTy)
+		stScope := st.Scope.(*Scope)
+		stScope.ForceAddType("Self", SelfStTy)
+	}
+
+	for _, stDef := range a.Ast.Classes {
+		superDef := stDef.Super
+		if superDef == nil {
+			continue
+		}
+		st := a.GetClass(stDef, nil)
+		stScope := st.Scope.(*Scope)
+
+		superT := a.resolveType(stScope, *superDef)
+		if !superT.IsClass() {
+			a.panicf((*superDef).Span(), "expected class type, got: %s", superT.String())
+		}
+
+		st.Super = superT.Class()
+	}
+
+	for _, stDef := range a.Ast.Classes {
+		st := a.GetClass(stDef, nil)
+		stScope := st.Scope.(*Scope)
+		SelfSt := stScope.GetType("Self").Class()
+		a.collectClassFields(SelfSt)
+		a.collectClassFields(st)
+	}
+
+	for _, traitDef := range a.Ast.Traits {
+		trait := traitDef.Sem
+		scope := trait.Scope.(*Scope)
+		SelfScope := scope.Child(false)
+		SelfScope.ForceAddType("Self", ast.NewSemDynTrait(trait, traitDef.Name.Span()))
+		for _, method := range traitDef.Methods {
+			name := method.Name.Raw
+			if _, exists := trait.Methods[name]; exists {
+				a.panicf(method.Name.Span(), "duplicate method `%s` in trait `%s`", name, traitDef.Name.Raw)
+			}
+			params := method.Params
+			if len(params) < 1 || params[0].Name.Raw != "self" {
+				a.panicf(method.Name.Span(), "trait `%s` method `%s` must have a `self` parameter as the first parameter", traitDef.Name.Raw, method.Name.Raw)
+			}
+			funcTy := a.handleFunctionSignature(SelfScope, &method)
+			funcTy.Scope = scope
+			trait.Methods[name] = funcTy
+			traitDef.Checks = append(traitDef.Checks, func() {
+				funcTy := a.handleFunction(SelfScope, &method)
+				funcTy.Scope = scope
+				trait.Methods[name] = funcTy
+			})
+		}
+	}
+
+	for _, implTrait := range a.Ast.ImplTraits {
+		traitPath := a.resolvePathSymbol(a.Scope, &implTrait.Trait)
+		if !traitPath.IsTrait() {
+			a.panic(implTrait.Trait.Span(), "expected trait")
+		}
+		trait := traitPath.Trait()
+		implTrait.ResolvedTrait = trait
+
+		genericsScope := a.setupTypeGenerics(a.Scope, implTrait.Generics, nil)
+
+		stTy := a.resolveType(genericsScope, implTrait.Class)
+		if !stTy.IsClass() {
+			a.panic(implTrait.Class.Span(), "expected class")
+		}
+		if err := genericsScope.AddType("Self", stTy); err != nil {
+			a.Error(stTy.Span(), err.Error())
+		}
+		st := stTy.Class()
+
+		if trait.Def.Attributes.Has("requires_metatable") && st.Def.Attributes.Has("no_metatable") {
+			a.panicf(implTrait.Span(), "class `%s` cannot implement trait `%s` because it has no metatable", st.Def.Name.Raw, trait.Def.Name.Raw)
+		}
+
+		implTrait.Checks = append(implTrait.Checks, func() {
+			for _, superTrait := range trait.SuperTraits {
+				if !a.ClassImplementsTrait(st, superTrait) {
+					a.panicf(implTrait.Span(), "class `%s` must implement supertrait `%s`", st.Def.Name.Raw, superTrait.Def.Name.Raw)
+				}
+			}
+		})
+
+		implMethods := make(map[string]ast.SemFunction, len(implTrait.Methods))
+		for _, method := range implTrait.Methods {
+			if _, exists := implMethods[method.Name.Raw]; exists {
+				a.panicf(method.Name.Span(), "duplicate method `%s` in trait implementation", method.Name.Raw)
+			}
+			funcTy := a.handleFunctionSignature(genericsScope, &method)
+			funcTy.Scope = a.Scope
+			funcTy.Generics = implTrait.Generics
+			implMethods[method.Name.Raw] = funcTy
+			implTrait.Checks = append(implTrait.Checks, func() {
+				funcTy := a.handleFunction(genericsScope, &method)
+				funcTy.Scope = a.Scope
+				funcTy.Generics = implTrait.Generics
+				implMethods[method.Name.Raw] = funcTy
+			})
+		}
+
+		for name, method := range implMethods {
+			if _, exists := trait.Methods[name]; !exists {
+				a.panicf(method.Def.Name.Span(), "method `%s` is not a member of trait `%s`", name, trait.Def.Name.Raw)
+			}
+		}
+
+		var methods = make(map[string]ast.SemFunction, len(trait.Methods))
+		for name, method := range trait.Methods {
+			stMethod, exists := implMethods[name]
+			if !exists {
+				if method.Def.Body != nil {
+					// a.RegisterStructMethod(st, method)
+					methods[name] = method
+					continue
+				} else {
+					a.panicf(implTrait.Span(), "class `%s` does not implement trait `%s` method `%s`", st.Def.Name.Raw, trait.Def.Name.Raw, name)
+				}
+			}
+			params := stMethod.Def.Params
+			if len(params) < 1 || params[0].Name.Raw != "self" {
+				a.panicf(implTrait.Span(), "class `%s` method `%s` must have a `self` parameter as the first parameter", st.Def.Name.Raw, name)
+			}
+
+			methodCopy := method
+			methodCopy.Params = append([]Type{}, method.Params[1:]...)
+
+			stMethodCopy := stMethod
+			stMethodCopy.Params = append([]Type{}, stMethod.Params[1:]...)
+
+			stMethodTy := ast.NewSemType(stMethodCopy, st.Def.Name.Span())
+			if !a.matchFunctionType(methodCopy, stMethodTy) {
+				a.panicf(implTrait.Span(), "method `%s` doesn't match trait `%s`: expected %s, got %s", name, trait.Def.Name.Raw, method.String(), stMethodTy.String())
+			}
+
+			stMethod.Trait = trait
+			methods[name] = stMethod
+		}
+
+		a.RegisterClassTraitImplementation(st, trait, methods, implTrait.Span())
+	}
+
+	for _, impl := range a.Ast.ImplClasses {
+		impl.Scope = a.Scope
+		genericsScope := a.setupTypeGenerics(a.Scope, impl.Generics, nil)
+		stTy := a.resolveType(genericsScope, impl.Class)
+		if !stTy.IsClass() {
+			a.panicf(impl.Class.Span(), "expected class type, got: %s", stTy.String())
+		}
+		if err := genericsScope.AddType("Self", stTy); err != nil {
+			a.Error(impl.Class.Span(), err.Error())
+		}
+		st := stTy.Class()
+		if st.Def.Attributes.Has("no_impl") {
+			a.panicf(impl.Span(), "class `%s` cannot implement methods", st.Def.Name.Raw)
+		}
+		for _, method := range impl.Methods {
+			funcTy := a.handleFunctionSignature(genericsScope, &method)
+			funcTy.Scope = a.Scope
+			funcTy.Generics = impl.Generics
+			methodName := method.Name.Raw
+			a.RegisterClassMethod(st, funcTy)
+			impl.Checks = append(impl.Checks, func() {
+				// this hack is needed, so something like `__x_iter_range` can check if `__x_iter_range_bound` exists or not
+				a.checkClassMethods(st, methodName)
+			})
+		}
+		impl.GenericsScope = genericsScope
+	}
+}
+
+func (a *Analysis) analyzeImplementations() {
+	for _, implTrait := range a.Ast.ImplTraits {
+		for _, check := range implTrait.Checks {
+			check()
+		}
+	}
+
+	for _, let := range a.Ast.Lets {
+		a.handleLet(a.Scope, let)
+	}
+
+	for _, funcDef := range a.Ast.Funcs {
+		a.handleFunction(a.Scope, funcDef)
+	}
+
+	for _, impl := range a.Ast.ImplClasses {
+		for _, check := range impl.Checks {
+			check()
+		}
+		for _, method := range impl.Methods {
+			_ = a.handleFunction(impl.GenericsScope.(*Scope), &method)
+		}
+	}
+
+	for _, traitDef := range a.Ast.Traits {
+		for _, check := range traitDef.Checks {
+			check()
+		}
+	}
+
+	a.CheckConflictingMethodImplementations()
+	a.CheckConflictingTraitImplementations()
 }

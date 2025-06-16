@@ -110,6 +110,8 @@ type ImplClass struct {
 	Scope         any
 	GenericsScope any
 	span          common.Span
+
+	Checks []func() // these checks are ran in analyzeImplementations
 }
 
 func NewImplClass(generics Generics, st Type, methods []Function, span common.Span) *ImplClass {
@@ -133,6 +135,8 @@ type Trait struct {
 	Attributes  Attributes
 	Sem         *SemTrait // semantic information, if available
 	span        common.Span
+
+	Checks []func() // these checks are ran in analyzeImplementations
 }
 
 func NewTrait(name lexer.TokIdent, superTraits []Path, methods []Function, span common.Span) *Trait {
@@ -155,6 +159,8 @@ type ImplTraitForClass struct {
 	Methods       []Function
 	ResolvedTrait *SemTrait
 	span          common.Span
+
+	Checks []func() // these checks are ran in analyzeImplementations
 }
 
 func NewImplTraitForClass(g Generics, trait Path, st Type, Methods []Function, span common.Span) *ImplTraitForClass {

@@ -40,6 +40,8 @@ func (p *parser) parseLet(isItem bool) *ast.Let {
 		if p.tryConsume(":") {
 			t := p.parseType()
 			tyPtr = &t
+		} else if isItem {
+			common.PanicDiag("type annotation is required for `let` in top-level context", p.prevSpan())
 		}
 		types = append(types, tyPtr)
 

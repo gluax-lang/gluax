@@ -123,8 +123,10 @@ func (a *Analysis) CheckConflictingMethodImplementations() {
 				for j := i + 1; j < len(list); j++ {
 					m2 := list[j]
 					if a.TypeParametersConflict(m1.TypeParameters, m2.TypeParameters) {
-						a.Errorf(m2.Method.Def.Span(),
-							"duplicate method impl for `%s`", name)
+						if m2.Method.Def.Span().Source == a.Src {
+							a.Errorf(m2.Method.Def.Span(),
+								"duplicate method impl for `%s`", name)
+						}
 						break // one is enough
 					}
 				}
@@ -141,8 +143,10 @@ func (a *Analysis) CheckConflictingTraitImplementations() {
 				for j := i + 1; j < len(list); j++ {
 					t2 := list[j]
 					if a.TypeParametersConflict(t1.TypeParameters, t2.TypeParameters) {
-						a.Errorf(t2.Span,
-							"duplicate trait impl for `%s`", tr.Def.Name.Raw)
+						if t2.Span.Source == a.Src {
+							a.Errorf(t2.Span,
+								"duplicate trait impl for `%s`", tr.Def.Name.Raw)
+						}
 						break // one is enough
 					}
 				}
