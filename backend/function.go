@@ -164,12 +164,14 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 		switch {
 		case toCallTy.IsClass():
 			st := toCallTy.Class()
-			funP := cg.Analysis.FindClassMethod(st, call.Method.Raw)
-			fun = *funP
+			funs := cg.Analysis.FindClassOrTraitMethod(st, call.Method.Raw)
+			fun = funs[0]
+			fun.Class = st
 		case toCallTy.IsDynTrait():
-			_ = toCallTy.DynTrait()
-			panic("todo")
-			// fun, _ = cg.Analysis.GetTraitMethod(dt.Trait, call.Method.Raw)
+			dynTrait := toCallTy.DynTrait()
+			methods := cg.Analysis.GetTraitMethods(dynTrait.Trait, call.Method.Raw)
+			fun = methods[0]
+			fun.Trait = dynTrait.Trait
 		}
 	} else {
 		fun = toCallTy.Function()
@@ -198,13 +200,22 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 
 	buildCallExpr := func() string {
 		if call.Method != nil {
-			if toCallTy.IsClass() && toCallTy.Class().Def.Attributes.Has("no_metatable", "no__index") {
-				stName := cg.decorateClassName(toCallTy.Class())
+			switch {
+			case toCallTy.IsClass():
+				if fun.Trait != nil {
+					args := cg.getCallArgs(call, toCall)
+					return fmt.Sprintf("%s(%s)", cg.decorateFuncName(&fun), args)
+				} else if toCallTy.IsClass() && toCallTy.Class().Def.Attributes.Has("no_metatable", "no__index") {
+					args := cg.getCallArgs(call, toCall)
+					return fmt.Sprintf("%s(%s)", cg.decorateFuncName(&fun), args)
+				}
+			case toCallTy.IsDynTrait():
 				args := cg.getCallArgs(call, toCall)
-				return fmt.Sprintf("%s.%s(%s)", stName, call.Method.Raw, args)
+				return fmt.Sprintf("%s(%s)", cg.decorateFuncName(&fun), args)
+			default:
+				args := cg.genExprsLeftToRight(call.Args)
+				return fmt.Sprintf("%s(%s)", toCall, args)
 			}
-			args := cg.genExprsLeftToRight(call.Args)
-			return fmt.Sprintf("%s:%s(%s)", toCall, call.Method.Raw, args)
 		}
 		args := cg.genExprsLeftToRight(call.Args)
 		return fmt.Sprintf("%s(%s)", toCall, args)
