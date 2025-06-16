@@ -245,37 +245,35 @@ func (cg *Codegen) currentFuncScope() *funcScope {
 	return cg.funcScopeStack[len(cg.funcScopeStack)-1]
 }
 
-func (cg *Codegen) generate() {
-	for _, imp := range cg.Ast.Imports {
-		cg.genImport(imp)
-	}
-
-	cg.ln("")
-
+func (cg *Codegen) generateClasses() {
 	for _, st := range cg.Ast.Classes {
 		for _, inst := range st.GetClassStack() {
 			cg.generateClass(inst.Type)
 		}
 		cg.ln("")
 	}
+}
 
+func (cg *Codegen) generateTraits() {
 	for _, tr := range cg.Ast.Traits {
 		cg.genTrait(tr)
 		cg.ln("")
 	}
+}
 
-	{
-		generated := make(map[*ast.SemTrait]struct{}, len(cg.Ast.ImplTraits))
-		for _, tImpl := range cg.Ast.ImplTraits {
-			trait := tImpl.ResolvedTrait
-			if _, exists := generated[trait]; exists {
-				continue // already generated this trait implementation
-			}
-			generated[trait] = struct{}{}
-			cg.genTraitImpl(tImpl.ResolvedTrait)
+func (cg *Codegen) generateTraitImpls() {
+	generated := make(map[*ast.SemTrait]struct{}, len(cg.Ast.ImplTraits))
+	for _, tImpl := range cg.Ast.ImplTraits {
+		trait := tImpl.ResolvedTrait
+		if _, exists := generated[trait]; exists {
+			continue // already generated this trait implementation
 		}
+		generated[trait] = struct{}{}
+		cg.genTraitImpl(tImpl.ResolvedTrait)
 	}
+}
 
+func (cg *Codegen) generateFunctions() {
 	for _, funDef := range cg.Ast.Funcs {
 		fun := funDef.Sem()
 		name := cg.decorateFuncName(fun)
@@ -285,7 +283,9 @@ func (cg *Codegen) generate() {
 		cg.ln("%s = %s;", name, cg.genFunction(funDef.Sem()))
 		cg.ln("")
 	}
+}
 
+func (cg *Codegen) generateLets() {
 	for _, let := range cg.Ast.Lets {
 		cg.genLet(let)
 		cg.ln("")

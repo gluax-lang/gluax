@@ -36,6 +36,4 @@ var DYNTRAIT_PREFIX = defineConst("dyn_trait_")
 var IMPORTS_TBL = defineConst("imports")
 var PUBLIC_TBL = defineConst("public")
 
-var RUN_IMPORT = defineConst("run_import")
-
 var CLASS_MARKER_PREFIX = defineConst("marker_class")

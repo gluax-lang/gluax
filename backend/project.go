@@ -26,7 +26,6 @@ func GenerateProject(pA *sema.ProjectAnalysis) (string, string) {
 	serverCg.bufCtx.buf.Grow(1024 * 2)
 	headers(&serverCg)
 	serverCg.handleFiles(pA.ServerFiles())
-	serverCg.ln("%s(%s);", RUN_IMPORT, pathToLuaString(pA.Main))
 	serverCode := serverCg.bufCtx.buf.String()
 
 	clientCg := Codegen{
@@ -40,7 +39,6 @@ func GenerateProject(pA *sema.ProjectAnalysis) (string, string) {
 	clientCg.bufCtx.buf.Grow(1024 * 2)
 	headers(&clientCg)
 	clientCg.handleFiles(pA.ClientFiles())
-	clientCg.ln("%s(%s);", RUN_IMPORT, pathToLuaString(pA.Main))
 	clientCode := clientCg.bufCtx.buf.String()
 
 	return removeRedundantBlankLines(serverCode), removeRedundantBlankLines(clientCode)
@@ -53,8 +51,35 @@ func (cg *Codegen) handleFiles(files map[string]*sema.Analysis) {
 	}
 	sort.Strings(paths)
 	// Process files in sorted order
+	cg.pushTempScope()
+	oldBuf := cg.newBuf()
+	cg.runGenerationPhase(files, paths, func(cg *Codegen) {
+		cg.generateClasses()
+	})
+	cg.runGenerationPhase(files, paths, func(cg *Codegen) {
+		cg.generateTraits()
+	})
+	cg.runGenerationPhase(files, paths, func(cg *Codegen) {
+		cg.generateTraitImpls()
+	})
+	cg.runGenerationPhase(files, paths, func(cg *Codegen) {
+		cg.generateFunctions()
+	})
+	cg.runGenerationPhase(files, paths, func(cg *Codegen) {
+		cg.generateLets()
+	})
+	generated := cg.restoreBuf(oldBuf)
+	cg.emitTempLocals()
+	cg.writeString(generated)
+}
+
+func (cg *Codegen) runGenerationPhase(files map[string]*sema.Analysis, paths []string, generateFunc func(*Codegen)) {
 	for _, path := range paths {
-		addImport(cg, path, files[path])
+		// cg.ln("-- %s", path)
+		analysis := files[path]
+		cg.setAnalysis(analysis)
+		generateFunc(cg)
+		// cg.ln("-- end %s", path)
 	}
 }
 
@@ -65,43 +90,6 @@ func headers(cg *Codegen) {
 	classHeaders(cg)
 	cg.writeByte('\n')
 
-	importsHeaders(cg)
-	cg.writeByte('\n')
-
 	publicHeaders(cg)
 	cg.writeByte('\n')
-}
-
-func importsHeaders(cg *Codegen) {
-	cg.ln("-- imports")
-	cg.ln("local %s = {};", IMPORTS_TBL)
-	cg.ln("local %s = function(f)", RUN_IMPORT)
-	cg.pushIndent()
-	cg.ln("if %s[f] then", IMPORTS_TBL)
-	cg.pushIndent()
-	cg.ln("local load = %s[f]", IMPORTS_TBL)
-	cg.ln("%s[f] = nil", IMPORTS_TBL)
-	cg.ln("load()")
-	cg.popIndent()
-	cg.ln("end")
-	cg.popIndent()
-	cg.ln("end;")
-}
-
-func addImport(cg *Codegen, path string, analysis *sema.Analysis) {
-	path = pathToLuaString(path)
-	cg.writef("%s[%s] = ", IMPORTS_TBL, path)
-	cg.writeString("function()\n")
-	cg.pushIndent()
-	cg.setAnalysis(analysis)
-	{
-		cg.pushTempScope()
-		oldBuf := cg.newBuf()
-		cg.generate()
-		generated := cg.restoreBuf(oldBuf)
-		cg.emitTempLocals()
-		cg.writeString(generated)
-	}
-	cg.popIndent()
-	cg.ln("end;\n")
 }
