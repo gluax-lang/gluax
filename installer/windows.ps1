@@ -38,5 +38,5 @@ if ($userPath -notlike "*$installDir*") {
 }
 else {
     Write-Host "Gluax updated to $latest"
-    Write-Host "Run 'gluax --version' to verify"
+    Write-Host "Run 'gluax version' to verify"
 }
