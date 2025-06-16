@@ -342,10 +342,12 @@ func (a *Analysis) resolveImplementations() {
 			}
 			funcTy := a.handleFunctionSignature(SelfScope, &method)
 			funcTy.Scope = scope
+			funcTy.Trait = trait
 			trait.Methods[name] = funcTy
 			traitDef.Checks = append(traitDef.Checks, func() {
 				funcTy := a.handleFunction(SelfScope, &method)
 				funcTy.Scope = scope
+				funcTy.Trait = trait
 				trait.Methods[name] = funcTy
 			})
 		}

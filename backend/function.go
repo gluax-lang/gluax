@@ -171,7 +171,6 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 			dynTrait := toCallTy.DynTrait()
 			methods := cg.Analysis.GetTraitMethods(dynTrait.Trait, call.Method.Raw)
 			fun = methods[0]
-			fun.Trait = dynTrait.Trait
 		}
 	} else {
 		fun = toCallTy.Function()
