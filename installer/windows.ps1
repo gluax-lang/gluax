@@ -33,8 +33,10 @@ Remove-Item $tempZip
 $userPath = [Environment]::GetEnvironmentVariable("PATH", "User")
 if ($userPath -notlike "*$installDir*") {
     [Environment]::SetEnvironmentVariable("PATH", "$userPath;$installDir", "User")
-    Write-Host "Gluax installed. Please restart your terminal or log out/in to update your PATH."
+    Write-Host "Gluax installed to $installDir"
+    Write-Host "Restart your terminal to use 'gluax' command"
 }
 else {
-    Write-Host "Gluax installed and already in PATH."
+    Write-Host "Gluax updated to $latest"
+    Write-Host "Run 'gluax --version' to verify"
 }
