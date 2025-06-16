@@ -2,15 +2,14 @@ $ErrorActionPreference = "Stop"
 
 # Detect architecture
 $arch = ""
-switch ([System.Environment]::Is64BitOperatingSystem) {
-    $true {
-        $envProc = $env:PROCESSOR_ARCHITECTURE
-        if ($envProc -eq "ARM64") { $arch = "arm64" }
-        else { $arch = "amd64" }
-    }
-    $false {
-        $arch = "386"
-    }
+if ([System.Environment]::Is64BitOperatingSystem) {
+    $envProc = $env:PROCESSOR_ARCHITECTURE
+    if ($envProc -eq "ARM64") { $arch = "arm64" }
+    else { $arch = "amd64" }
+}
+else {
+    Write-Error "32-bit Windows is not supported. Please use a 64-bit version of Windows."
+    exit 1
 }
 
 $installDir = "$env:USERPROFILE\.gluax\bin"
