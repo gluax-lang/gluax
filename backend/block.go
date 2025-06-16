@@ -46,7 +46,3 @@ func (cg *Codegen) genBlockX(b *ast.Block, flags BlockFlag) string {
 
 	return toReturn
 }
-
-func (cg *Codegen) genBlockDest(b *ast.Block) string {
-	return cg.genBlockX(b, BlockWrap)
-}

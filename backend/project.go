@@ -23,10 +23,10 @@ func GenerateProject(pA *sema.ProjectAnalysis) (string, string) {
 		publicMap:        make(map[string]int),
 		generatedClasses: make(map[string]struct{}),
 	}
-	serverCg.bufCtx.buf.Grow(1024 * 2)
+	serverCg.buf().Grow(1024 * 2)
 	headers(&serverCg)
 	serverCg.handleFiles(pA.ServerFiles())
-	serverCode := serverCg.bufCtx.buf.String()
+	serverCode := serverCg.buf().String()
 
 	clientCg := Codegen{
 		bufCtx: bufCtx{
@@ -36,10 +36,10 @@ func GenerateProject(pA *sema.ProjectAnalysis) (string, string) {
 		publicMap:        make(map[string]int),
 		generatedClasses: make(map[string]struct{}),
 	}
-	clientCg.bufCtx.buf.Grow(1024 * 2)
+	clientCg.buf().Grow(1024 * 2)
 	headers(&clientCg)
 	clientCg.handleFiles(pA.ClientFiles())
-	clientCode := clientCg.bufCtx.buf.String()
+	clientCode := clientCg.buf().String()
 
 	return removeRedundantBlankLines(serverCode), removeRedundantBlankLines(clientCode)
 }

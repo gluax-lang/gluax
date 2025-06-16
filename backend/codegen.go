@@ -68,12 +68,12 @@ func (cg *Codegen) newBuf() bufCtx {
 	cg.bufCtx = bufCtx{
 		buf: strings.Builder{},
 	}
-	cg.bufCtx.buf.Grow(1024)
+	cg.buf().Grow(1024)
 	return old
 }
 
 func (cg *Codegen) restoreBuf(old bufCtx) string {
-	snippet := cg.bufCtx.buf.String()
+	snippet := cg.buf().String()
 	cg.bufCtx = old
 	return snippet
 }
@@ -93,15 +93,15 @@ func (cg *Codegen) popIndent() {
 }
 
 func (cg *Codegen) writef(format string, args ...any) {
-	cg.bufCtx.buf.WriteString(fmt.Sprintf(format, args...))
+	fmt.Fprintf(cg.buf(), format, args...)
 }
 
 func (cg *Codegen) writeByte(b byte) {
-	cg.bufCtx.buf.WriteByte(b)
+	cg.buf().WriteByte(b)
 }
 
 func (cg *Codegen) writeString(s string) {
-	cg.bufCtx.buf.WriteString(s)
+	cg.buf().WriteString(s)
 }
 
 func (cg *Codegen) ln(format string, args ...any) {
