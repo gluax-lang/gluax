@@ -81,7 +81,7 @@ func (s *Scope) GetSymbol(name string) *Symbol {
 		if sym, ok := scope.Symbols[name]; ok {
 			result = &sym
 			return true
-	}
+		}
 		return false
 	})
 	return result
@@ -183,4 +183,15 @@ func (s *Scope) IsSymbolPublic(name string) bool {
 		return false
 	}
 	return sym.IsPublic()
+}
+
+func (s *Scope) IsTraitInScope(trait *ast.SemTrait) bool {
+	return s.walkScopes(func(scope *Scope) bool {
+		for _, sym := range scope.Symbols {
+			if sym.Kind() == ast.SymTrait && sym.Trait() == trait {
+				return true
+			}
+		}
+		return false
+	})
 }
