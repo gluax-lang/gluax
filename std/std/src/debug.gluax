@@ -5,7 +5,7 @@ import "base";
 #endif
 pub func assert(cond: bool, fmt: string, ...any) {
     if !cond {
-        base::errorf(fmt, ...);
+        base::errorf(fmt, ...)
     }
 }
 
@@ -13,12 +13,12 @@ pub func assert(cond: bool, fmt: string, ...any) {
 #[no_op]
 #endif
 pub func print(...any) {
-    globals::base::print(...);
+    globals::base::print(...)
 }
 
 #ifndef DEBUG
 #[no_op]
 #endif
 pub func printf(fmt: string, ...any) {
-    base::printf(fmt, ...);
+    base::printf(fmt, ...)
 }

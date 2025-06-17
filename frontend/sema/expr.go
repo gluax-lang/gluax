@@ -305,31 +305,30 @@ func (a *Analysis) handleIfExpr(scope *Scope, ifE *ast.ExprIf) (Type, FlowStatus
 
 	overallFlow := combineFlows(branchFlows)
 
-	// Next, unify only the types from branches that ended in FlowNormal.
-	// If a branch ended in FlowReturn or FlowBreak, that branch doesn't produce a
-	// "usable expression result" at runtime, so skip it in the final type unification.
-
 	var resultType *Type // nil means "not set yet"
-	for i, f := range branchFlows {
-		if f == FlowNormal {
-			if resultType == nil {
-				// first normal-flow branch
-				tmp := branchTypes[i]
-				resultType = &tmp
-			} else {
-				a.StrictMatches(*resultType, branchTypes[i], ifE.Span())
-			}
+	for i, branchType := range branchTypes {
+		if branchFlows[i] != FlowNormal {
+			continue
+		}
+		if branchType.Kind() == ast.SemUnreachableKind {
+			continue
+		}
+
+		if resultType == nil {
+			// First reachable type becomes the result type
+			tmp := branchTypes[i]
+			resultType = &tmp
+		} else {
+			a.StrictMatches(*resultType, branchTypes[i], ifE.Span())
 		}
 	}
 
-	// If NO branch was normal => that means all branches ended with break/return/throw.
-	// So the entire if-expr is effectively unreachable from the outside.
+	// If NO branch had a reachable type, the whole expression is unreachable
 	if resultType == nil {
 		unreachable := ast.NewSemType(ast.SemUnreachable{}, ifE.Span())
 		return unreachable, overallFlow
 	}
 
-	// Return whichever type we unified, plus the final flow
 	return *resultType, overallFlow
 }
 
