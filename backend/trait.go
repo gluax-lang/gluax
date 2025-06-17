@@ -36,8 +36,9 @@ func (cg *Codegen) genTrait(tr *ast.Trait) {
 	/*
 		local trait = {
 			func_name = function(v, ...)
-				local method = v[2].func_name
-				return method(v[1], ...)
+				local obj = v[1]
+				local vtable = v[2]
+				return vtable.func_name(obj, ...)
 			end
 		}
 	*/
