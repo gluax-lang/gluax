@@ -12,7 +12,9 @@ import (
 	"sync"
 
 	"github.com/gluax-lang/gluax/common"
+	"github.com/gluax-lang/gluax/frontend/ast"
 	"github.com/gluax-lang/gluax/frontend/sema"
+	"github.com/gluax-lang/lsp"
 	protocol "github.com/gluax-lang/lsp"
 )
 
@@ -65,6 +67,7 @@ func (h *Handler) Initialize(p *protocol.InitializeParams) (*protocol.Initialize
 			},
 		}),
 		DefinitionProvider: true,
+		ReferencesProvider: true,
 	}}, nil
 }
 
@@ -256,14 +259,62 @@ func (h *Handler) Definition(p *protocol.DefinitionParams) ([]protocol.Location,
 	return []protocol.Location{(*symbol).Span().ToLocation()}, nil
 }
 
+func (h *Handler) References(p *lsp.ReferenceParams) ([]protocol.Location, error) {
+	var locations []protocol.Location
+
+	dWR := h.findDeclAtPos(p.TextDocument.URI, p.Position)
+	if dWR == nil {
+		return nil, nil
+	}
+
+	if p.Context.IncludeDeclaration {
+		locations = append(locations, dWR.Decl.Span().ToLocation())
+	}
+
+	for _, ref := range dWR.Refs {
+		span := ref.Span()
+		if ref, ok := ref.(ast.LSPRef); ok {
+			span = ref.RefSpan()
+		}
+
+		locations = append(locations, span.ToLocation())
+	}
+
+	return locations, nil
+}
+
 func (h *Handler) findSymAtPos(uri string, pos protocol.Position) *sema.LSPSymbol {
+	fPath, err := uriToFilePath(uri)
+	if err != nil {
+		return nil
+	}
+	fPath = common.FilePathClean(fPath)
 	if serverAnalysis := h.getServerFileAnalysis(uri); serverAnalysis != nil {
-		if symbol := serverAnalysis.GetSymbolAtPosition(pos); symbol != nil {
+		if symbol := serverAnalysis.GetSymbolAtPosition(pos, fPath); symbol != nil {
 			return symbol
 		}
 	}
 	if clientAnalysis := h.getClientFileAnalysis(uri); clientAnalysis != nil {
-		if symbol := clientAnalysis.GetSymbolAtPosition(pos); symbol != nil {
+		if symbol := clientAnalysis.GetSymbolAtPosition(pos, fPath); symbol != nil {
+			return symbol
+		}
+	}
+	return nil
+}
+
+func (h *Handler) findDeclAtPos(uri string, pos protocol.Position) *sema.DeclWithRef {
+	fPath, err := uriToFilePath(uri)
+	if err != nil {
+		return nil
+	}
+	fPath = common.FilePathClean(fPath)
+	if serverAnalysis := h.getServerFileAnalysis(uri); serverAnalysis != nil {
+		if symbol := serverAnalysis.GetDeclAtPosition(pos, fPath); symbol != nil {
+			return symbol
+		}
+	}
+	if clientAnalysis := h.getClientFileAnalysis(uri); clientAnalysis != nil {
+		if symbol := clientAnalysis.GetDeclAtPosition(pos, fPath); symbol != nil {
 			return symbol
 		}
 	}

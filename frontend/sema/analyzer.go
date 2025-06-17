@@ -30,11 +30,6 @@ func (pa *ProjectAnalysis) StripWorkspace(path string) string {
 	return rel
 }
 
-type DeclWithRef struct {
-	Declaration LSPSymbol   // The declaration symbol
-	References  []LSPSymbol // All references to this declaration
-}
-
 type Analysis struct {
 	Src                   string // source file name
 	Workspace             string // workspace root
@@ -44,74 +39,8 @@ type Analysis struct {
 	TempIdx               *int
 	Project               *ProjectAnalysis
 	Ast                   *ast.Ast
-	DeclRefs              []DeclWithRef
 	State                 *State // current state of the analysis
 	currentClassSetupSpan *Span  // used to track the span of the current class setup
-}
-
-func (a *Analysis) AddDecl(declaration LSPSymbol) *DeclWithRef {
-	if a.DeclRefs == nil {
-		a.DeclRefs = make([]DeclWithRef, 0)
-	}
-
-	// Check if declaration already exists
-	for _, dR := range a.DeclRefs {
-		if dR.Declaration.Span() == declaration.Span() {
-			return &dR
-		}
-	}
-
-	newDecl := DeclWithRef{
-		Declaration: declaration,
-		References:  make([]LSPSymbol, 0),
-	}
-	a.DeclRefs = append(a.DeclRefs, newDecl)
-	return &a.DeclRefs[len(a.DeclRefs)-1]
-}
-
-func (a *Analysis) AddRef(decl LSPSymbol, span Span) {
-	ref := ast.NewLSPRef(decl, span)
-	declSpan := decl.Span()
-	for i := range a.DeclRefs {
-		if a.DeclRefs[i].Declaration.Span() == declSpan {
-			a.DeclRefs[i].References = append(a.DeclRefs[i].References, ref)
-			return
-		}
-	}
-	declWithRefs := a.AddDecl(decl)
-	declWithRefs.References = append(declWithRefs.References, ref)
-
-}
-
-func (a *Analysis) GetRefsForDecl(declarationSpan Span) []LSPSymbol {
-	for _, dR := range a.DeclRefs {
-		if dR.Declaration.Span() == declarationSpan {
-			return dR.References
-		}
-	}
-	return nil
-}
-
-func (a *Analysis) GetSymbolAtPosition(pos protocol.Position) *LSPSymbol {
-	for _, dR := range a.DeclRefs {
-		declRng := dR.Declaration.Span().ToRange()
-		declRng.End.Character++
-		if declRng.Contains(pos) {
-			return &dR.Declaration
-		}
-		for j, ref := range dR.References {
-			span := ref.Span()
-			if ref, ok := ref.(ast.LSPRef); ok {
-				span = ref.RefSpan()
-			}
-			refRng := span.ToRange()
-			refRng.End.Character++
-			if refRng.Contains(pos) {
-				return &dR.References[j]
-			}
-		}
-	}
-	return nil
 }
 
 func (a *Analysis) SetClassSetupSpan(span Span) bool {
