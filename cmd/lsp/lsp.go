@@ -15,7 +15,6 @@ import (
 	"github.com/gluax-lang/gluax/frontend/ast"
 	"github.com/gluax-lang/gluax/frontend/sema"
 	"github.com/gluax-lang/lsp"
-	protocol "github.com/gluax-lang/lsp"
 )
 
 func RunLSP() error {
@@ -23,7 +22,7 @@ func RunLSP() error {
 }
 
 type Handler struct {
-	*protocol.Server
+	*lsp.Server
 	fileCache        map[string]string
 	mu               sync.Mutex
 	workspace        string
@@ -35,11 +34,11 @@ func NewHandler() *Handler {
 		fileCache: make(map[string]string),
 		mu:        sync.Mutex{},
 	}
-	h.Server = protocol.NewServer(os.Stdin, os.Stdout, h)
+	h.Server = lsp.NewServer(os.Stdin, os.Stdout, h)
 	return h
 }
 
-func (h *Handler) Initialize(p *protocol.InitializeParams) (*protocol.InitializeResult, error) {
+func (h *Handler) Initialize(p *lsp.InitializeParams) (*lsp.InitializeResult, error) {
 	if p.WorkspaceFolders == nil || len(*p.WorkspaceFolders) == 0 {
 		return nil, fmt.Errorf("no workspace folder detected")
 	}
@@ -51,18 +50,18 @@ func (h *Handler) Initialize(p *protocol.InitializeParams) (*protocol.Initialize
 	}
 	log.Printf("root: %s", root)
 	h.workspace = root
-	return &protocol.InitializeResult{Capabilities: protocol.ServerCapabilities{
-		HoverProvider: protocol.NewHoverProviderBool(true),
-		TextDocumentSync: protocol.NewTextDocumentSyncOptions(protocol.TextDocumentSyncOptions{
+	return &lsp.InitializeResult{Capabilities: lsp.ServerCapabilities{
+		HoverProvider: lsp.NewHoverProviderBool(true),
+		TextDocumentSync: lsp.NewTextDocumentSyncOptions(lsp.TextDocumentSyncOptions{
 			OpenClose: true,
-			Change:    protocol.TextDocumentSyncKindFull,
-			Save: &protocol.SaveOptions{
+			Change:    lsp.TextDocumentSyncKindFull,
+			Save: &lsp.SaveOptions{
 				IncludeText: true,
 			},
 		}),
-		InlayHintProvider: protocol.NewInlayHintProviderOptions(protocol.InlayHintOptions{
+		InlayHintProvider: lsp.NewInlayHintProviderOptions(lsp.InlayHintOptions{
 			ResolveProvider: false,
-			WorkDoneProgressOptions: protocol.WorkDoneProgressOptions{
+			WorkDoneProgressOptions: lsp.WorkDoneProgressOptions{
 				WorkDoneProgress: false,
 			},
 		}),
@@ -76,7 +75,7 @@ func (h *Handler) Initialized() error {
 	return nil
 }
 
-func (h *Handler) Hover(p *protocol.HoverParams) (*protocol.Hover, error) {
+func (h *Handler) Hover(p *lsp.HoverParams) (*lsp.Hover, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -90,15 +89,15 @@ func (h *Handler) Hover(p *protocol.HoverParams) (*protocol.Hover, error) {
 
 	content := fmt.Sprintf("```gluax\n%s\n```\n", (*sym).LSPString())
 
-	return &protocol.Hover{
-		Contents: protocol.MarkupContent{
+	return &lsp.Hover{
+		Contents: lsp.MarkupContent{
 			Kind:  "markdown",
 			Value: content,
 		},
 	}, nil
 }
 
-func (h *Handler) InlayHint(p *protocol.InlayHintParams) ([]protocol.InlayHint, error) {
+func (h *Handler) InlayHint(p *lsp.InlayHintParams) ([]lsp.InlayHint, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	uri := p.TextDocument.URI
@@ -121,7 +120,7 @@ func (h *Handler) InlayHint(p *protocol.InlayHintParams) ([]protocol.InlayHint, 
 	return analysis.InlayHints, nil
 }
 
-func (h *Handler) DidOpen(p *protocol.DidOpenTextDocumentParams) error {
+func (h *Handler) DidOpen(p *lsp.DidOpenTextDocumentParams) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	path, err := uriToFilePath(p.TextDocument.URI)
@@ -134,7 +133,7 @@ func (h *Handler) DidOpen(p *protocol.DidOpenTextDocumentParams) error {
 	return nil
 }
 
-func (h *Handler) DidChange(p *protocol.DidChangeTextDocumentParams) error {
+func (h *Handler) DidChange(p *lsp.DidChangeTextDocumentParams) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	path, err := uriToFilePath(p.TextDocument.URI)
@@ -147,7 +146,7 @@ func (h *Handler) DidChange(p *protocol.DidChangeTextDocumentParams) error {
 	return nil
 }
 
-func (h *Handler) DidClose(p *protocol.DidCloseTextDocumentParams) error {
+func (h *Handler) DidClose(p *lsp.DidCloseTextDocumentParams) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	uri := p.TextDocument.URI
@@ -159,7 +158,7 @@ func (h *Handler) DidClose(p *protocol.DidCloseTextDocumentParams) error {
 	return nil
 }
 
-func (h *Handler) DidSave(p *protocol.DidSaveTextDocumentParams) error {
+func (h *Handler) DidSave(p *lsp.DidSaveTextDocumentParams) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	path, err := uriToFilePath(p.TextDocument.URI)
@@ -237,7 +236,7 @@ func (h *Handler) handleDiagnostics() {
 // 	h.PublishDiagnostics(uri, analysis.Diags)
 // }
 
-func (h *Handler) Definition(p *protocol.DefinitionParams) ([]protocol.Location, error) {
+func (h *Handler) Definition(p *lsp.DefinitionParams) ([]lsp.Location, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -256,11 +255,11 @@ func (h *Handler) Definition(p *protocol.DefinitionParams) ([]protocol.Location,
 		return nil, nil
 	}
 	// Convert symbol span to location
-	return []protocol.Location{(*symbol).Span().ToLocation()}, nil
+	return []lsp.Location{(*symbol).Span().ToLocation()}, nil
 }
 
-func (h *Handler) References(p *lsp.ReferenceParams) ([]protocol.Location, error) {
-	var locations []protocol.Location
+func (h *Handler) References(p *lsp.ReferenceParams) ([]lsp.Location, error) {
+	var locations []lsp.Location
 
 	dWR := h.findDeclAtPos(p.TextDocument.URI, p.Position)
 	if dWR == nil {
@@ -283,7 +282,7 @@ func (h *Handler) References(p *lsp.ReferenceParams) ([]protocol.Location, error
 	return locations, nil
 }
 
-func (h *Handler) findSymAtPos(uri string, pos protocol.Position) *sema.LSPSymbol {
+func (h *Handler) findSymAtPos(uri string, pos lsp.Position) *sema.LSPSymbol {
 	fPath, err := uriToFilePath(uri)
 	if err != nil {
 		return nil
@@ -302,7 +301,7 @@ func (h *Handler) findSymAtPos(uri string, pos protocol.Position) *sema.LSPSymbo
 	return nil
 }
 
-func (h *Handler) findDeclAtPos(uri string, pos protocol.Position) *sema.DeclWithRef {
+func (h *Handler) findDeclAtPos(uri string, pos lsp.Position) *sema.DeclWithRef {
 	fPath, err := uriToFilePath(uri)
 	if err != nil {
 		return nil
