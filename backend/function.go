@@ -26,12 +26,12 @@ func (cg *Codegen) decorateFuncName(f *ast.SemFunction) string {
 	var sb strings.Builder
 	sb.WriteString(FUNC_PREFIX)
 	sb.WriteString(f.Def.Name.Raw)
-	if f.Def.Public {
+	if f.Def.IsItem {
 		id := fmt.Sprintf("_%d", f.Def.Span().ID)
 		sb.WriteString(id)
 	}
 	baseName := sb.String()
-	if f.Def.Public {
+	if f.Def.IsItem {
 		return cg.getPublic(baseName) + fmt.Sprintf(" --[[%s]]", f.String())
 	}
 	return baseName + fmt.Sprintf(" --[[%s]]", f.String())

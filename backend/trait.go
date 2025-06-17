@@ -12,24 +12,18 @@ func (cg *Codegen) decorateTraitName(tr *ast.Trait, class *ast.SemClass) string 
 	var sb strings.Builder
 	sb.WriteString(TRAIT_PREFIX)
 	sb.WriteString(raw)
-	if tr.Public {
-		id := fmt.Sprintf("_%d", tr.Span().ID)
-		sb.WriteString(id)
-	}
+	sb.WriteString(fmt.Sprintf("_%d", tr.Span().ID))
 	if class != nil {
 		sb.WriteString(cg.decorateClassName_internal(class))
 	}
 	baseName := sb.String()
-	if tr.Public {
-		var comment string
-		if class != nil {
-			comment = fmt.Sprintf("impl %s for %s", raw, class.Def.Name.Raw)
-		} else {
-			comment = fmt.Sprintf("trait %s", raw)
-		}
-		return cg.getPublic(baseName) + fmt.Sprintf(" --[[%s]]", comment)
+	var comment string
+	if class != nil {
+		comment = fmt.Sprintf("impl %s for %s", raw, class.Def.Name.Raw)
+	} else {
+		comment = fmt.Sprintf("trait %s", raw)
 	}
-	return baseName
+	return cg.getPublic(baseName) + fmt.Sprintf(" --[[%s]]", comment)
 }
 
 func (cg *Codegen) genTrait(tr *ast.Trait) {
@@ -43,9 +37,6 @@ func (cg *Codegen) genTrait(tr *ast.Trait) {
 		}
 	*/
 	dTName := cg.decorateTraitName(tr, nil)
-	if !tr.Public {
-		cg.currentTempScope().all = append(cg.currentTempScope().all, dTName)
-	}
 	cg.ln("%s = {", dTName)
 	cg.pushIndent()
 	for _, m := range tr.Methods {
@@ -72,10 +63,6 @@ func (cg *Codegen) genTraitImpl(tr *ast.SemTrait) {
 		}
 
 		dTName := cg.decorateTraitName(tr.Def, class)
-
-		if !tr.Def.Public {
-			cg.currentTempScope().all = append(cg.currentTempScope().all, dTName)
-		}
 
 		cg.ln("%s = {", dTName)
 		cg.pushIndent()

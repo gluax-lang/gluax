@@ -16,11 +16,8 @@ func (cg *Codegen) decorateClassName_internal(st *ast.SemClass) string {
 			sb.WriteString(CLASS_PREFIX)
 		}
 		sb.WriteString(s.Def.Name.Raw)
-		// we don't need an id for builtin types, because they are always unique everywhere
-		if s.Def.Public && !ast.IsBuiltinType(s.Def.Name.Raw) {
-			id := fmt.Sprintf("_%d", s.Def.Span().ID)
-			sb.WriteString(id)
-		}
+		id := fmt.Sprintf("_%d", s.Def.Span().ID)
+		sb.WriteString(id)
 		for _, g := range s.Generics.Params {
 			sb.WriteByte('_')
 			switch {
@@ -55,10 +52,7 @@ func (cg *Codegen) decorateClassName(st *ast.SemClass) string {
 		}
 	}
 	baseName := cg.decorateClassName_internal(st)
-	if st.Def.Public {
-		return cg.getPublic(baseName) + fmt.Sprintf(" --[[class: %s]]", st.String())
-	}
-	return baseName + fmt.Sprintf(" --[[class: %s]]", st.String())
+	return cg.getPublic(baseName) + fmt.Sprintf(" --[[class %s]]", st.String())
 }
 
 func classHeaders(cg *Codegen) {
@@ -75,9 +69,6 @@ func (cg *Codegen) generateClass(st *ast.SemClass) {
 			return
 		}
 		cg.generatedClasses[name] = struct{}{}
-	}
-	if !st.Def.Public {
-		cg.currentTempScope().all = append(cg.currentTempScope().all, name)
 	}
 	cg.ln("%s = {", name)
 	cg.pushIndent()

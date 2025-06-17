@@ -277,9 +277,6 @@ func (cg *Codegen) generateFunctions() {
 	for _, funDef := range cg.Ast.Funcs {
 		fun := funDef.Sem()
 		name := cg.decorateFuncName(fun)
-		if !funDef.Public {
-			cg.currentTempScope().all = append(cg.currentTempScope().all, name)
-		}
 		cg.ln("%s = %s;", name, cg.genFunction(funDef.Sem()))
 		cg.ln("")
 	}
