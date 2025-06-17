@@ -21,6 +21,8 @@ import (
 	protocol "github.com/gluax-lang/lsp"
 )
 
+const typesFile = "@@@types@@@"
+
 func createImport(name string, analysis *Analysis) ast.SemImport {
 	tokStr := lexer.NewTokString(name, common.SpanDefault())
 	tokIdent := lexer.NewTokIdent(name, common.SpanDefault())
@@ -110,7 +112,7 @@ func (pa *ProjectAnalysis) globalsList() []string {
 
 func (pa *ProjectAnalysis) newAnalysis(path string) *Analysis {
 	scope := pa.currentState.RootScope
-	if path != "types" {
+	if path != typesFile {
 		scope = NewScope(pa.currentState.RootScope)
 	}
 	return &Analysis{
@@ -357,6 +359,14 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
 	mainPath = common.FilePathClean(mainPath)
 	pa.Main = pa.PathRelativeToWorkspace(mainPath)
 
+	if pa.Config.Std {
+		pa.overrides[typesFile] = ast.BuiltinTypes
+		if err := pa.AnalyzeFromEntryPoint(typesFile); err != nil {
+			return fmt.Errorf("failed to analyze built-in types: %w", err)
+		}
+		delete(pa.overrides, typesFile)
+	}
+
 	pa.importGlobals()
 
 	if err := pa.AnalyzeFromEntryPoint(mainPath); err != nil {
@@ -391,9 +401,6 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
 
 func (pa *ProjectAnalysis) processState(state *State, workspace string) error {
 	pa.currentState = state
-	if err := pa.AnalyzeFromEntryPoint("types"); err != nil {
-		return fmt.Errorf("failed to analyze built-in types: %w", err)
-	}
 	// if we are processing std, then don't process std twice
 	if !pa.Config.Std {
 		// keeping these comments for future reference
@@ -420,7 +427,6 @@ func (pa *ProjectAnalysis) processState(state *State, workspace string) error {
 }
 
 func AnalyzeProject(workspace string, overrides map[string]string) (*ProjectAnalysis, error) {
-	overrides["types"] = ast.BuiltinTypes
 	pa := NewProjectAnalysis(workspace, overrides)
 
 	restoreRoot, err := pa.SetRoot(workspace)
