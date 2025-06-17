@@ -8,36 +8,12 @@ import (
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
-func (cg *Codegen) decorateClassName_internal(st *ast.SemClass) string {
+func (cg *Codegen) decorateClassName_internal(cls *ast.SemClass) string {
 	var sb strings.Builder
-	var emit func(s *ast.SemClass)
-	emit = func(s *ast.SemClass) {
-		if sb.Len() == 0 {
-			sb.WriteString(CLASS_PREFIX)
-		}
-		sb.WriteString(s.Def.Name.Raw)
-		id := fmt.Sprintf("_%d", s.Def.Span().ID)
-		sb.WriteString(id)
-		for _, g := range s.Generics.Params {
-			sb.WriteByte('_')
-			switch {
-			case g.IsClass():
-				emit(g.Class())
-			case g.IsGeneric():
-				panic("THIS SHOULD NOT HAPPEN WITH NEW VERSION OF GLUAX")
-				sb.WriteString(g.Generic().Ident.Raw)
-			case g.IsFunction():
-				panic("TODO: handle function generics in class names")
-				// f := g.Function()
-				// sb.WriteString(cg.decorateFuncName(&f))
-			case g.IsUnreachable():
-				sb.WriteString(UNREACHABLE_PREFIX)
-			default:
-				panic("not yet implemented")
-			}
-		}
-	}
-	emit(st)
+	sb.WriteString(CLASS_PREFIX)
+	sb.WriteString(cls.Def.Name.Raw)
+	sb.WriteString(fmt.Sprintf("_%d", cls.Def.Span().ID))
+	sb.WriteString(fmt.Sprintf("_%p", cls))
 	return sb.String()
 }
 

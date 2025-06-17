@@ -106,7 +106,7 @@ func (cg *Codegen) getCallArgs(call *ast.Call, toCall string) string {
 
 func (cg *Codegen) genInlineCall(call *ast.Call, fun ast.SemFunction, toCall string) string {
 	// Inline the function body
-	cg.ln("do -- inline %s", fun.Def.Name.Raw)
+	cg.ln("do --[[inline call: %s]]", fun.Def.Name.Raw)
 	cg.pushIndent()
 
 	if len(fun.Def.Params) > 0 {
