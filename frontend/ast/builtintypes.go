@@ -32,7 +32,7 @@ pub class map<K, V> { _priv: nil }
 
 #[no_metatable]
 #[sealed]
-pub class option<T> { _priv: nil }
+pub class nilable<T> { _priv: nil }
 
 #[no_metatable]
 #[no_impl]
@@ -53,7 +53,7 @@ var builtin = map[string]struct{}{
 	"string":  {},
 	"vec":     {},
 	"map":     {},
-	"option":  {},
+	"nilable": {},
 	"anyfunc": {},
 	"table":   {},
 }

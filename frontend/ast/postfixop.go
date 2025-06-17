@@ -60,7 +60,7 @@ func (c *Call) Span() common.Span {
 	return c.span
 }
 
-/* Else for options */
+/* Else for nilables */
 
 type Else struct {
 	Value Expr
@@ -77,18 +77,18 @@ func (e *Else) Span() common.Span {
 	return e.span
 }
 
-/* Unwrap Option */
+/* Unwrap Nilable */
 
-type UnwrapOption struct {
+type UnwrapNilable struct {
 	span common.Span
 }
 
-func NewUnwrapOption(span common.Span) *UnwrapOption {
-	return &UnwrapOption{span: span}
+func NewUnwrapNilable(span common.Span) *UnwrapNilable {
+	return &UnwrapNilable{span: span}
 }
 
-func (u *UnwrapOption) isPostfixOp() {}
+func (u *UnwrapNilable) isPostfixOp() {}
 
-func (u *UnwrapOption) Span() common.Span {
+func (u *UnwrapNilable) Span() common.Span {
 	return u.span
 }

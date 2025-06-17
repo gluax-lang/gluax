@@ -16,10 +16,10 @@ func NilType(span common.Span) Type {
 	}
 }
 
-func IsOption(ty Type) bool {
+func IsNilable(ty Type) bool {
 	if gs, ok := ty.(*GenericClass); ok {
 		idents := gs.Path.Idents
-		if len(idents) == 1 && idents[0].Raw == "option" {
+		if len(idents) == 1 && idents[0].Raw == "nilable" {
 			return true
 		}
 	}

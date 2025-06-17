@@ -15,14 +15,14 @@ func (p *parser) parseTypeX(flags Flags) ast.Type {
 
 	if p.tryConsume("?") {
 		if p.Token.Is("?") {
-			common.PanicDiag("cannot have nested option types", p.span())
+			common.PanicDiag("cannot have nested nilable types", p.span())
 		}
 		qSpan := p.prevSpan()
-		ty := p.parseType() // no flags, because tuple/vararg can't be optional
-		optionIdent := lexer.NewTokIdent("option", qSpan)
-		optionPath := ast.NewPath([]ast.Ident{optionIdent})
+		ty := p.parseType() // no flags, because tuple/vararg can't be nilable
+		nilableIdent := lexer.NewTokIdent("nilable", qSpan)
+		nilablePath := ast.NewPath([]ast.Ident{nilableIdent})
 		generics := []ast.Type{ty}
-		return ast.NewGenericClass(optionPath, generics, SpanFrom(spanStart, p.prevSpan()))
+		return ast.NewGenericClass(nilablePath, generics, SpanFrom(spanStart, p.prevSpan()))
 	}
 
 	if p.Token.Is("Self") {

@@ -88,9 +88,9 @@ func (t SemType) Span() common.Span {
 	return t.span
 }
 
-func (t SemType) OptionInnerType() SemType {
-	if !t.IsOption() {
-		panic("not an option")
+func (t SemType) NilableInnerType() SemType {
+	if !t.IsNilable() {
+		panic("not a nilable type")
 	}
 	return t.Class().InnerType()
 }
@@ -168,7 +168,7 @@ func (t SemType) isNamed(wanted string) bool {
 }
 
 func (t SemType) IsNil() bool     { return t.isNamed("nil") }
-func (t SemType) IsOption() bool  { return t.isNamed("option") }
+func (t SemType) IsNilable() bool { return t.isNamed("nilable") }
 func (t SemType) IsAny() bool     { return t.isNamed("any") }
 func (t SemType) IsAnyFunc() bool { return t.isNamed("anyfunc") }
 func (t SemType) IsTable() bool   { return t.isNamed("table") }
@@ -177,7 +177,7 @@ func (t SemType) IsMap() bool     { return t.isNamed("map") }
 func (t SemType) IsBool() bool    { return t.isNamed("bool") }
 func (t SemType) IsNumber() bool  { return t.isNamed("number") }
 func (t SemType) IsString() bool  { return t.isNamed("string") }
-func (t SemType) IsLogical() bool { return t.IsBool() || t.IsOption() }
+func (t SemType) IsLogical() bool { return t.IsBool() || t.IsNilable() }
 
 /* ClassType */
 
@@ -245,7 +245,7 @@ func (t *SemClass) InnerType2() (SemType, SemType) {
 }
 
 func (s SemClass) String() string {
-	if s.IsOption() {
+	if s.IsNilable() {
 		return "?" + s.InnerType().String()
 	}
 	return s.Def.Name.Raw + s.Generics.String()
@@ -276,8 +276,8 @@ func (s SemClass) AstString() string {
 	return sb.String()
 }
 
-func (s SemClass) IsOption() bool {
-	return s.Def.Name.Raw == "option"
+func (s SemClass) IsNilable() bool {
+	return s.Def.Name.Raw == "nilable"
 }
 
 func (s SemClass) IsAnyFunc() bool {

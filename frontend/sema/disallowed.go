@@ -14,7 +14,7 @@ func disallowedKind(t Type) bool {
 
 func isValidAsGenericTypeArgument(ty Type) bool {
 	switch {
-	case ty.IsOption(), ty.IsNil(), ty.IsVararg(), ty.IsTuple():
+	case ty.IsNilable(), ty.IsNil(), ty.IsVararg(), ty.IsTuple():
 		return false
 	default:
 		return true

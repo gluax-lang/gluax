@@ -15,7 +15,7 @@ func (p *parser) parsePostfixExpr(ctx ExprCtx, left ast.Expr) ast.Expr {
 	case p.Token.Is("else"):
 		op = p.parseElse()
 	case p.Token.Is("?"):
-		op = p.parseUnwrapOption()
+		op = p.parseUnwrapNilable()
 	case p.Token.Is("."):
 		dotSpan := p.span()
 		p.advance() // eat '.'
@@ -77,9 +77,9 @@ func (p *parser) parseElse() ast.PostfixOp {
 	return ast.NewElse(value, span)
 }
 
-func (p *parser) parseUnwrapOption() ast.PostfixOp {
+func (p *parser) parseUnwrapNilable() ast.PostfixOp {
 	spanStart := p.span()
 	p.advance() // consume '?'
 	span := SpanFrom(spanStart, p.prevSpan())
-	return ast.NewUnwrapOption(span)
+	return ast.NewUnwrapNilable(span)
 }

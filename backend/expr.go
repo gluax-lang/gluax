@@ -320,7 +320,7 @@ func (cg *Codegen) genPostfixExpr(p *ast.ExprPostfix) string {
 		cg.popIndent()
 		cg.ln("end")
 		return temp
-	case *ast.UnwrapOption:
+	case *ast.UnwrapNilable:
 		temp := cg.getTempVar()
 		cg.ln("%s = %s;", temp, value)
 		cg.ln("if %s == nil then", temp)

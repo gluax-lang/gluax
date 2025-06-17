@@ -101,7 +101,7 @@ type Expr struct {
 	data exprData
 	sem  SemType
 	// indicates whether this expression is used as a condition
-	// this is used for option types, to always evaluate them to bool
+	// this is used for nilable types, to always evaluate them to bool
 	// lua always returns the last value of a condition, nil or not (s = a and b)
 	// so it will break our code because it will be expecting a bool
 	AsCond bool

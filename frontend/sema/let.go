@@ -72,7 +72,7 @@ func (a *Analysis) resolveRHS(
 						a.panic(exprSp, "unexpected vararg value - all identifiers already bound")
 					}
 					for len(types) < lhsCount {
-						types = append(types, a.optionType(elem.Vararg().Type, elem.Span()))
+						types = append(types, a.nilableType(elem.Vararg().Type, elem.Span()))
 						spans = append(spans, exprSp)
 					}
 					break // nothing comes after vararg
@@ -89,7 +89,7 @@ func (a *Analysis) resolveRHS(
 				a.panic(exprSp, "unexpected vararg value - all identifiers already bound")
 			}
 			for len(types) < lhsCount {
-				types = append(types, a.optionType(exprTy.Vararg().Type, exprSp))
+				types = append(types, a.nilableType(exprTy.Vararg().Type, exprSp))
 				spans = append(spans, exprSp)
 			}
 

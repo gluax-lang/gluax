@@ -193,8 +193,8 @@ func (a *Analysis) mapType(key, value Type, span Span) Type {
 	return a.instantiateBuiltinClass("map", span, key, value)
 }
 
-func (a *Analysis) optionType(t Type, span Span) Type {
-	return a.instantiateBuiltinClass("option", span, t)
+func (a *Analysis) nilableType(t Type, span Span) Type {
+	return a.instantiateBuiltinClass("nilable", span, t)
 }
 
 func (a *Analysis) tupleType(span Span, ty Type, other ...Type) Type {

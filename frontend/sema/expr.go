@@ -149,7 +149,7 @@ func (a *Analysis) handleBinaryExpr(scope *Scope, binE *ast.ExprBinary) Type {
 	switch binE.Op {
 	case ast.BinaryOpEqual, ast.BinaryOpNotEqual:
 		// we need to compare from left and right
-		// Matches is built that if left side is not optional and right side is optional, it will not match, but works vice versa
+		// Matches is built that if left side is not nilable and right side is nilable, it will not match, but works vice versa
 		if !a.matchTypes(lty, rty) && !a.matchTypes(rty, lty) {
 			a.Errorf(binE.Span(), "cannot `%s` with `%s`", lty.String(), rty.String())
 		}
@@ -265,7 +265,7 @@ func (a *Analysis) handleIfExpr(scope *Scope, ifE *ast.ExprIf) (Type, FlowStatus
 	// If
 	a.handleExpr(scope, &ifE.Main.Cond)
 	condTy := ifE.Main.Cond.Type()
-	if !condTy.IsOption() {
+	if !condTy.IsNilable() {
 		a.Matches(a.boolType(), condTy, ifE.Main.Cond.Span())
 	}
 	ifE.Main.Cond.AsCond = true
@@ -281,7 +281,7 @@ func (a *Analysis) handleIfExpr(scope *Scope, ifE *ast.ExprIf) (Type, FlowStatus
 		br := &ifE.Branches[i]
 		a.handleExpr(scope, &br.Cond)
 		cTy := br.Cond.Type()
-		if !cTy.IsOption() {
+		if !cTy.IsNilable() {
 			a.Matches(a.boolType(), cTy, br.Cond.Span())
 		}
 		br.Cond.AsCond = true
@@ -335,7 +335,7 @@ func (a *Analysis) handleIfExpr(scope *Scope, ifE *ast.ExprIf) (Type, FlowStatus
 func (a *Analysis) handleWhileExpr(scope *Scope, whileE *ast.ExprWhile) {
 	a.handleExpr(scope, &whileE.Cond)
 	condTy := whileE.Cond.Type()
-	if !condTy.IsOption() {
+	if !condTy.IsNilable() {
 		a.Matches(a.boolType(), condTy, whileE.Cond.Span())
 	}
 	whileE.Cond.AsCond = true
@@ -473,8 +473,8 @@ func (a *Analysis) handlePostfixExpr(scope *Scope, e *ast.ExprPostfix) Type {
 		ty = a.handleDotAccess(op, expr)
 	case *ast.Else:
 		ty = a.handleElse(scope, op, expr)
-	case *ast.UnwrapOption:
-		ty = a.handleUnwrapOption(scope, op, expr)
+	case *ast.UnwrapNilable:
+		ty = a.handleUnwrapNilable(scope, op, expr)
 	}
 
 	return ty
@@ -651,20 +651,20 @@ func (a *Analysis) handleUnsafeCast(scope *Scope, as *ast.UnsafeCast) Type {
 
 func (a *Analysis) handleElse(scope *Scope, elseOp *ast.Else, expr *ast.Expr) Type {
 	exprTy := expr.Type()
-	if !exprTy.IsOption() {
-		a.panic(elseOp.Span(), "`else` can only be used on options")
+	if !exprTy.IsNilable() {
+		a.panic(elseOp.Span(), "`else` can only be used on nilables")
 	}
 	a.handleExpr(scope, &elseOp.Value)
-	a.Matches(exprTy.OptionInnerType(), elseOp.Value.Type(), elseOp.Value.Span())
+	a.Matches(exprTy.NilableInnerType(), elseOp.Value.Type(), elseOp.Value.Span())
 	return elseOp.Value.Type()
 }
 
-func (a *Analysis) handleUnwrapOption(_ *Scope, unwrapOp *ast.UnwrapOption, expr *ast.Expr) Type {
+func (a *Analysis) handleUnwrapNilable(_ *Scope, unwrapOp *ast.UnwrapNilable, expr *ast.Expr) Type {
 	exprTy := expr.Type()
-	if !exprTy.IsOption() {
-		a.panic(unwrapOp.Span(), "`?` can only be used on options")
+	if !exprTy.IsNilable() {
+		a.panic(unwrapOp.Span(), "`?` can only be used on nilables")
 	}
-	return exprTy.OptionInnerType()
+	return exprTy.NilableInnerType()
 }
 
 func (a *Analysis) handleRunRaw(scope *Scope, runRaw *ast.ExprRunRaw) Type {

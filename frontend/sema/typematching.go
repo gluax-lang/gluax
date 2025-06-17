@@ -91,12 +91,12 @@ func (a *Analysis) matchClassType(s *SemClass, other Type) bool {
 		return true
 	}
 
-	if s.IsOption() {
+	if s.IsNilable() {
 		inner := s.InnerType()
 		if other.IsNil() {
 			return true
 		}
-		if other.IsOption() {
+		if other.IsNilable() {
 			otherInner := oS.InnerType()
 			return a.matchTypes(inner, otherInner)
 		}
