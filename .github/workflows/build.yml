@@ -58,10 +58,10 @@ jobs:
           cd ../..
 
       - name: Release Artifacts
-        uses: ncipollo/release-action@v1
+        uses: softprops/action-gh-release@v1
         with:
-          allowUpdates: true
-          token: "${{ secrets.GITHUB_TOKEN }}"
-          tag: "${{ steps.get_version.outputs.version }}"
-          artifacts: |
+          tag_name: ${{ steps.get_version.outputs.version }}
+          files: |
             dist/gluax-*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
