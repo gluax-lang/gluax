@@ -164,7 +164,7 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 		switch {
 		case toCallTy.IsClass():
 			st := toCallTy.Class()
-			funs := cg.Analysis.FindClassOrTraitMethod(st, call.Method.Raw)
+			funs := cg.Analysis.FindClassOrTraitMethod(st, call.Method.Raw, nil)
 			fun = funs[0]
 			fun.Class = st
 		case toCallTy.IsDynTrait():

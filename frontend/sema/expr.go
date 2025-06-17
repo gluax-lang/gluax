@@ -620,7 +620,7 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 	toCallTy := toCall.Type()
 	toCallName := toCallTy.String()
 
-	methods := a.findMethodsOnType(toCallTy, call.Method.Raw)
+	methods := a.findMethodsOnType(scope, toCallTy, call.Method.Raw)
 
 	if len(methods) == 0 {
 		a.panicf(call.Method.Span(), "no method named `%s` in `%s`", call.Method.Raw, toCallName)

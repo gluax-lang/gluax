@@ -2,10 +2,10 @@ package sema
 
 import "github.com/gluax-lang/gluax/frontend/ast"
 
-func (a *Analysis) findMethodsOnType(ty Type, methodName string) []ast.SemFunction {
+func (a *Analysis) findMethodsOnType(scope *Scope, ty Type, methodName string) []ast.SemFunction {
 	switch {
 	case ty.IsClass():
-		return a.FindClassOrTraitMethod(ty.Class(), methodName)
+		return a.FindClassOrTraitMethod(ty.Class(), methodName, scope)
 	case ty.IsGeneric():
 		generic := ty.Generic()
 		return a.FindGenericMethods(&generic, methodName)

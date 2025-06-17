@@ -196,15 +196,15 @@ func (a *Analysis) FindClassMethod(st *ast.SemClass, name string) *SemFunction {
 	return nil
 }
 
-func (a *Analysis) FindClassOrTraitMethod(st *ast.SemClass, name string) []SemFunction {
+func (a *Analysis) FindClassOrTraitMethod(st *ast.SemClass, name string, scope *Scope) []SemFunction {
 	method := a.FindClassMethod(st, name)
 	if method != nil {
 		return []SemFunction{*method}
 	}
-	return a.FindClassMethodByTrait(st, name)
+	return a.FindClassMethodByTrait(st, name, scope)
 }
 
-func (a *Analysis) FindClassMethodByTrait(st *ast.SemClass, methodName string) []SemFunction {
+func (a *Analysis) FindClassMethodByTrait(st *ast.SemClass, methodName string, scope *Scope) []SemFunction {
 	actual := st.Generics.Params
 	foundTraits := make(map[*ast.SemTrait]struct{})
 	var results []SemFunction
@@ -220,6 +220,11 @@ func (a *Analysis) FindClassMethodByTrait(st *ast.SemClass, methodName string) [
 				if _, already := foundTraits[trait]; already {
 					continue // already found in subclass
 				}
+
+				if scope != nil && !scope.IsTraitInScope(trait) {
+					continue
+				}
+
 				for _, meta := range metas {
 					if a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
 						if method, exists := meta.Methods[methodName]; exists {
