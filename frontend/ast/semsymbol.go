@@ -19,7 +19,7 @@ const (
 
 type symbolData interface {
 	SymbolKind() SymbolKind
-	AstString() string // for lsp
+	LSPString() string
 }
 
 func (v *Value) SymbolKind() SymbolKind          { return SymValue }
@@ -30,7 +30,7 @@ func (t *SemTrait) SymbolKind() SymbolKind       { return SymTrait }
 
 type Symbol struct {
 	Name   string
-	Span   common.Span
+	span   common.Span
 	public bool
 	data   symbolData
 }
@@ -38,17 +38,25 @@ type Symbol struct {
 func NewSymbol[T symbolData](name string, data T, span common.Span, public bool) Symbol {
 	return Symbol{
 		Name:   name,
-		Span:   span,
+		span:   span,
 		data:   data,
 		public: public,
 	}
 }
 
-func (s *Symbol) AstString() string {
+func (s Symbol) Span() common.Span {
+	return s.span
+}
+
+func (s *Symbol) SetSpan(span common.Span) {
+	s.span = span
+}
+
+func (s Symbol) LSPString() string {
 	if s.data == nil {
 		return "<nil>"
 	}
-	return s.data.AstString()
+	return s.data.LSPString()
 }
 
 func (s *Symbol) SetPublic(b bool) {
@@ -122,7 +130,7 @@ func (t SemImport) String() string {
 	return t.Path
 }
 
-func (i SemImport) AstString() string {
+func (i SemImport) LSPString() string {
 	var sb strings.Builder
 	sb.WriteString("import ")
 	sb.WriteString(i.Def.As.Raw)
@@ -151,7 +159,7 @@ func (t SemTrait) String() string {
 	return t.Def.Name.Raw
 }
 
-func (t SemTrait) AstString() string {
+func (t SemTrait) LSPString() string {
 	var sb strings.Builder
 	sb.WriteString("trait ")
 	sb.WriteString(t.Def.Name.Raw)

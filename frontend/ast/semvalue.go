@@ -14,7 +14,7 @@ const (
 type valueData interface {
 	ValueKind() ValueKind
 	ValueType() SemType
-	AstString() string
+	LSPString() string
 }
 
 func (v Variable) ValueKind() ValueKind { return ValVariable }
@@ -41,11 +41,11 @@ func (v Value) Kind() ValueKind {
 	return v.data.ValueKind()
 }
 
-func (v Value) AstString() string {
+func (v Value) LSPString() string {
 	if v.data == nil {
 		return "<nil>"
 	}
-	return v.data.AstString()
+	return v.data.LSPString()
 }
 
 func (v Value) CanShadow(other Value) bool {
@@ -114,7 +114,7 @@ func NewVariable(def Let, n int, ty SemType) Variable {
 	return Variable{Def: def, N: n, Type: ty}
 }
 
-func (v Variable) AstString() string {
+func (v Variable) LSPString() string {
 	var sb strings.Builder
 	if v.Def.Public {
 		sb.WriteString("pub ")
@@ -135,7 +135,7 @@ func NewSemFunctionParam(def FunctionParam, ty SemType) SemFunctionParam {
 	return SemFunctionParam{Def: def, Type: ty}
 }
 
-func (p SemFunctionParam) AstString() string {
+func (p SemFunctionParam) LSPString() string {
 	return p.Def.Name.Raw + ": " + p.Type.String()
 }
 
@@ -148,6 +148,6 @@ func NewSingleVariable(name string, ty SemType) SingleVariable {
 	return SingleVariable{Name: name, Ty: ty}
 }
 
-func (v SingleVariable) AstString() string {
+func (v SingleVariable) LSPString() string {
 	return v.Name + ": " + v.Ty.String()
 }

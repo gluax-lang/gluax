@@ -29,3 +29,5 @@ type SemDynTrait = ast.SemDynTrait
 type SemGenericType = ast.SemGenericType
 
 type ClassInstance = ast.ClassInstance
+
+type LSPSymbol = ast.LSPSymbol

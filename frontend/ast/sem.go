@@ -49,7 +49,7 @@ const (
 type semTypeData interface {
 	TypeKind() SemTypeKind
 	String() string
-	AstString() string
+	LSPString() string
 }
 
 type SemType struct {
@@ -73,11 +73,11 @@ func (t SemType) IsValid() bool {
 	return t.data != nil
 }
 
-func (t SemType) AstString() string {
+func (t SemType) LSPString() string {
 	if t.data == nil {
 		return "<nil>"
 	}
-	return t.data.AstString()
+	return t.data.LSPString()
 }
 
 func (t *SemType) SetSpan(span common.Span) {
@@ -197,7 +197,7 @@ func (f SemaClassField) IsPublic() bool {
 	return f.Def.Public
 }
 
-func (f SemaClassField) AstString() string {
+func (f SemaClassField) LSPString() string {
 	var sb strings.Builder
 	if f.IsPublic() {
 		sb.WriteString("pub ")
@@ -251,7 +251,7 @@ func (s SemClass) String() string {
 	return s.Def.Name.Raw + s.Generics.String()
 }
 
-func (s SemClass) AstString() string {
+func (s SemClass) LSPString() string {
 	var sb strings.Builder
 	sb.WriteString("class ")
 	sb.WriteString(s.Def.Name.Raw)
@@ -424,7 +424,7 @@ func (t SemFunction) ReturnCount() int {
 	return 1
 }
 
-func (f SemFunction) AstString() string {
+func (f SemFunction) LSPString() string {
 	return f.String()
 }
 
@@ -455,7 +455,7 @@ func (t SemTuple) String() string {
 	return "(" + strings.Join(elems, ", ") + ")"
 }
 
-func (t SemTuple) AstString() string {
+func (t SemTuple) LSPString() string {
 	return t.String()
 }
 
@@ -472,7 +472,7 @@ func NewSemVararg(ty SemType) SemVararg {
 }
 
 func (t SemVararg) String() string    { return "..." + t.Type.String() }
-func (t SemVararg) AstString() string { return "..." + t.Type.AstString() }
+func (t SemVararg) LSPString() string { return "..." + t.Type.LSPString() }
 
 /* SemUnreachable */
 type SemUnreachable struct{}
@@ -480,7 +480,7 @@ type SemUnreachable struct{}
 func (t SemUnreachable) TypeKind() SemTypeKind { return SemUnreachableKind }
 
 func (t SemUnreachable) String() string    { return "unreachable" }
-func (t SemUnreachable) AstString() string { return "unreachable" }
+func (t SemUnreachable) LSPString() string { return "unreachable" }
 
 func (t SemType) String() string {
 	return t.data.String()
@@ -497,7 +497,7 @@ func NewErrorType(span common.Span) SemType {
 func (t SemError) TypeKind() SemTypeKind { return SemErrorKind }
 
 func (t SemError) String() string    { return "error" }
-func (t SemError) AstString() string { return t.String() }
+func (t SemError) LSPString() string { return t.String() }
 
 /* SemDynTrait */
 
@@ -518,7 +518,7 @@ func (t SemDynTrait) String() string {
 	return "todo"
 }
 
-func (t SemDynTrait) AstString() string {
+func (t SemDynTrait) LSPString() string {
 	return "todo"
 }
 
@@ -550,7 +550,7 @@ func (gt SemGenericType) String() string {
 	}
 	return sb.String()
 }
-func (gt SemGenericType) AstString() string { return gt.String() }
+func (gt SemGenericType) LSPString() string { return gt.String() }
 
 type SemGenerics struct {
 	Params []SemType

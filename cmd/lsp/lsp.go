@@ -85,7 +85,7 @@ func (h *Handler) Hover(p *protocol.HoverParams) (*protocol.Hover, error) {
 		return nil, nil
 	}
 
-	content := fmt.Sprintf("```gluax\n%s\n```\n", sym.AstString())
+	content := fmt.Sprintf("```gluax\n%s\n```\n", (*sym).LSPString())
 
 	return &protocol.Hover{
 		Contents: protocol.MarkupContent{
@@ -253,11 +253,11 @@ func (h *Handler) Definition(p *protocol.DefinitionParams) ([]protocol.Location,
 		return nil, nil
 	}
 	// Convert symbol span to location
-	return []protocol.Location{symbol.Span.ToLocation()}, nil
+	return []protocol.Location{(*symbol).Span().ToLocation()}, nil
 }
 
-func (h *Handler) findSymAtPos(uri string, pos protocol.Position) *sema.Symbol {
-	find := func(analysis *sema.Analysis) *sema.Symbol {
+func (h *Handler) findSymAtPos(uri string, pos protocol.Position) *sema.LSPSymbol {
+	find := func(analysis *sema.Analysis) *sema.LSPSymbol {
 		for span, sym := range analysis.SpanSymbols {
 			rng := span.ToRange()
 			rng.End.Character++ // just to make sure it works if clicking on the last character

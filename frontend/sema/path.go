@@ -41,7 +41,7 @@ func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafRe
 			if currentSym.IsImport() {
 				imp := currentSym.Import()
 				customSym := *currentSym
-				customSym.Span = common.SpanSrc(getImportAnalysis(imp).Src)
+				customSym.SetSpan(common.SpanSrc(getImportAnalysis(imp).Src))
 				a.AddSpanSymbol(ident.Span(), customSym)
 			} else {
 				a.AddSpanSymbol(ident.Span(), *currentSym)

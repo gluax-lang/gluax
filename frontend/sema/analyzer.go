@@ -39,14 +39,14 @@ type Analysis struct {
 	TempIdx               *int
 	Project               *ProjectAnalysis
 	Ast                   *ast.Ast
-	SpanSymbols           map[Span]ast.Symbol // map of spans to symbols for hover and diagnostics
-	State                 *State              // current state of the analysis
-	currentClassSetupSpan *Span               // used to track the span of the current class setup
+	SpanSymbols           map[Span]LSPSymbol // map of spans to symbols for hover and diagnostics
+	State                 *State             // current state of the analysis
+	currentClassSetupSpan *Span              // used to track the span of the current class setup
 }
 
-func (a *Analysis) AddSpanSymbol(span Span, sym ast.Symbol) {
+func (a *Analysis) AddSpanSymbol(span Span, sym LSPSymbol) {
 	if a.SpanSymbols == nil {
-		a.SpanSymbols = make(map[Span]ast.Symbol)
+		a.SpanSymbols = make(map[Span]LSPSymbol)
 	}
 	if _, ok := a.SpanSymbols[span]; ok {
 		return
