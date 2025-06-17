@@ -148,7 +148,7 @@ func (t *Trait) isItem() {}
 func (t *Trait) SetPublic(b bool) { t.Public = b }
 
 func (t Trait) Span() common.Span {
-	return t.span
+	return t.Name.Span()
 }
 
 /* Impl Trait for Class */
