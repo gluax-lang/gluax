@@ -618,63 +618,30 @@ func (a *Analysis) handleDotAccess(expr *ast.DotAccess, toIndex *ast.Expr) Type 
 }
 
 func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Expr) Type {
-	var method ast.SemFunction
-	var exists bool
-	var toCallName string
-
 	toCallTy := toCall.Type()
-	switch {
-	case toCallTy.IsClass():
-		st := toCallTy.Class()
-		toCallName = st.String()
-		methods := a.FindClassOrTraitMethod(st, call.Method.Raw)
-		if len(methods) == 1 {
-			method = methods[0]
-			exists = true
-		} else if len(methods) > 1 {
-			a.panicf(call.Method.Span(), "ambiguous method call `%s` in class `%s`", call.Method.Raw, toCallName)
-		}
-	case toCallTy.IsGeneric():
-		generic := toCallTy.Generic()
-		toCallName = generic.String()
-		methods := a.FindGenericMethods(&generic, call.Method.Raw)
-		if len(methods) == 1 {
-			method = methods[0]
-			exists = true
-		} else if len(methods) > 1 {
-			a.panicf(call.Method.Span(), "ambiguous method call `%s` in generic type `%s`", call.Method.Raw, toCallName)
-		} else {
-			a.panicf(call.Method.Span(), "no method named `%s` in generic type `%s`", call.Method.Raw, toCallName)
-		}
-	case toCallTy.IsDynTrait():
-		dynTrait := toCallTy.DynTrait()
-		toCallName = dynTrait.String()
-		methods := a.GetTraitMethods(dynTrait.Trait, call.Method.Raw)
-		if len(methods) == 1 {
-			method = methods[0]
-			exists = true
-		} else if len(methods) > 1 {
-			a.panicf(call.Method.Span(), "ambiguous method call `%s` in dynamic trait `%s`", call.Method.Raw, toCallName)
-		}
-	default:
-		a.panicf(call.Span(), "cannot call method on non-class/dyn-trait type `%s`", toCallTy.String())
-	}
+	toCallName := toCallTy.String()
 
-	if !exists {
+	methods := a.findMethodsOnType(toCallTy, call.Method.Raw)
+
+	if len(methods) == 0 {
 		a.panicf(call.Method.Span(), "no method named `%s` in `%s`", call.Method.Raw, toCallName)
 	}
+	if len(methods) > 1 {
+		a.panicf(call.Method.Span(), "ambiguous method call `%s` in `%s`", call.Method.Raw, toCallName)
+	}
+
+	method := methods[0]
 
 	if len(method.Params) < 1 || method.Def.Params[0].Name.Raw != "self" {
 		a.panicf(call.Method.Span(), "no method named `%s` in `%s`", call.Method.Raw, toCallName)
 	}
 
-	method.Params = method.Params[1:]
-	method.Def.Params = method.Def.Params[1:]
+	methodCopy := method
+	methodCopy.Params = method.Params[1:]
+	methodCopy.Def.Params = method.Def.Params[1:]
 
-	methodTy := ast.NewSemType(method, call.Span())
-
-	ret := a.handleCall(scope, call, methodTy, call.Span())
-	return ret
+	methodTy := ast.NewSemType(methodCopy, call.Span())
+	return a.handleCall(scope, call, methodTy, call.Span())
 }
 
 func (a *Analysis) handleUnsafeCast(scope *Scope, as *ast.UnsafeCast) Type {
