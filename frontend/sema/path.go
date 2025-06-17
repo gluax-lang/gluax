@@ -120,6 +120,13 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 				} else {
 					return nil
 				}
+				childScope := NewScope(method.Scope.(*Scope))
+				if err := childScope.AddType("Self", *ty); err != nil {
+					a.Error(ty.Span(), err.Error())
+				}
+				methodScope := method.Scope
+				method = a.handleFunctionSignature(childScope, &method.Def)
+				method.Scope = methodScope
 			}
 			val := ast.NewValue(method)
 			sym := ast.NewSymbol(raw, &val, method.Def.Name.Span(), method.Def.Public)
