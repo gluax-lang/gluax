@@ -81,7 +81,6 @@ func (cg *Codegen) genTraitImpl(tr *ast.SemTrait) {
 
 		for _, m := range methods {
 			hMethod := cg.Analysis.HandleClassMethod(class, m, true)
-			hMethod.Class = class
 			cg.ln("%s = %s,", hMethod.Def.Name.Raw, cg.genFunction(&hMethod))
 		}
 

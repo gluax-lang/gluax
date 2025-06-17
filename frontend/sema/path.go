@@ -99,11 +99,16 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 		} else if sym.IsType() && sym.Type().IsClass() {
 			st := sym.Type().Class()
 			st = a.resolveClass(scope, st, path.Generics, name.Span())
-			method := a.FindClassMethod(st, raw)
-			if method == nil {
+			methods := a.FindClassOrTraitMethod(st, raw)
+			var method SemFunction
+			if len(methods) == 1 {
+				method = methods[0]
+			} else if len(methods) > 1 {
+				a.panicf(path.Span(), "multiple methods found for `%s` in class `%s`", raw, st.Def.Name.Raw)
+			} else {
 				return nil
 			}
-			val := ast.NewValue(*method)
+			val := ast.NewValue(method)
 			sym := ast.NewSymbol(raw, &val, method.Def.Name.Span(), method.Def.Public)
 			path.ResolvedSymbol = &sym
 			a.AddSpanSymbol(name.Span(), sym)

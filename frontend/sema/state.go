@@ -223,6 +223,7 @@ func (a *Analysis) FindClassMethodByTrait(st *ast.SemClass, methodName string) [
 				for _, meta := range metas {
 					if a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
 						if method, exists := meta.Methods[methodName]; exists {
+							method.Class = st
 							results = append(results, method)
 							foundTraits[trait] = struct{}{}
 							break // only one per trait
