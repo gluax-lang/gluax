@@ -16,7 +16,7 @@ pub func getfenv_l(level: number) ! -> map<any, any> {
 }
 
 pub func printf(fmt: string, ...any) {
-    base::print(str::format(fmt, ...));
+    base::print(str::format(fmt, ...))
 }
 
 pub func errorf(msg: string, ...any) -> unreachable {
