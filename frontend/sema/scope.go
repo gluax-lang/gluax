@@ -24,6 +24,17 @@ func NewScope(parent *Scope) *Scope {
 	return scope
 }
 
+func (s *Scope) walkScopes(fn func(*Scope) bool) bool {
+	current := s
+	for current != nil {
+		if fn(current) {
+			return true
+		}
+		current = current.Parent
+	}
+	return false
+}
+
 func (s *Scope) Child(copyState bool) *Scope {
 	child := NewScope(s)
 	if copyState {
@@ -50,13 +61,10 @@ func (s *Scope) AddLabel(name string) error {
 }
 
 func (s *Scope) LabelExists(name string) bool {
-	if _, ok := s.Labels[name]; ok {
-		return true
-	}
-	if s.Parent != nil {
-		return s.Parent.LabelExists(name)
-	}
-	return false
+	return s.walkScopes(func(scope *Scope) bool {
+		_, ok := scope.Labels[name]
+		return ok
+	})
 }
 
 func (s *Scope) AddSymbol(name string, sym Symbol) error {
@@ -68,13 +76,15 @@ func (s *Scope) AddSymbol(name string, sym Symbol) error {
 }
 
 func (s *Scope) GetSymbol(name string) *Symbol {
-	if sym, ok := s.Symbols[name]; ok {
-		return &sym
+	var result *Symbol
+	s.walkScopes(func(scope *Scope) bool {
+		if sym, ok := scope.Symbols[name]; ok {
+			result = &sym
+			return true
 	}
-	if s.Parent != nil {
-		return s.Parent.GetSymbol(name)
-	}
-	return nil
+		return false
+	})
+	return result
 }
 
 func (s *Scope) AddValue(name string, val Value, span Span) error {
@@ -96,13 +106,13 @@ func (s *Scope) AddValueVisibility(name string, val Value, span Span, public boo
 }
 
 func (s *Scope) RemoveSymbol(name string) {
-	if _, ok := s.Symbols[name]; ok {
-		delete(s.Symbols, name)
-		return
-	}
-	if s.Parent != nil {
-		s.Parent.RemoveSymbol(name)
-	}
+	s.walkScopes(func(scope *Scope) bool {
+		if _, ok := scope.Symbols[name]; ok {
+			delete(scope.Symbols, name)
+			return true
+		}
+		return false
+	})
 }
 
 func (s *Scope) GetValue(name string) *Value {
