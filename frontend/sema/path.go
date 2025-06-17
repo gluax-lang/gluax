@@ -97,41 +97,43 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 			a.AddSpanSymbol(name.Span(), *sym)
 			return sym.Value()
 		} else if sym.IsType() {
-			ty := sym.Type()
-			var method SemFunction
-			if ty.IsClass() {
-				st := ty.Class()
-				st = a.resolveClass(scope, st, path.Generics, name.Span())
-				methods := a.FindClassOrTraitMethod(st, raw)
-				if len(methods) == 1 {
-					method = methods[0]
-				} else if len(methods) > 1 {
-					a.panicf(path.Span(), "multiple methods found for `%s` in class `%s`", raw, st.Def.Name.Raw)
-				} else {
-					return nil
+			baseTy := sym.Type()
+			var resolvedTy Type
+
+			if baseTy.IsClass() {
+				st := a.resolveClass(scope, baseTy.Class(), path.Generics, name.Span())
+				resolvedTy = ast.NewSemType(st, baseTy.Span())
+			} else {
+				if len(path.Generics) > 0 {
+					a.panicf(path.Span(), "cannot specify generics for non-class type `%s`", baseTy.String())
 				}
-			} else if ty.IsGeneric() {
-				generic := ty.Generic()
-				methods := a.FindGenericMethods(&generic, raw)
-				if len(methods) == 1 {
-					method = methods[0]
-				} else if len(methods) > 1 {
-					a.panicf(path.Span(), "multiple methods found for `%s` in generic type `%s`", raw, generic.String())
-				} else {
-					return nil
-				}
+				resolvedTy = *baseTy
+			}
+
+			methods := a.findMethodsOnType(resolvedTy, raw)
+			if len(methods) == 0 {
+				return nil // Not found
+			}
+			if len(methods) > 1 {
+				a.panicf(path.Span(), "ambiguous method `%s` on type `%s`", raw, resolvedTy.String())
+			}
+
+			method := methods[0]
+
+			if resolvedTy.IsGeneric() {
 				childScope := NewScope(method.Scope.(*Scope))
-				if err := childScope.AddType("Self", *ty); err != nil {
-					a.Error(ty.Span(), err.Error())
+				if err := childScope.AddType("Self", resolvedTy); err != nil {
+					a.Error(resolvedTy.Span(), err.Error())
 				}
 				methodScope := method.Scope
 				method = a.handleFunctionSignature(childScope, &method.Def)
 				method.Scope = methodScope
 			}
+
 			val := ast.NewValue(method)
-			sym := ast.NewSymbol(raw, &val, method.Def.Name.Span(), method.Def.Public)
-			path.ResolvedSymbol = &sym
-			a.AddSpanSymbol(name.Span(), sym)
+			valSym := ast.NewSymbol(raw, &val, method.Def.Name.Span(), method.Def.Public)
+			path.ResolvedSymbol = &valSym
+			a.AddSpanSymbol(name.Span(), valSym)
 			return &val
 		}
 		return nil
