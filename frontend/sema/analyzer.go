@@ -30,6 +30,11 @@ func (pa *ProjectAnalysis) StripWorkspace(path string) string {
 	return rel
 }
 
+type DeclWithRef struct {
+	Declaration LSPSymbol   // The declaration symbol
+	References  []LSPSymbol // All references to this declaration
+}
+
 type Analysis struct {
 	Src                   string // source file name
 	Workspace             string // workspace root
@@ -39,19 +44,74 @@ type Analysis struct {
 	TempIdx               *int
 	Project               *ProjectAnalysis
 	Ast                   *ast.Ast
-	SpanSymbols           map[Span]LSPSymbol // map of spans to symbols for hover and diagnostics
-	State                 *State             // current state of the analysis
-	currentClassSetupSpan *Span              // used to track the span of the current class setup
+	DeclRefs              []DeclWithRef
+	State                 *State // current state of the analysis
+	currentClassSetupSpan *Span  // used to track the span of the current class setup
 }
 
-func (a *Analysis) AddSpanSymbol(span Span, sym LSPSymbol) {
-	if a.SpanSymbols == nil {
-		a.SpanSymbols = make(map[Span]LSPSymbol)
+func (a *Analysis) AddDecl(declaration LSPSymbol) *DeclWithRef {
+	if a.DeclRefs == nil {
+		a.DeclRefs = make([]DeclWithRef, 0)
 	}
-	if _, ok := a.SpanSymbols[span]; ok {
-		return
+
+	// Check if declaration already exists
+	for _, dR := range a.DeclRefs {
+		if dR.Declaration.Span() == declaration.Span() {
+			return &dR
+		}
 	}
-	a.SpanSymbols[span] = sym
+
+	newDecl := DeclWithRef{
+		Declaration: declaration,
+		References:  make([]LSPSymbol, 0),
+	}
+	a.DeclRefs = append(a.DeclRefs, newDecl)
+	return &a.DeclRefs[len(a.DeclRefs)-1]
+}
+
+func (a *Analysis) AddRef(decl LSPSymbol, span Span) {
+	ref := ast.NewLSPRef(decl, span)
+	declSpan := decl.Span()
+	for i := range a.DeclRefs {
+		if a.DeclRefs[i].Declaration.Span() == declSpan {
+			a.DeclRefs[i].References = append(a.DeclRefs[i].References, ref)
+			return
+		}
+	}
+	declWithRefs := a.AddDecl(decl)
+	declWithRefs.References = append(declWithRefs.References, ref)
+
+}
+
+func (a *Analysis) GetRefsForDecl(declarationSpan Span) []LSPSymbol {
+	for _, dR := range a.DeclRefs {
+		if dR.Declaration.Span() == declarationSpan {
+			return dR.References
+		}
+	}
+	return nil
+}
+
+func (a *Analysis) GetSymbolAtPosition(pos protocol.Position) *LSPSymbol {
+	for _, dR := range a.DeclRefs {
+		declRng := dR.Declaration.Span().ToRange()
+		declRng.End.Character++
+		if declRng.Contains(pos) {
+			return &dR.Declaration
+		}
+		for j, ref := range dR.References {
+			span := ref.Span()
+			if ref, ok := ref.(ast.LSPRef); ok {
+				span = ref.RefSpan()
+			}
+			refRng := span.ToRange()
+			refRng.End.Character++
+			if refRng.Contains(pos) {
+				return &dR.References[j]
+			}
+		}
+	}
+	return nil
 }
 
 func (a *Analysis) SetClassSetupSpan(span Span) bool {
@@ -232,6 +292,7 @@ func (a *Analysis) populateDeclarations() {
 			a.Error(traitDef.Span(), err.Error())
 		}
 		traitDef.Sem = &trait
+		a.AddDecl(trait)
 	}
 
 	for _, stDef := range astD.Classes {
@@ -239,12 +300,14 @@ func (a *Analysis) populateDeclarations() {
 		st := a.setupClass(stDef, nil, false)
 		stSem := ast.NewSemType(st, stDef.Name.Span())
 		a.AddTypeVisibility(a.Scope, stDef.Name.Raw, stSem, stDef.Public)
+		a.AddDecl(stSem)
 	}
 
 	for _, funcDef := range astD.Funcs {
 		funcSem := a.handleFunctionSignature(a.Scope, funcDef)
 		funcDef.SetSem(&funcSem)
 		a.AddValueVisibility(a.Scope, funcDef.Name.Raw, ast.NewValue(funcSem), funcDef.Name.Span(), funcDef.Public)
+		a.AddDecl(funcSem)
 	}
 
 	for _, letDef := range astD.Lets {
@@ -324,6 +387,10 @@ func (a *Analysis) resolveImplementations() {
 		SelfSt := stScope.GetType("Self").Class()
 		a.collectClassFields(SelfSt)
 		a.collectClassFields(st)
+
+		for _, field := range st.Fields {
+			a.AddDecl(field)
+		}
 	}
 
 	for _, traitDef := range a.Ast.Traits {

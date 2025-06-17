@@ -378,8 +378,7 @@ func (a *Analysis) handleForNumExpr(scope *Scope, forE *ast.ExprForNum) {
 	child := scope.Child(true)
 	child.InLoop = true
 
-	varName := forE.Var.Raw
-	idxVariable := ast.NewSingleVariable(varName, a.numberType())
+	idxVariable := ast.NewSingleVariable(forE.Var, a.numberType())
 	a.AddValue(child, forE.Var.Raw, ast.NewValue(idxVariable), forE.Var.Span())
 
 	if forE.Label != nil {
@@ -437,7 +436,7 @@ func (a *Analysis) handleForInExpr(scope *Scope, forIn *ast.ExprForIn) {
 	for i, v := range forIn.Vars {
 		varName := v.Raw
 		varType := varsTypes[i]
-		idxVariable := ast.NewSingleVariable(varName, varType)
+		idxVariable := ast.NewSingleVariable(v, varType)
 		a.AddValue(child, varName, ast.NewValue(idxVariable), v.Span())
 		if i == 0 && forIn.IsRange {
 			idxPath := ast.NewPath([]ast.Ident{lexer.NewTokIdent(varName, v.Span())})
@@ -576,7 +575,7 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 	if call.Catch != nil {
 		catch := call.Catch
 		catchScope := scope.Child(true)
-		errVariable := ast.NewSingleVariable(catch.Name.Raw, a.stringType())
+		errVariable := ast.NewSingleVariable(catch.Name, a.stringType())
 		a.AddValue(catchScope, catch.Name.Raw, ast.NewValue(errVariable), catch.Name.Span())
 
 		a.handleBlock(catchScope, &catch.Block)
@@ -608,7 +607,7 @@ func (a *Analysis) handleDotAccess(expr *ast.DotAccess, toIndex *ast.Expr) Type 
 			a.Errorf(field.Span(), "field `%s` of class `%s` is private", field.Raw, st.Def.Name.Raw)
 		}
 		fldSym := ast.NewSymbol(field.Raw, &fld, fld.Def.Name.Span(), true)
-		a.AddSpanSymbol(expr.Span(), fldSym)
+		a.AddRef(fldSym, field.Span())
 		return fld.Ty
 	}
 

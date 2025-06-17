@@ -42,9 +42,9 @@ func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafRe
 				imp := currentSym.Import()
 				customSym := *currentSym
 				customSym.SetSpan(common.SpanSrc(getImportAnalysis(imp).Src))
-				a.AddSpanSymbol(ident.Span(), customSym)
+				a.AddRef(customSym, ident.Span())
 			} else {
-				a.AddSpanSymbol(ident.Span(), *currentSym)
+				a.AddRef(*currentSym, ident.Span())
 			}
 		} else {
 			return nil
@@ -73,7 +73,7 @@ func (a *Analysis) resolvePathType(scope *Scope, path *ast.Path) Type {
 			a.panicf(name.Span(), "`%s` is private", name.Raw)
 		}
 		path.ResolvedSymbol = sym
-		a.AddSpanSymbol(name.Span(), *sym)
+		a.AddRef(*sym, name.Span())
 		return sym.Type()
 	})
 	if t == nil {
@@ -94,7 +94,7 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 				a.panicf(name.Span(), "`%s` is private", raw)
 			}
 			path.ResolvedSymbol = sym
-			a.AddSpanSymbol(name.Span(), *sym)
+			a.AddRef(*sym, name.Span())
 			return sym.Value()
 		} else if sym.IsType() {
 			baseTy := sym.Type()
@@ -133,7 +133,7 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 			val := ast.NewValue(method)
 			valSym := ast.NewSymbol(raw, &val, method.Def.Name.Span(), method.Def.Public)
 			path.ResolvedSymbol = &valSym
-			a.AddSpanSymbol(name.Span(), valSym)
+			a.AddRef(valSym, name.Span())
 			return &val
 		}
 		return nil
@@ -158,7 +158,7 @@ func (a *Analysis) resolvePathSymbol(scope *Scope, path *ast.Path) Symbol {
 			a.panicf(name.Span(), "`%s` is private", raw)
 		}
 		path.ResolvedSymbol = sym
-		a.AddSpanSymbol(name.Span(), *sym)
+		a.AddRef(*sym, name.Span())
 		return sym
 	})
 	if t == nil {

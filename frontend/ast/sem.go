@@ -208,6 +208,10 @@ func (f SemaClassField) LSPString() string {
 	return sb.String()
 }
 
+func (f SemaClassField) Span() common.Span {
+	return f.Def.Name.Span()
+}
+
 type SemClass struct {
 	Def      *Class
 	Generics SemGenerics
@@ -426,6 +430,10 @@ func (t SemFunction) ReturnCount() int {
 
 func (f SemFunction) LSPString() string {
 	return f.String()
+}
+
+func (f SemFunction) Span() common.Span {
+	return f.Def.Name.Span()
 }
 
 func (f SemFunction) FirstReturnType() SemType {

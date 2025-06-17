@@ -34,7 +34,7 @@ func (a *Analysis) handleLet(scope *Scope, it *ast.Let) {
 			a.AddValueVisibility(scope, ident.Raw, value, ident.Span(), it.Public)
 		}
 
-		a.AddSpanSymbol(ident.Span(), *scope.GetSymbol(ident.Raw))
+		a.AddDecl(variable)
 	}
 }
 

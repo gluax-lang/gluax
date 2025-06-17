@@ -82,6 +82,7 @@ func (a *Analysis) handleClassInit(scope *Scope, si *ast.ExprClassInit) Type {
 					baseClass.Def.Name.Raw, f.Name.Raw),
 			)
 		}
+		a.AddRef(field, f.Name.Span())
 		if !a.canAccessClassMember(newClass, field.IsPublic()) {
 			a.Errorf(f.Name.Span(), "field `%s` of class `%s` is private", f.Name.Raw, newClass.Def.Name.Raw)
 		}

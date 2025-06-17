@@ -140,6 +140,10 @@ func (i SemImport) LSPString() string {
 	return sb.String()
 }
 
+func (i SemImport) Span() common.Span {
+	return i.Def.span
+}
+
 type SemTrait struct {
 	Def         *Trait
 	SuperTraits []*SemTrait // traits that this trait extends
@@ -171,4 +175,8 @@ func (t SemTrait) LSPString() string {
 	// 	sb.WriteString("}")
 	// }
 	return sb.String()
+}
+
+func (t SemTrait) Span() common.Span {
+	return t.Def.Name.Span()
 }

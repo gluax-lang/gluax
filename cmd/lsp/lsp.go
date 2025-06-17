@@ -257,23 +257,13 @@ func (h *Handler) Definition(p *protocol.DefinitionParams) ([]protocol.Location,
 }
 
 func (h *Handler) findSymAtPos(uri string, pos protocol.Position) *sema.LSPSymbol {
-	find := func(analysis *sema.Analysis) *sema.LSPSymbol {
-		for span, sym := range analysis.SpanSymbols {
-			rng := span.ToRange()
-			rng.End.Character++ // just to make sure it works if clicking on the last character
-			if rng.Contains(pos) {
-				return &sym
-			}
-		}
-		return nil
-	}
 	if serverAnalysis := h.getServerFileAnalysis(uri); serverAnalysis != nil {
-		if symbol := find(serverAnalysis); symbol != nil {
+		if symbol := serverAnalysis.GetSymbolAtPosition(pos); symbol != nil {
 			return symbol
 		}
 	}
 	if clientAnalysis := h.getClientFileAnalysis(uri); clientAnalysis != nil {
-		if symbol := find(clientAnalysis); symbol != nil {
+		if symbol := clientAnalysis.GetSymbolAtPosition(pos); symbol != nil {
 			return symbol
 		}
 	}

@@ -1,6 +1,10 @@
 package ast
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/gluax-lang/gluax/common"
+)
 
 type ValueKind uint8
 
@@ -15,6 +19,7 @@ type valueData interface {
 	ValueKind() ValueKind
 	ValueType() SemType
 	LSPString() string
+	Span() common.Span
 }
 
 func (v Variable) ValueKind() ValueKind { return ValVariable }
@@ -46,6 +51,13 @@ func (v Value) LSPString() string {
 		return "<nil>"
 	}
 	return v.data.LSPString()
+}
+
+func (v Value) Span() common.Span {
+	if v.data == nil {
+		return common.Span{}
+	}
+	return v.data.Span()
 }
 
 func (v Value) CanShadow(other Value) bool {
@@ -114,6 +126,10 @@ func NewVariable(def Let, n int, ty SemType) Variable {
 	return Variable{Def: def, N: n, Type: ty}
 }
 
+func (v Variable) Span() common.Span {
+	return v.Def.Names[v.N].Span()
+}
+
 func (v Variable) LSPString() string {
 	var sb strings.Builder
 	if v.Def.Public {
@@ -139,15 +155,23 @@ func (p SemFunctionParam) LSPString() string {
 	return p.Def.Name.Raw + ": " + p.Type.String()
 }
 
+func (p SemFunctionParam) Span() common.Span {
+	return p.Def.Name.Span()
+}
+
 type SingleVariable struct {
-	Name string
+	Name Ident
 	Ty   SemType
 }
 
-func NewSingleVariable(name string, ty SemType) SingleVariable {
+func NewSingleVariable(name Ident, ty SemType) SingleVariable {
 	return SingleVariable{Name: name, Ty: ty}
 }
 
 func (v SingleVariable) LSPString() string {
-	return v.Name + ": " + v.Ty.String()
+	return v.Name.Raw + ": " + v.Ty.String()
+}
+
+func (v SingleVariable) Span() common.Span {
+	return v.Name.Span()
 }
