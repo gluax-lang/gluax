@@ -34,7 +34,7 @@ func (a *Analysis) resolveType(scope *Scope, ty ast.Type) Type {
 		return ast.NewSemType(ast.SemTuple{Elems: elems}, t.Span())
 	case *ast.Vararg:
 		ty := a.resolveType(scope, t.Type)
-		if !isInnerTypeRuleCompliant(ty) {
+		if !isValidAsGenericTypeArgument(ty) {
 			a.panicf(ty.Span(), "type `%s` is not a valid vararg type", ty.String())
 		}
 		return ast.NewSemType(ast.NewSemVararg(ty), t.Span())

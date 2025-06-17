@@ -34,7 +34,7 @@ func (a *Analysis) setupTypeGenerics(scope *Scope, generics ast.Generics, concre
 
 func (a *Analysis) setupClass(def *ast.Class, concrete []Type, buildGenerics bool) *SemClass {
 	for _, ty := range concrete {
-		if !isInnerTypeRuleCompliant(ty) {
+		if !isValidAsGenericTypeArgument(ty) {
 			a.panicf(a.GetClassSetupSpan(def.Span()), "type `%s` cannot be used as a generic type", ty.String())
 		}
 	}
