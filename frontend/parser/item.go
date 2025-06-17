@@ -48,6 +48,7 @@ func (p *parser) parseFunction() ast.Item {
 	span := SpanFrom(spanStart, p.prevSpan())
 	fun := ast.NewFunction(&name, sig, &body, nil, span)
 	fun.IsGlobalDef = p.processingGlobals
+	fun.IsItem = true
 	return fun
 }
 

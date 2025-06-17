@@ -21,6 +21,7 @@ type Function struct {
 	Attributes  Attributes
 	sem         *SemFunction
 	span        common.Span
+	IsItem      bool
 	IsGlobalDef bool // true if this is a global definition
 }
 
