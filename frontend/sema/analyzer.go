@@ -175,31 +175,26 @@ func (a *Analysis) anyType() Type {
 	return a.getBuiltinType("any")
 }
 
-func (a *Analysis) vecType(t Type, span Span) Type {
+func (a *Analysis) instantiateBuiltinClass(name string, span Span, params ...Type) Type {
 	if a.SetClassSetupSpan(span) {
 		defer a.ClearClassSetupSpan()
 	}
-	vec := a.getBuiltinType("vec")
-	st := vec.Class()
-	newSt := a.instantiateClass(st.Def, []Type{t})
+	builtin := a.getBuiltinType(name)
+	st := builtin.Class()
+	newSt := a.instantiateClass(st.Def, params)
 	return ast.NewSemType(newSt, span)
+}
+
+func (a *Analysis) vecType(t Type, span Span) Type {
+	return a.instantiateBuiltinClass("vec", span, t)
 }
 
 func (a *Analysis) mapType(key, value Type, span Span) Type {
-	if a.SetClassSetupSpan(span) {
-		defer a.ClearClassSetupSpan()
-	}
-	mapTy := a.getBuiltinType("map")
-	st := mapTy.Class()
-	newSt := a.instantiateClass(st.Def, []Type{key, value})
-	return ast.NewSemType(newSt, span)
+	return a.instantiateBuiltinClass("map", span, key, value)
 }
 
 func (a *Analysis) optionType(t Type, span Span) Type {
-	option := a.getBuiltinType("option")
-	st := option.Class()
-	newSt := a.instantiateClass(st.Def, []Type{t})
-	return ast.NewSemType(newSt, span)
+	return a.instantiateBuiltinClass("option", span, t)
 }
 
 func (a *Analysis) tupleType(span Span, ty Type, other ...Type) Type {
