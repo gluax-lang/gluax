@@ -637,19 +637,13 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 	case toCallTy.IsGeneric():
 		generic := toCallTy.Generic()
 		toCallName = generic.String()
-		for _, trait := range generic.Traits {
-			if exists {
-				a.panicf(call.Method.Span(), "ambiguous method call `%s` in generic type `%s`", call.Method.Raw, toCallName)
-			}
-			methods := a.GetTraitMethods(trait, call.Method.Raw)
-			if len(methods) == 1 {
-				method = methods[0]
-				exists = true
-			} else if len(methods) > 1 {
-				a.panicf(call.Method.Span(), "ambiguous method call `%s` in generic type `%s`", call.Method.Raw, toCallName)
-			}
-		}
-		if !exists {
+		methods := a.FindGenericMethods(&generic, call.Method.Raw)
+		if len(methods) == 1 {
+			method = methods[0]
+			exists = true
+		} else if len(methods) > 1 {
+			a.panicf(call.Method.Span(), "ambiguous method call `%s` in generic type `%s`", call.Method.Raw, toCallName)
+		} else {
 			a.panicf(call.Method.Span(), "no method named `%s` in generic type `%s`", call.Method.Raw, toCallName)
 		}
 	case toCallTy.IsDynTrait():

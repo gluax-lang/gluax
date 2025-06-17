@@ -96,17 +96,30 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 			path.ResolvedSymbol = sym
 			a.AddSpanSymbol(name.Span(), *sym)
 			return sym.Value()
-		} else if sym.IsType() && sym.Type().IsClass() {
-			st := sym.Type().Class()
-			st = a.resolveClass(scope, st, path.Generics, name.Span())
-			methods := a.FindClassOrTraitMethod(st, raw)
+		} else if sym.IsType() {
+			ty := sym.Type()
 			var method SemFunction
-			if len(methods) == 1 {
-				method = methods[0]
-			} else if len(methods) > 1 {
-				a.panicf(path.Span(), "multiple methods found for `%s` in class `%s`", raw, st.Def.Name.Raw)
-			} else {
-				return nil
+			if ty.IsClass() {
+				st := ty.Class()
+				st = a.resolveClass(scope, st, path.Generics, name.Span())
+				methods := a.FindClassOrTraitMethod(st, raw)
+				if len(methods) == 1 {
+					method = methods[0]
+				} else if len(methods) > 1 {
+					a.panicf(path.Span(), "multiple methods found for `%s` in class `%s`", raw, st.Def.Name.Raw)
+				} else {
+					return nil
+				}
+			} else if ty.IsGeneric() {
+				generic := ty.Generic()
+				methods := a.FindGenericMethods(&generic, raw)
+				if len(methods) == 1 {
+					method = methods[0]
+				} else if len(methods) > 1 {
+					a.panicf(path.Span(), "multiple methods found for `%s` in generic type `%s`", raw, generic.String())
+				} else {
+					return nil
+				}
 			}
 			val := ast.NewValue(method)
 			sym := ast.NewSymbol(raw, &val, method.Def.Name.Span(), method.Def.Public)
