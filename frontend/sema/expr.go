@@ -717,7 +717,11 @@ func (a *Analysis) handleRunRaw(scope *Scope, runRaw *ast.ExprRunRaw) Type {
 		a.handleExpr(scope, &runRaw.Args[i])
 	}
 
-	return a.resolveType(scope, runRaw.ReturnType)
+	returnType := a.nilType()
+	if runRaw.ReturnType != nil {
+		returnType = a.resolveType(scope, *runRaw.ReturnType)
+	}
+	return returnType
 }
 
 func (a *Analysis) handleVecInit(scope *Scope, vecInit *ast.ExprVecInit) Type {

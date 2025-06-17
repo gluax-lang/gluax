@@ -8,7 +8,7 @@ import (
 type FunctionSignature struct {
 	Params     []FunctionParam
 	Errorable  bool
-	ReturnType Type
+	ReturnType *Type
 }
 
 type Function struct {
@@ -16,7 +16,7 @@ type Function struct {
 	Name        *lexer.TokIdent // nil if anonymous
 	Params      []FunctionParam
 	Errorable   bool
-	ReturnType  Type
+	ReturnType  *Type
 	Body        *Block // nil if abstract
 	Attributes  Attributes
 	sem         *SemFunction

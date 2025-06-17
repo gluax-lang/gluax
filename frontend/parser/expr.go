@@ -256,7 +256,6 @@ func (p *parser) parseRunRawExpr() ast.Expr {
 	spanStart := p.span()
 	p.advance() // consume "@"
 	p.advance() // consume "lua"
-	atLuaSpan := SpanFrom(spanStart, p.prevSpan())
 
 	p.expect("(")
 
@@ -273,7 +272,7 @@ func (p *parser) parseRunRawExpr() ast.Expr {
 
 	p.expect(")")
 
-	returnType := p.parseFunctionReturnType(FlagTypeTuple|FlagTypeVarArg|FlagFuncReturnUnreachable, atLuaSpan)
+	returnType := p.parseFunctionReturnType(FlagTypeTuple | FlagTypeVarArg | FlagFuncReturnUnreachable)
 
 	return ast.NewRunRawExpr(code, args, returnType, SpanFrom(spanStart, p.prevSpan()))
 }

@@ -601,11 +601,11 @@ func (a *UnsafeCast) Span() common.Span {
 type ExprRunRaw struct {
 	Code       lexer.TokString
 	Args       []Expr
-	ReturnType Type
+	ReturnType *Type
 	span       common.Span
 }
 
-func NewRunRawExpr(code lexer.TokString, args []Expr, returnType Type, span common.Span) Expr {
+func NewRunRawExpr(code lexer.TokString, args []Expr, returnType *Type, span common.Span) Expr {
 	return NewExpr(&ExprRunRaw{Code: code, Args: args, ReturnType: returnType, span: span})
 }
 

@@ -28,8 +28,10 @@ func (a *Analysis) handleFunctionImpl(scope *Scope, it *ast.Function, withBody b
 		params = append(params, ty)
 	}
 
-	// return type
-	returnType := a.resolveType(child, it.ReturnType)
+	returnType := a.nilType()
+	if it.ReturnType != nil {
+		returnType = a.resolveType(child, *it.ReturnType)
+	}
 
 	funcType := ast.SemFunction{
 		Def:    *it,
@@ -41,7 +43,7 @@ func (a *Analysis) handleFunctionImpl(scope *Scope, it *ast.Function, withBody b
 	if returnType.IsTuple() {
 		for _, elem := range returnType.Tuple().Elems {
 			if elem.IsUnreachable() {
-				a.panic(it.ReturnType.Span(), "cannot have unreachable type inside a tuple return type")
+				a.panic((*it.ReturnType).Span(), "cannot have unreachable type inside a tuple return type")
 			}
 		}
 	}
