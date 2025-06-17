@@ -634,6 +634,8 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 		a.panicf(call.Method.Span(), "no method named `%s` in `%s`", call.Method.Raw, toCallName)
 	}
 
+	a.AddRef(method, call.Method.Span())
+
 	methodCopy := method
 	methodCopy.Params = method.Params[1:]
 	methodCopy.Def.Params = method.Def.Params[1:]
