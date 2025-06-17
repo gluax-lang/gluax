@@ -310,7 +310,12 @@ func (a *Analysis) resolveImplementations() {
 			a.panicf((*superDef).Span(), "expected class type, got: %s", superT.String())
 		}
 
-		st.Super = superT.Class()
+		superClass := superT.Class()
+		if superClass.Def.Attributes.Has("sealed") {
+			a.panicf((*superDef).Span(), "cannot inherit from sealed class `%s`", superClass.Def.Name.Raw)
+		}
+
+		st.Super = superClass
 	}
 
 	for _, stDef := range a.Ast.Classes {
