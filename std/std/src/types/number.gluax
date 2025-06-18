@@ -21,7 +21,14 @@ impl number {
     func is_inf(self) -> bool { self == math::HUGE || self == -math::HUGE }
 
     #[inline]
-    func is_int(self) -> bool { self == self.floor() }
+    func is_double(self) -> bool {
+        // a number like 1.7976931348623e308 will fail with % 1 ~= 0
+        // but if you subtract 1 from it, it will still equal itself
+        self % 1 != 0 || self - 1 == self
+    }
+
+    #[inline]
+    func is_int(self) -> bool { !self.is_double() }
 
     #[inline]
     func clamp(self, mi: number, ma: number) -> number { math::clamp(self, mi, ma) }
