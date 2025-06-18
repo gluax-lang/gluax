@@ -368,6 +368,13 @@ func (a *Analysis) resolveImplementations() {
 		}
 		st := stTy.Class()
 
+		if !a.Project.StartsWithWorkspace(trait.Def.Span().Source) &&
+			!a.Project.StartsWithWorkspace(st.Def.Span().Source) {
+			a.panicf(implTrait.Span(),
+				"cannot implement trait `%s` for type `%s` because neither is defined in this package",
+				trait.Def.Name.Raw, st.Def.Name.Raw)
+		}
+
 		if trait.Def.Attributes.Has("requires_metatable") && st.Def.Attributes.Has("no_metatable") {
 			a.panicf(implTrait.Span(), "class `%s` cannot implement trait `%s` because it has no metatable", st.Def.Name.Raw, trait.Def.Name.Raw)
 		}
@@ -449,6 +456,9 @@ func (a *Analysis) resolveImplementations() {
 			a.Error(impl.Class.Span(), err.Error())
 		}
 		st := stTy.Class()
+		if !a.Project.StartsWithWorkspace(st.Def.Span().Source) {
+			a.panicf(impl.Span(), "cannot add methods to types defined outside this package")
+		}
 		if st.Def.Attributes.Has("no_impl") {
 			a.panicf(impl.Span(), "class `%s` cannot implement methods", st.Def.Name.Raw)
 		}
