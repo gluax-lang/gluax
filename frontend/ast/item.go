@@ -189,11 +189,10 @@ func (it *ImplTraitForClass) Span() common.Span {
 /* Import */
 
 type Import struct {
-	Public   bool
-	Path     lexer.TokString
-	As       *lexer.TokIdent
-	SafePath string
-	span     common.Span
+	Public bool
+	Path   lexer.TokString
+	As     *lexer.TokIdent
+	span   common.Span
 }
 
 func NewImport(path lexer.TokString, as *lexer.TokIdent, span common.Span) *Import {

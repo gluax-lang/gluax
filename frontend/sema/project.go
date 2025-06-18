@@ -290,7 +290,7 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
 	}
 
 	mainPath = common.FilePathClean(mainPath)
-	pa.Main = pa.PathRelativeToWorkspace(mainPath)
+	pa.Main = mainPath
 
 	if pa.Config.Std {
 		builtinTypesFile := common.FilePathClean(filepath.Join(pa.workspace, typesFile))
@@ -307,13 +307,13 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
 
 	state := pa.currentState
 	// don't leak full path
-	for p, a := range state.Files {
-		if !pa.StartsWithWorkspace(p) {
-			continue
-		}
-		delete(state.Files, p)
-		state.Files[pa.PathRelativeToWorkspace(p)] = a
-	}
+	// for p, a := range state.Files {
+	// 	if !pa.StartsWithWorkspace(p) {
+	// 		continue
+	// 	}
+	// 	delete(state.Files, p)
+	// 	state.Files[pa.PathRelativeToWorkspace(p)] = a
+	// }
 
 	packageName := pa.CurrentPackage()
 

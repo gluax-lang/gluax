@@ -72,7 +72,6 @@ func (a *Analysis) handleImport(scope *Scope, it *ast.Import) {
 	}
 
 	importInfo := ast.NewSemImport(*it, resolved, importedAnalysis)
-	it.SafePath = a.Project.PathRelativeToWorkspace(resolved)
 	if err := scope.AddImport(it.As.Raw, importInfo, it.As.Span(), it.Public); err != nil {
 		a.Error(it.As.Span(), err.Error())
 	}

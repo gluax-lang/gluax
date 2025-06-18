@@ -113,7 +113,7 @@ func (h *Handler) InlayHint(p *lsp.InlayHintParams) ([]lsp.InlayHint, error) {
 	if pAnalysis == nil {
 		return nil, nil
 	}
-	analysis := pAnalysis.Files()[pAnalysis.PathRelativeToWorkspace(path)]
+	analysis := pAnalysis.Files()[path]
 	if analysis == nil {
 		return nil, nil
 	}
@@ -200,7 +200,7 @@ func (h *Handler) getServerFileAnalysis(uri string) *sema.Analysis {
 	if err != nil {
 		return nil
 	}
-	analysis := pAnalysis.ServerFiles()[pAnalysis.PathRelativeToWorkspace(relPath)]
+	analysis := pAnalysis.ServerFiles()[relPath]
 	return analysis
 }
 
@@ -213,7 +213,7 @@ func (h *Handler) getClientFileAnalysis(uri string) *sema.Analysis {
 	if err != nil {
 		return nil
 	}
-	analysis := pAnalysis.ClientFiles()[pAnalysis.PathRelativeToWorkspace(relPath)]
+	analysis := pAnalysis.ClientFiles()[relPath]
 	return analysis
 }
 
@@ -344,5 +344,5 @@ func uriToFilePath(uri string) (string, error) {
 	}
 
 	// Convert slashes to OS‐specific separators
-	return filepath.FromSlash(p), nil
+	return common.FilePathClean(filepath.FromSlash(p)), nil
 }
