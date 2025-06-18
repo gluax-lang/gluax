@@ -16,11 +16,14 @@ func getImportScope(imp *ast.SemImport) *Scope {
 	return getImportAnalysis(imp).Scope
 }
 
+func checkSegmentGenerics(a *Analysis, seg *ast.PathSegment) {
+	if len(seg.Generics) > 0 {
+		a.Errorf(seg.Ident.Span(), "`%s` cannot have generics", seg.Ident.Raw)
+	}
+}
+
 func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafResolver func(*Symbol, *ast.PathSegment) *T) *T {
 	segs := path.Segments
-	if len(segs) == 0 {
-		return nil
-	}
 
 	var fakeImport ast.Import
 	fakeSemImport := ast.NewSemImport(fakeImport, "", a)
@@ -38,6 +41,7 @@ func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafRe
 			if i > 0 && !currentSym.IsPublic() {
 				a.panicf(seg.Span(), "`%s` is private", seg.Ident.Raw)
 			}
+			checkSegmentGenerics(a, seg)
 			if currentSym.IsImport() {
 				imp := currentSym.Import()
 				customSym := *currentSym
@@ -61,29 +65,30 @@ func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafRe
 }
 
 func (a *Analysis) resolvePathType(scope *Scope, path *ast.Path) Type {
-	t := resolvePathGeneric(a, scope, path, func(sym *Symbol, name *ast.PathSegment) *Type {
+	t := resolvePathGeneric(a, scope, path, func(sym *Symbol, leaf *ast.PathSegment) *Type {
 		if !sym.IsImport() {
 			return nil
 		}
-		sym = getImportScope(sym.Import()).GetSymbol(name.Ident.Raw)
+		sym = getImportScope(sym.Import()).GetSymbol(leaf.Ident.Raw)
 		if sym == nil || !sym.IsType() {
 			return nil
 		}
 		if len(path.Segments) > 1 && !sym.IsPublic() {
-			a.panicf(name.Span(), "`%s` is private", name.Ident.Raw)
+			a.panicf(leaf.Span(), "`%s` is private", leaf.Ident.Raw)
 		}
 
 		var ty *Type
-		if sym.IsType() && sym.Type().IsClass() && len(name.Generics) > 0 {
-			cls := a.resolveClass(scope, sym.Type().Class(), name.Generics, name.Span())
-			tyO := ast.NewSemType(cls, name.Span())
+		if sym.IsType() && sym.Type().IsClass() && len(leaf.Generics) > 0 {
+			cls := a.resolveClass(scope, sym.Type().Class(), leaf.Generics, leaf.Span())
+			tyO := ast.NewSemType(cls, leaf.Span())
 			ty = &tyO
 		} else {
+			checkSegmentGenerics(a, leaf)
 			ty = sym.Type()
 		}
 
 		path.ResolvedSymbol = sym
-		a.AddRef(*sym, name.Span())
+		a.AddRef(*sym, leaf.Span())
 
 		return ty
 	})
@@ -104,6 +109,7 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 			if len(path.Segments) > 1 && !sym.IsPublic() {
 				a.panicf(leaf.Span(), "`%s` is private", raw)
 			}
+			checkSegmentGenerics(a, leaf)
 			path.ResolvedSymbol = sym
 			a.AddRef(*sym, leaf.Span())
 			return sym.Value()
@@ -115,9 +121,7 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 				st := a.resolveClass(scope, baseTy.Class(), leaf.Generics, leaf.Span())
 				resolvedTy = ast.NewSemType(st, baseTy.Span())
 			} else {
-				if len(leaf.Generics) > 0 {
-					a.panicf(path.Span(), "cannot specify generics for non-class type `%s`", baseTy.String())
-				}
+				checkSegmentGenerics(a, leaf)
 				resolvedTy = *baseTy
 			}
 
@@ -168,6 +172,7 @@ func (a *Analysis) resolvePathSymbol(scope *Scope, path *ast.Path) Symbol {
 		if len(path.Segments) > 1 && !sym.IsPublic() {
 			a.panicf(leaf.Span(), "`%s` is private", raw)
 		}
+		checkSegmentGenerics(a, leaf)
 		path.ResolvedSymbol = sym
 		a.AddRef(*sym, leaf.Span())
 		return sym

@@ -20,7 +20,19 @@ func NewPath(segments []*PathSegment) Path {
 func NewSimplePath(ident Ident) Path {
 	return Path{
 		Segments: []*PathSegment{
-			{Ident: ident, Generics: nil},
+			{Ident: ident, Generics: nil, span: ident.Span()},
+		},
+	}
+}
+
+func NewSimplePathWithGenerics(ident Ident, generics []Type) Path {
+	span := ident.Span()
+	if len(generics) > 0 {
+		span = common.SpanFrom(ident.Span(), generics[len(generics)-1].Span())
+	}
+	return Path{
+		Segments: []*PathSegment{
+			{Ident: ident, Generics: generics, span: span},
 		},
 	}
 }
@@ -68,16 +80,13 @@ func (p *Path) LastSegment() *PathSegment {
 type PathSegment struct {
 	Ident    Ident
 	Generics []Type
+	span     common.Span
 }
 
-func NewPathSegment(ident Ident, generics []Type) *PathSegment {
-	return &PathSegment{Ident: ident, Generics: generics}
+func NewPathSegment(ident Ident, generics []Type, span common.Span) *PathSegment {
+	return &PathSegment{Ident: ident, Generics: generics, span: span}
 }
 
 func (ps *PathSegment) Span() common.Span {
-	if len(ps.Generics) > 0 {
-		lastGeneric := ps.Generics[len(ps.Generics)-1]
-		return common.SpanFrom(ps.Ident.Span(), lastGeneric.Span())
-	}
-	return ps.Ident.Span()
+	return ps.span
 }

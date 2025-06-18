@@ -20,10 +20,11 @@ func (p *parser) parseTypeX(flags Flags) ast.Type {
 		qSpan := p.prevSpan()
 		innerType := p.parseType() // no flags, because tuple/vararg can't be nilable
 
-		nilableIdent := lexer.NewTokIdent("nilable", qSpan)
-		segment := ast.NewPathSegment(nilableIdent, []ast.Type{innerType})
-		path := ast.NewPath([]*ast.PathSegment{segment})
-		return &path
+		nilable := ast.NewSimplePathWithGenerics(
+			lexer.NewTokIdent("nilable", qSpan),
+			[]ast.Type{innerType},
+		)
+		return &nilable
 	}
 
 	if p.Token.Is("Self") {

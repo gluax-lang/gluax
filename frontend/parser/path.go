@@ -11,20 +11,24 @@ func (p *parser) parsePath(firstIdent *ast.Ident) ast.Path {
 func (p *parser) parsePathInternal(firstIdent *ast.Ident, flags Flags) ast.Path {
 	var segments []*ast.PathSegment
 
+	var spanStart Span
+
 	ident := ast.Ident{}
 	if firstIdent != nil {
 		ident = *firstIdent
+		spanStart = firstIdent.Span()
 	} else {
 		ident = p.expectIdent()
+		spanStart = ident.Span()
 	}
 
 	generics := p.parseOptionalGenerics(flags)
-	segments = append(segments, ast.NewPathSegment(ident, generics))
+	segments = append(segments, ast.NewPathSegment(ident, generics, SpanFrom(spanStart, p.prevSpan())))
 
 	for p.tryConsume("::") {
 		ident := p.expectIdent()
 		generics := p.parseOptionalGenerics(flags)
-		segments = append(segments, ast.NewPathSegment(ident, generics))
+		segments = append(segments, ast.NewPathSegment(ident, generics, SpanFrom(ident.Span(), p.prevSpan())))
 	}
 	return ast.NewPath(segments)
 }
