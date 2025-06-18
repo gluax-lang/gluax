@@ -40,7 +40,7 @@ func (p *parser) parseFunctionParam(flags Flags, isFirst bool) ast.FunctionParam
 		name = &ident
 		if flags.Has(FlagFuncParamSelf) && ident.Raw == "self" {
 			if isFirst {
-				SelfPath := ast.NewPath([]ast.Ident{lexer.NewTokIdent("Self", ident.Span())})
+				SelfPath := ast.NewSimplePath(lexer.NewTokIdent("Self", ident.Span()))
 				return ast.NewFunctionParam(name, &SelfPath, SpanFrom(spanStart, p.prevSpan()))
 			} else {
 				common.PanicDiag("`self` can only be used as the first parameter in this context", ident.Span())

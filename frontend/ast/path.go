@@ -9,13 +9,20 @@ import (
 // Path represents a path to a symbol/class function/type.
 // It is a sequence of identifiers separated by "::".
 type Path struct {
-	Idents         []Ident
-	Generics       []Type  // generic parameters
+	Segments       []*PathSegment
 	ResolvedSymbol *Symbol // resolved symbol, if any
 }
 
-func NewPath(idents []Ident) Path {
-	return Path{Idents: idents}
+func NewPath(segments []*PathSegment) Path {
+	return Path{Segments: segments}
+}
+
+func NewSimplePath(ident Ident) Path {
+	return Path{
+		Segments: []*PathSegment{
+			{Ident: ident, Generics: nil},
+		},
+	}
 }
 
 func (p *Path) isType() {}
@@ -24,39 +31,53 @@ func (p *Path) ExprKind() ExprKind {
 }
 
 func (p *Path) Span() common.Span {
-	// from the first ident to the last
-	return common.SpanFrom(p.Idents[0].Span(), p.Idents[len(p.Idents)-1].Span())
+	// from the first segment to the last
+	return common.SpanFrom(p.Segments[0].Span(), p.Segments[len(p.Segments)-1].Span())
 }
 
 func (p *Path) IsSelf() bool {
-	return len(p.Idents) == 1 && p.Idents[0].Raw == "Self"
+	return len(p.Segments) == 1 && p.Segments[0].Ident.Raw == "Self"
 }
 
 func (p *Path) IsVec() bool {
-	return len(p.Idents) == 1 && p.Idents[0].Raw == "vec"
+	return len(p.Segments) == 1 && p.Segments[0].Ident.Raw == "vec"
 }
 
 func (p *Path) IsMap() bool {
-	return len(p.Idents) == 1 && p.Idents[0].Raw == "map"
+	return len(p.Segments) == 1 && p.Segments[0].Ident.Raw == "map"
 }
 
 func (p *Path) String() string {
 	var sb strings.Builder
-	sb.WriteString(p.Idents[0].Raw)
-	for i := 1; i < len(p.Idents); i++ {
+	sb.WriteString(p.Segments[0].Ident.Raw)
+	for i := 1; i < len(p.Segments); i++ {
 		sb.WriteString("::")
-		sb.WriteString(p.Idents[i].Raw)
+		sb.WriteString(p.Segments[i].Ident.Raw)
 	}
 	return sb.String()
 }
 
-func (p *Path) ToSnakeCase() string {
-	var sb strings.Builder
-	for i, ident := range p.Idents {
-		if i > 0 {
-			sb.WriteString("_")
-		}
-		sb.WriteString(strings.ToLower(ident.Raw))
+func (p *Path) LastIdent() Ident {
+	return p.Segments[len(p.Segments)-1].Ident
+}
+
+func (p *Path) LastSegment() *PathSegment {
+	return p.Segments[len(p.Segments)-1]
+}
+
+type PathSegment struct {
+	Ident    Ident
+	Generics []Type
+}
+
+func NewPathSegment(ident Ident, generics []Type) *PathSegment {
+	return &PathSegment{Ident: ident, Generics: generics}
+}
+
+func (ps *PathSegment) Span() common.Span {
+	if len(ps.Generics) > 0 {
+		lastGeneric := ps.Generics[len(ps.Generics)-1]
+		return common.SpanFrom(ps.Ident.Span(), lastGeneric.Span())
 	}
-	return sb.String()
+	return ps.Ident.Span()
 }

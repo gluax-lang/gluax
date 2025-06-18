@@ -2,7 +2,6 @@ package ast
 
 import (
 	"github.com/gluax-lang/gluax/common"
-	"github.com/gluax-lang/gluax/frontend/lexer"
 )
 
 type Type interface {
@@ -10,37 +9,24 @@ type Type interface {
 	Span() common.Span
 }
 
-func NilType(span common.Span) Type {
-	return &Path{
-		Idents: []Ident{lexer.NewTokIdent("nil", span)},
-	}
-}
-
 func IsNilable(ty Type) bool {
-	if gs, ok := ty.(*GenericClass); ok {
-		idents := gs.Path.Idents
-		if len(idents) == 1 && idents[0].Raw == "nilable" {
-			return true
-		}
+	if p, ok := ty.(*Path); ok {
+		// A path is nilable if it's `nilable<T>`
+		return len(p.Segments) == 1 && p.Segments[0].Ident.Raw == "nilable" && len(p.Segments[0].Generics) > 0
 	}
 	return false
 }
 
 func IsSelf(ty Type) bool {
 	if p, ok := ty.(*Path); ok {
-		idents := p.Idents
-		if len(idents) == 1 && idents[0].Raw == "Self" {
-			return true
-		}
+		return p.IsSelf()
 	}
 	return false
 }
 
 func IsVararg(ty Type) bool {
-	if _, ok := ty.(*Vararg); ok {
-		return true
-	}
-	return false
+	_, ok := ty.(*Vararg)
+	return ok
 }
 
 /* Tuple */
@@ -75,24 +61,6 @@ func (v *Vararg) isType() {}
 
 func (v *Vararg) Span() common.Span {
 	return v.span
-}
-
-/* GenericClass */
-
-type GenericClass struct {
-	Path     Path
-	Generics []Type
-	span     common.Span
-}
-
-func NewGenericClass(path Path, generics []Type, span common.Span) *GenericClass {
-	return &GenericClass{Path: path, Generics: generics, span: span}
-}
-
-func (g *GenericClass) isType() {}
-
-func (g *GenericClass) Span() common.Span {
-	return g.span
 }
 
 /* Unreachable */

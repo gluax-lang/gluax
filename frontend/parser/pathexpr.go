@@ -5,40 +5,14 @@ import (
 )
 
 func (p *parser) parsePathExpr(ctx ExprCtx, ident *ast.Ident) ast.Expr {
-	path := ast.Path{Idents: []ast.Ident{}, Generics: []ast.Type{}}
+	path := p.parsePathInternal(ident, FlagTurboFishGenerics)
 
-	if ident != nil {
-		path.Idents = append(path.Idents, *ident)
-	} else {
-		path.Idents = append(path.Idents, p.expectIdent())
-	}
-
-	for p.tryConsume("::") {
-		// `::<` -> turbofish generics
-		if p.Token.Is("<") {
-			generics := p.parseTurbofishGenerics()
-			if p.Token.Is("{") {
-				return p.parseClassInit(path, generics)
-			} else {
-				path.Generics = generics
-				p.expect("::")
-			}
-		}
-
-		// Ordinary path segment.
-		path.Idents = append(path.Idents, p.expectIdent())
-
-		if len(path.Generics) > 0 {
-			break
-		}
-	}
-
-	// Class initializer without turbofish:  Foo::Bar { ... }
 	if !ctx.IsCondition() && p.Token.Is("{") {
-		return p.parseClassInit(path, nil)
+		return p.parseClassInit(path)
 	}
 
-	return ast.NewExpr(&path)
+	pathExpr := ast.NewExpr(&path)
+	return pathExpr
 }
 
 // parseClassInitField parses a single `field: value` entry inside a class
@@ -47,29 +21,15 @@ func (p *parser) parseClassInitField() ast.ExprClassField {
 	name := p.expectIdent()
 	p.expect(":")
 	value := p.parseExpr(ExprCtxNormal)
-	return ast.ExprClassField{
-		Name:  name,
-		Value: value,
-	}
+	return ast.ExprClassField{Name: name, Value: value}
 }
 
-// parseTurbofishGenerics parses the `<T, U, V>` part after `::<`.
-func (p *parser) parseTurbofishGenerics() []ast.Type {
-	p.expect("<")
-	var generics []ast.Type
-	p.parseCommaSeparatedDelimited(">", func(p *parser) {
-		generics = append(generics, p.parseType())
-	})
-	return generics
-}
-
-func (p *parser) parseClassInit(ty ast.Path, generics []ast.Type) ast.Expr {
-	if ty.IsVec() {
-		return p.parseVecInit(generics)
+func (p *parser) parseClassInit(path ast.Path) ast.Expr {
+	if path.IsVec() {
+		return p.parseVecInit(path)
 	}
-
-	if ty.IsMap() {
-		return p.parseMapInit(generics)
+	if path.IsMap() {
+		return p.parseMapInit(path)
 	}
 
 	p.expect("{")
@@ -80,12 +40,12 @@ func (p *parser) parseClassInit(ty ast.Path, generics []ast.Type) ast.Expr {
 	})
 
 	spanEnd := p.prevSpan()
-	span := SpanFrom(ty.Span(), spanEnd)
+	span := SpanFrom(path.Span(), spanEnd)
 
-	return ast.NewClassInit(ty, generics, fields, span)
+	return ast.NewClassInit(path, fields, span)
 }
 
-func (p *parser) parseVecInit(generics []ast.Type) ast.Expr {
+func (p *parser) parseVecInit(path ast.Path) ast.Expr {
 	spanStart := p.span()
 
 	p.expect("{")
@@ -97,6 +57,11 @@ func (p *parser) parseVecInit(generics []ast.Type) ast.Expr {
 
 	spanEnd := p.prevSpan()
 	span := SpanFrom(spanStart, spanEnd)
+
+	var generics []ast.Type
+	if len(path.Segments) > 0 && len(path.Segments[0].Generics) > 0 {
+		generics = path.Segments[0].Generics
+	}
 
 	return ast.NewVecInitExpr(generics, values, span)
 }
@@ -111,7 +76,7 @@ func (p *parser) parseMapEntry() ast.ExprMapEntry {
 	}
 }
 
-func (p *parser) parseMapInit(generics []ast.Type) ast.Expr {
+func (p *parser) parseMapInit(path ast.Path) ast.Expr {
 	spanStart := p.span()
 
 	p.expect("{")
@@ -123,6 +88,11 @@ func (p *parser) parseMapInit(generics []ast.Type) ast.Expr {
 
 	spanEnd := p.prevSpan()
 	span := SpanFrom(spanStart, spanEnd)
+
+	var generics []ast.Type
+	if len(path.Segments) > 0 && len(path.Segments[0].Generics) > 0 {
+		generics = path.Segments[0].Generics
+	}
 
 	return ast.NewMapInitExpr(generics, entries, span)
 }

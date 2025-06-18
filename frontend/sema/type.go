@@ -14,17 +14,6 @@ func (a *Analysis) resolveType(scope *Scope, ty ast.Type) Type {
 		}
 		found.SetSpan(t.Span())
 		return found
-	case *ast.GenericClass:
-		if a.SetClassSetupSpan(ty.Span()) {
-			defer a.ClearClassSetupSpan()
-		}
-		ty := a.resolvePathType(scope, &t.Path)
-		if !ty.IsClass() {
-			a.panicf(t.Span(), "expected class type, got: %s", ty.String())
-		}
-		st := ty.Class()
-		st = a.resolveClass(scope, st, t.Generics, t.Span())
-		return ast.NewSemType(st, t.Span())
 	case *ast.Tuple:
 		elems := make([]Type, 0, len(t.Elems))
 		for _, elem := range t.Elems {

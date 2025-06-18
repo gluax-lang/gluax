@@ -31,7 +31,7 @@ func (p *parser) parseGenericParam() ast.GenericParam {
 	var constraints []ast.Path
 	if p.tryConsume(":") {
 		for {
-			constraints = append(constraints, p.parsePath())
+			constraints = append(constraints, p.parsePath(nil))
 			if !p.tryConsume("+") {
 				break
 			}

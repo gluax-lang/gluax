@@ -10,7 +10,7 @@ func (p *parser) parseQPath() *ast.QPath {
 
 	p.expect("as")
 
-	as := p.parsePath()
+	as := p.parsePath(nil)
 
 	p.expect(">")
 

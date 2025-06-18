@@ -562,14 +562,13 @@ type ExprClassField struct {
 }
 
 type ExprClassInit struct {
-	Name     Path
-	Generics []Type
-	Fields   []ExprClassField
-	span     common.Span
+	Name   Path
+	Fields []ExprClassField
+	span   common.Span
 }
 
-func NewClassInit(name Path, generics []Type, fields []ExprClassField, span common.Span) Expr {
-	return NewExpr(&ExprClassInit{Name: name, Generics: generics, Fields: fields, span: span})
+func NewClassInit(name Path, fields []ExprClassField, span common.Span) Expr {
+	return NewExpr(&ExprClassInit{Name: name, Fields: fields, span: span})
 }
 
 func (s *ExprClassInit) ExprKind() ExprKind { return ExprKindClassInit }

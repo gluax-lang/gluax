@@ -227,5 +227,5 @@ func (u Use) NameIdent() lexer.TokIdent {
 	if u.As != nil {
 		return *u.As
 	}
-	return u.Path.Idents[len(u.Path.Idents)-1]
+	return u.Path.LastIdent()
 }

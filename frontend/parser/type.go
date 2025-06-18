@@ -18,16 +18,17 @@ func (p *parser) parseTypeX(flags Flags) ast.Type {
 			common.PanicDiag("cannot have nested nilable types", p.span())
 		}
 		qSpan := p.prevSpan()
-		ty := p.parseType() // no flags, because tuple/vararg can't be nilable
+		innerType := p.parseType() // no flags, because tuple/vararg can't be nilable
+
 		nilableIdent := lexer.NewTokIdent("nilable", qSpan)
-		nilablePath := ast.NewPath([]ast.Ident{nilableIdent})
-		generics := []ast.Type{ty}
-		return ast.NewGenericClass(nilablePath, generics, SpanFrom(spanStart, p.prevSpan()))
+		segment := ast.NewPathSegment(nilableIdent, []ast.Type{innerType})
+		path := ast.NewPath([]*ast.PathSegment{segment})
+		return &path
 	}
 
 	if p.Token.Is("Self") {
 		p.advance()
-		selfPath := ast.NewPath([]ast.Ident{lexer.NewTokIdent("Self", p.prevSpan())})
+		selfPath := ast.NewSimplePath(lexer.NewTokIdent("Self", p.prevSpan()))
 		return &selfPath
 	}
 
@@ -48,7 +49,8 @@ func (p *parser) parseTypeX(flags Flags) ast.Type {
 		return p.parseDynTraitType()
 	}
 
-	return p.parsePathType(spanStart, nil)
+	path := p.parsePath(nil)
+	return &path
 }
 
 func (p *parser) parseType() ast.Type {
@@ -93,27 +95,11 @@ func (p *parser) parseTupleType(flags Flags) ast.Type {
 	return ast.NewTuple(elems, span)
 }
 
-func (p *parser) parsePathType(spanStart common.Span, path *ast.Path) ast.Type {
-	if path == nil {
-		parsed := p.parsePath()
-		path = &parsed
-	}
-	// generic class
-	if p.tryConsume("<") {
-		var generics []ast.Type
-		p.parseCommaSeparatedDelimited(">", func(p *parser) {
-			generics = append(generics, p.parseType())
-		})
-		return ast.NewGenericClass(*path, generics, SpanFrom(spanStart, p.prevSpan()))
-	}
-	return path
-}
-
 func (p *parser) parseDynTraitType() ast.Type {
 	spanStart := p.span()
 	p.advance() // consume `dyn`
 
-	trait := p.parsePath()
+	trait := p.parsePath(nil)
 	span := SpanFrom(spanStart, p.prevSpan())
 
 	return ast.NewDynTrait(trait, span)

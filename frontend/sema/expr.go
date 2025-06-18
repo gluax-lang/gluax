@@ -438,7 +438,7 @@ func (a *Analysis) handleForInExpr(scope *Scope, forIn *ast.ExprForIn) {
 		idxVariable := ast.NewSingleVariable(v, varType)
 		a.AddValue(child, varName, ast.NewValue(idxVariable), v.Span())
 		if i == 0 && forIn.IsRange {
-			idxPath := ast.NewPath([]ast.Ident{lexer.NewTokIdent(varName, v.Span())})
+			idxPath := ast.NewSimplePath(lexer.NewTokIdent(varName, v.Span()))
 			idxPath.ResolvedSymbol = child.GetSymbol(varName)
 			forIn.IdxPath = &idxPath
 		}

@@ -200,7 +200,7 @@ func (p *parser) parseTrait() ast.Item {
 	var superTraits []ast.Path
 	if p.tryConsume(":") {
 		for {
-			superTrait := p.parsePath()
+			superTrait := p.parsePath(nil)
 			superTraits = append(superTraits, superTrait)
 			if !p.tryConsume("+") {
 				break
@@ -247,7 +247,7 @@ func (p *parser) parseUse() ast.Item {
 	spanStart := p.span()
 	p.advance() // skip `use`
 
-	path := p.parsePath()
+	path := p.parsePath(nil)
 
 	var as *ast.Ident
 	if p.tryConsume("as") {
