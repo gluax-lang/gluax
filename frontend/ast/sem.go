@@ -324,6 +324,14 @@ func (c SemClass) IsFullyConcrete() bool {
 	return true
 }
 
+func (c SemClass) IsGlobal() bool {
+	return c.Def.IsGlobal()
+}
+
+func (c SemClass) GlobalName() string {
+	return c.Def.GlobalName()
+}
+
 /* FunctionType */
 
 type SemFunction struct {
@@ -447,6 +455,14 @@ func (f SemFunction) FirstReturnType() SemType {
 		return f.Return.Tuple().Elems[0]
 	}
 	return f.Return
+}
+
+func (f SemFunction) IsGlobal() bool {
+	return f.Def.IsGlobal()
+}
+
+func (f SemFunction) GlobalName() string {
+	return f.Def.GlobalName()
 }
 
 /* Tuple */

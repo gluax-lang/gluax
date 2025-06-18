@@ -18,14 +18,8 @@ func (cg *Codegen) decorateClassName_internal(cls *ast.SemClass) string {
 }
 
 func (cg *Codegen) decorateClassName(st *ast.SemClass) string {
-	{
-		raw := st.Def.Name.Raw
-		if st.Def.Public && st.Def.IsGlobalDef {
-			if rename_to := st.Def.Attributes.GetString("rename_to"); rename_to != nil {
-				return *rename_to
-			}
-			return raw
-		}
+	if st.IsGlobal() {
+		return st.GlobalName()
 	}
 	baseName := cg.decorateClassName_internal(st)
 	return cg.getPublic(baseName) + fmt.Sprintf(" --[[class %s]]", st.String())

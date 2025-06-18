@@ -2,10 +2,10 @@
 
 import "base";
 
-pub use globals::base::print;
-pub use globals::base::error;
-pub use globals::base::error_level;
-pub use globals::base::_VERSION;
+pub use base::print;
+pub use base::error;
+pub use base::error_level;
+pub use base::_VERSION;
 
 pub use base::printf;
 pub use base::errorf;

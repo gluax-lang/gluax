@@ -1,16 +1,17 @@
 import "../math";
 import "../debug";
+import "../base";
 
 impl number {
     #[inline]
     func to_string(self) -> string {
-        globals::base::tostring(self)
+        base::tostring(self)
     }
 
     #[inline]
     func to_char(self) -> string {
         debug::assert(self >= 0 && self <= 255, "number.to_char: value must be in range [0, 255], got %s", self);
-        globals::str::char(self)
+        string::char(self)
     }
 
     #[inline]
@@ -59,7 +60,7 @@ impl number {
     func frexp(self) -> (number, number) { math::frexp(self) }
 
     #[inline]
-    func log(self, base: ?number) -> number { math::log(self, base) }
+    func log(self, b: ?number) -> number { math::log(self, b) }
 
     #[inline]
     func log10(self) -> number { math::log10(self) }

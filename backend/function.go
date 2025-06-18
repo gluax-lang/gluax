@@ -8,24 +8,21 @@ import (
 )
 
 func (cg *Codegen) decorateFuncName(f *ast.SemFunction) string {
-	raw := f.Def.Name.Raw
-	if f.Def.Public && f.Def.IsGlobalDef {
-		if rename_to := f.Def.Attributes.GetString("rename_to"); rename_to != nil {
-			return *rename_to
-		}
-		return raw
+	if f.IsGlobal() {
+		return f.GlobalName()
 	}
+	raw := f.Def.Name.Raw
 	if f.Trait != nil {
 		dTName := cg.decorateTraitName(f.Trait.Def, f.Class)
-		return dTName + "." + f.Def.Name.Raw
+		return dTName + "." + raw
 	}
 	if f.Class != nil {
 		stName := cg.decorateClassName(f.Class)
-		return stName + "." + f.Def.Name.Raw
+		return stName + "." + raw
 	}
 	var sb strings.Builder
 	sb.WriteString(FUNC_PREFIX)
-	sb.WriteString(f.Def.Name.Raw)
+	sb.WriteString(raw)
 	if f.Def.IsItem {
 		id := fmt.Sprintf("_%d", f.Def.Span().ID)
 		sb.WriteString(id)
@@ -46,6 +43,9 @@ func (cg *Codegen) genFunctionParams(f ast.Function) []string {
 }
 
 func (cg *Codegen) genFunction(f *ast.SemFunction) string {
+	if f.IsGlobal() {
+		return f.GlobalName()
+	}
 	def := f.Def
 	oldBuf := cg.newBuf()
 
@@ -185,7 +185,7 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 		if fun.HasVarargParam() || fun.HasVarargReturn() {
 			return false
 		}
-		if fun.Def.IsGlobalDef {
+		if fun.IsGlobal() {
 			return false
 		}
 		if fun.Def.Body == nil {

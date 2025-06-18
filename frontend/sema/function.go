@@ -48,7 +48,7 @@ func (a *Analysis) handleFunctionImpl(scope *Scope, it *ast.Function, withBody b
 		}
 	}
 
-	if it.Body != nil && !a.Project.processingGlobals {
+	if it.Body != nil && !it.IsGlobal() {
 		if withBody {
 			_ = a.handleBlock(child, it.Body)
 			a.Matches(returnType, it.Body.Type(), it.Body.Span())

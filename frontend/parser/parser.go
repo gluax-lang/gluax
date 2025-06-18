@@ -25,18 +25,16 @@ func errorToDiagnostic(err any) *diagnostic {
 }
 
 type parser struct {
-	TokenStream       []lexer.Token
-	Token             lexer.Token
-	Pos               uint32
-	processingGlobals bool
+	TokenStream []lexer.Token
+	Token       lexer.Token
+	Pos         uint32
 }
 
-func Parse(tkS []lexer.Token, processingGlobals bool) (astRet *ast.Ast, err *diagnostic) {
+func Parse(tkS []lexer.Token) (astRet *ast.Ast, err *diagnostic) {
 	p := &parser{
-		TokenStream:       tkS,
-		Token:             tkS[0],
-		Pos:               0,
-		processingGlobals: processingGlobals,
+		TokenStream: tkS,
+		Token:       tkS[0],
+		Pos:         0,
 	}
 
 	defer func() {

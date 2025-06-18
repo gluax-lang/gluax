@@ -22,8 +22,6 @@ type Let struct {
 
 	IsItem bool
 	span   common.Span
-
-	IsGlobalDef bool // true if this is a global definition
 }
 
 func NewLet(
@@ -48,6 +46,20 @@ func (l *Let) isStmt() {}
 
 func (l *Let) Span() common.Span {
 	return l.span
+}
+
+func (l *Let) IsGlobal() bool {
+	return l.Attributes.Has("global")
+}
+
+func (l *Let) GlobalName(n int) string {
+	if l.IsGlobal() {
+		if renameTo := l.Attributes.GetString("global"); renameTo != nil {
+			return *renameTo
+		}
+		return l.Names[n].Raw
+	}
+	panic("let is not global, cannot get global name")
 }
 
 /* Return */

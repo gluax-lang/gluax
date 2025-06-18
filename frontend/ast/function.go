@@ -12,17 +12,16 @@ type FunctionSignature struct {
 }
 
 type Function struct {
-	Public      bool
-	Name        *lexer.TokIdent // nil if anonymous
-	Params      []FunctionParam
-	Errorable   bool
-	ReturnType  *Type
-	Body        *Block // nil if abstract
-	Attributes  Attributes
-	sem         *SemFunction
-	span        common.Span
-	IsItem      bool
-	IsGlobalDef bool // true if this is a global definition
+	Public     bool
+	Name       *lexer.TokIdent // nil if anonymous
+	Params     []FunctionParam
+	Errorable  bool
+	ReturnType *Type
+	Body       *Block // nil if abstract
+	Attributes Attributes
+	sem        *SemFunction
+	span       common.Span
+	IsItem     bool
 }
 
 func NewFunction(name *lexer.TokIdent, sig FunctionSignature, body *Block, attributes Attributes, span common.Span) *Function {
@@ -52,6 +51,20 @@ func (f *Function) SetSem(sem *SemFunction) {
 
 func (f *Function) Sem() *SemFunction {
 	return f.sem
+}
+
+func (f *Function) IsGlobal() bool {
+	return f.Attributes.Has("global")
+}
+
+func (f *Function) GlobalName() string {
+	if f.IsGlobal() {
+		if renameTo := f.Attributes.GetString("global"); renameTo != nil {
+			return *renameTo
+		}
+		return f.Name.Raw
+	}
+	panic("function is not global, cannot get global name")
 }
 
 type FunctionParam struct {

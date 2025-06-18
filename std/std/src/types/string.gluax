@@ -1,13 +1,39 @@
 import "../debug";
+import "../base";
 
-use globals::str;
+/* Globals */
+#[global = "string.sub"]
+func sub(s: string, s_p: number, e_p: ?number) -> string {}
+
+#[global = "string.char"]
+func char(...number) -> string {}
+
+#[global = "string.byte"]
+func byte(s: string, p: number) -> ?number {}
+
+#[global = "string.byte"]
+func bytes(s: string, s_p: number, e_p: number) -> ...number {}
+
+#[global = "string.format"]
+func format(fmt: string, ...any) -> string {}
+
+#[global = "string.rep"]
+func rep(s: string, n: number, sep: ?string) -> string {}
+
+#[global = "string.upper"]
+func upper(s: string) -> string {}
+
+#[global = "string.lower"]
+func lower(s: string) -> string {}
+
+/* End Globals */
 
 impl string {
-    func char(...number) -> string { str::char(...) }
+    func char(...number) -> string { char(...) }
 
     #[inline]
     func to_number(self) -> ?number {
-        globals::base::tonumber(self)
+        base::tonumber(self)
     }
 
     #[inline]
@@ -20,14 +46,14 @@ impl string {
 
     #[inline]
     func sub(self, s_pos: number, e_pos: ?number) -> string {
-        str::sub(self, s_pos, e_pos)
+        sub(self, s_pos, e_pos)
     }
 
     #[inline]
     func byte(self, s_pos: number) -> ?number {
         debug::assert(s_pos > 0, "string.byte: position must be greater than 0, got %s", s_pos);
         debug::assert(s_pos <= #self, "string.byte: position out of bounds, got %s, string length is %s", s_pos, #self);
-        str::byte(self, s_pos)
+        byte(self, s_pos)
     }
 
     func bytes(self, s_pos: number, e_pos: number) -> ...number {
@@ -35,7 +61,7 @@ impl string {
         debug::assert(s_pos <= #self, "string.bytes: start position out of bounds, got %s, string length is %s", s_pos, #self);
         debug::assert(e_pos >= s_pos, "string.bytes: end position must be greater than or equal to start position, got %s and %s", e_pos, s_pos);
         debug::assert(e_pos <= #self, "string.bytes: end position out of bounds, got %s, string length is %s", e_pos, #self);
-        return str::bytes(self, s_pos, e_pos);
+        return bytes(self, s_pos, e_pos);
     }
 
     #[inline]
@@ -48,22 +74,22 @@ impl string {
         suffix == "" || self.sub(-#suffix, nil) == suffix
     }
 
-    func format(self, ...any) -> string { str::format(self, ...) }
+    func format(self, ...any) -> string { format(self, ...) }
 
     #[inline]
-    func rep(self, n: number, sep: ?string) -> string { str::rep(self, n, sep) }
+    func rep(self, n: number, sep: ?string) -> string { rep(self, n, sep) }
 
     #[inline]
-    func upper(self) -> string { str::upper(self) }
+    func upper(self) -> string { upper(self) }
 
     #[inline]
-    func lower(self) -> string { str::lower(self) }
+    func lower(self) -> string { lower(self) }
 
     #[inline]
     func __x_iter_range_bound(self) -> number { #self }
 
     #[inline]
     func __x_iter_range(self, idx: number) -> string {
-        str::sub(self, idx, idx)
+        sub(self, idx, idx)
     }
 }

@@ -36,9 +36,6 @@ type ProjectAnalysis struct {
 	workspace string
 	overrides map[string]string
 
-	// Processing Globals declarations or not?
-	processingGlobals bool
-
 	OsRoot *os.Root
 
 	// Either "SERVER" or "CLIENT"; used inside AnalyzeFile
@@ -48,8 +45,6 @@ type ProjectAnalysis struct {
 
 	// After merging, final map that combines them
 	files map[string]*Analysis
-
-	allGlobals []string
 }
 
 // NewProjectAnalysis builds a project-level container.
@@ -60,8 +55,6 @@ func NewProjectAnalysis(workspace string, overrides map[string]string) *ProjectA
 
 		// Final merged map
 		files: make(map[string]*Analysis),
-
-		allGlobals: make([]string, 0, 10),
 	}
 
 	for p, c := range overrides {
@@ -75,39 +68,6 @@ func NewProjectAnalysis(workspace string, overrides map[string]string) *ProjectA
 
 func (pa *ProjectAnalysis) getStateFiles() map[string]*Analysis {
 	return pa.currentState.Files
-}
-
-func (pa *ProjectAnalysis) globalsList() []string {
-	out := make([]string, 0, 60)
-	if pa.Config.Std && pa.workspace == std.Workspace {
-		const (
-			prefix = "std/src/@globals/"
-			suffix = ".gluax"
-		)
-		for p := range pa.overrides {
-			if strings.HasPrefix(p, prefix) && strings.HasSuffix(p, suffix) {
-				out = append(out, p)
-				pa.allGlobals = append(pa.allGlobals, pa.PathRelativeToWorkspace(p)) // keep for later
-			}
-		}
-	} else {
-		globalsDir := filepath.Join(pa.workspace, "src", "@globals")
-		entries, err := os.ReadDir(globalsDir)
-		if err != nil {
-			return out
-		}
-		for _, e := range entries {
-			if e.IsDir() {
-				continue
-			}
-			if strings.HasSuffix(e.Name(), ".gluax") {
-				name := common.FilePathClean(filepath.Join(globalsDir, e.Name()))
-				out = append(out, name)                                                 // full absolute path
-				pa.allGlobals = append(pa.allGlobals, pa.PathRelativeToWorkspace(name)) // keep for later
-			}
-		}
-	}
-	return out
 }
 
 func (pa *ProjectAnalysis) newAnalysis(path string) *Analysis {
@@ -149,7 +109,7 @@ func (pa *ProjectAnalysis) parseFile(path string) (*Analysis, error) {
 		return analysis, fmt.Errorf("lexing failed")
 	}
 
-	astRoot, diag := parser.Parse(toks, pa.processingGlobals)
+	astRoot, diag := parser.Parse(toks)
 	if diag != nil {
 		analysis.Diags = append(analysis.Diags, *diag)
 		return analysis, fmt.Errorf("parsing failed")
@@ -275,33 +235,6 @@ func (pa *ProjectAnalysis) CurrentPackage() string {
 	return pa.Config.Name
 }
 
-func (pa *ProjectAnalysis) importGlobals() {
-	pa.processingGlobals = true
-	globalsA := pa.newAnalysis("globals")
-	for _, path := range pa.globalsList() {
-		if err := pa.AnalyzeFromEntryPoint(path); err != nil {
-			log.Printf("Failed to analyze globals file %s: %v", path, err)
-			continue
-		}
-		analysis := pa.getStateFiles()[path]
-		inferredName := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
-		if !lexer.IsValidIdent(inferredName) {
-			analysis.Errorf(common.SpanDefault(), "`%s` is not a valid identifier to use, rename it", inferredName)
-			continue
-		}
-		createdImport := createImport(inferredName, analysis)
-		_ = globalsA.Scope.AddImport(inferredName, createdImport, common.SpanDefault(), true)
-	}
-	globalsImport := createImport("globals", globalsA)
-	globalsScope := NewScope(pa.currentState.RootScope)
-	err := globalsScope.AddImport("globals", globalsImport, common.SpanDefault(), true)
-	if err != nil {
-		panic(err)
-	}
-	pa.currentState.RootScope = globalsScope
-	pa.processingGlobals = false
-}
-
 func (pa *ProjectAnalysis) getProjectConfig(workspace string) (frontend.GluaxToml, error) {
 	config := frontend.GluaxToml{}
 	tomlContent, err := pa.ReadFile(filepath.Join(workspace, "gluax.toml"))
@@ -368,8 +301,6 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
 		delete(pa.overrides, builtinTypesFile)
 	}
 
-	pa.importGlobals()
-
 	if err := pa.AnalyzeFromEntryPoint(mainPath); err != nil {
 		return fmt.Errorf("failed to analyze package starting from %s: %w", mainPath, err)
 	}
@@ -389,7 +320,7 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
 	pa.workspace, pa.Config, pa.currentState.RootScope = oldWs, oldConfig, oldRootScope
 
 	if !isMain {
-		analysis := state.Files[pa.PathRelativeToWorkspace(mainPath)]
+		analysis := state.Files[mainPath]
 		imp := createImport(packageName, analysis)
 		err := state.RootScope.AddImport(packageName, imp, common.SpanDefault(), true)
 		if err != nil {
@@ -453,11 +384,6 @@ func AnalyzeProject(workspace string, overrides map[string]string) (*ProjectAnal
 
 	// Now unify pa.filesServer and pa.filesClient into pa.files
 	pa.mergeAll()
-
-	for _, path := range pa.allGlobals {
-		delete(pa.serverState.Files, path)
-		delete(pa.clientState.Files, path)
-	}
 
 	return pa, nil
 }

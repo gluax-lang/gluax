@@ -63,9 +63,6 @@ func (p *parser) parseLet(isItem bool) *ast.Let {
 
 	span := SpanFrom(spanStart, p.prevSpan())
 	let := ast.NewLet(names, types, values, span, isItem)
-	if isItem {
-		let.IsGlobalDef = p.processingGlobals
-	}
 	return let
 }
 

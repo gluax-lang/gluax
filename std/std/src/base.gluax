@@ -1,14 +1,57 @@
-use globals::base;
-use globals::str;
+/* Globals */
 
-pub use base::_VERSION;
+#[global]
+pub let _VERSION: string = "";
+
+#[global]
+pub func print(...any) {}
+
+#[global]
+pub func error(m: string) -> unreachable {}
+
+#[global = "error"]
+pub func error_level(m: string, level: number) -> unreachable {}
+
+#[global]
+pub func rawequal(v1: any, v2: any) -> bool {}
+
+#[global]
+pub func rawget(t: table, k: any) -> any {}
+#[global]
+pub func rawset(t: table, k: any, v: any) {}
+
+#[global]
+pub func getmetatable(t: any) -> any {}
+#[global]
+pub func setmetatable(t: any, m: any) {}
+
+#[global]
+pub func tonumber(v: any) -> ?number {}
+
+#[global = "tonumber"]
+pub func tonumber_base(v: any, base: ?number) -> ?number {}
+
+#[global]
+pub func getfenv(v: any) -> map<any, any> {}
+
+#[global]
+pub func pcall(f: anyfunc, ...any) -> (bool, ...any) {}
+
+#[global]
+pub func tostring(v: any) -> string {}
+
+#[global]
+pub func next(t: table, prev_k: any) -> (any, any) {}
+
+/* End Globals */
+
 
 pub func getfenv_f(f: anyfunc) -> map<any, any> {
-    base::getfenv(f)
+    getfenv(f)
 }
 
 pub func getfenv_l(level: number) ! -> map<any, any> {
-    let success, res = base::pcall(base::getfenv, level);
+    let success, res = pcall(getfenv, level);
     if !success {
         throw (res unsafe_cast_as string);
     }
@@ -16,9 +59,9 @@ pub func getfenv_l(level: number) ! -> map<any, any> {
 }
 
 pub func printf(fmt: string, ...any) {
-    base::print(str::format(fmt, ...))
+    print(string::format(fmt, ...))
 }
 
 pub func errorf(msg: string, ...any) -> unreachable {
-    base::error(str::format(msg, ...))
+    error(string::format(msg, ...))
 }

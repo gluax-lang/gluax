@@ -275,6 +275,9 @@ func (cg *Codegen) generateTraitImpls() {
 
 func (cg *Codegen) generateFunctions() {
 	for _, funDef := range cg.Ast.Funcs {
+		if funDef.IsGlobal() {
+			continue
+		}
 		fun := funDef.Sem()
 		name := cg.decorateFuncName(fun)
 		cg.ln("%s = %s;", name, cg.genFunction(funDef.Sem()))

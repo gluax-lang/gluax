@@ -8,14 +8,11 @@ import (
 )
 
 func (cg *Codegen) decorateLetName(l *ast.Let, n int) string {
+	if l.IsGlobal() {
+		return l.GlobalName(n)
+	}
 	name := l.Names[n]
 	raw := name.Raw
-	if l.Public && l.IsGlobalDef {
-		if rename_to := l.Attributes.GetString("rename_to"); rename_to != nil {
-			return *rename_to
-		}
-		return raw
-	}
 	if l.IsItem {
 		id := fmt.Sprintf("_%d", name.Span().ID)
 		return cg.getPublic(LOCAL_PREFIX + raw + id)
@@ -38,6 +35,9 @@ func (cg *Codegen) genLetLHS(l *ast.Let) []string {
 }
 
 func (cg *Codegen) genLet(l *ast.Let) {
+	if l.IsGlobal() {
+		return
+	}
 	rhs := cg.genExprsLeftToRight(l.Values)
 	lhs := cg.genLetLHS(l)
 	if l.IsItem {

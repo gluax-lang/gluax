@@ -47,7 +47,6 @@ func (p *parser) parseFunction() ast.Item {
 	body := p.parseBlock()
 	span := SpanFrom(spanStart, p.prevSpan())
 	fun := ast.NewFunction(&name, sig, &body, nil, span)
-	fun.IsGlobalDef = p.processingGlobals
 	fun.IsItem = true
 	return fun
 }
@@ -93,7 +92,6 @@ func (p *parser) parseClass() ast.Item {
 	span := SpanFrom(spanStart, p.prevSpan())
 
 	st := ast.NewClass(name, generics, super, fields, span)
-	st.IsGlobalDef = p.processingGlobals
 	return st
 }
 

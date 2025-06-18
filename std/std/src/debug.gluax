@@ -13,7 +13,7 @@ pub func assert(cond: bool, fmt: string, ...any) {
 #[no_op]
 #endif
 pub func print(...any) {
-    globals::base::print(...)
+    base::print(...)
 }
 
 #ifndef DEBUG

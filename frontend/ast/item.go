@@ -68,7 +68,6 @@ type Class struct {
 	Super          *Type // the type this class extends, if any
 	Fields         []ClassField
 	Attributes     Attributes
-	IsGlobalDef    bool // true if this is a global definition
 	Scope          any
 	CreatedClasses ClassesStack
 	span           common.Span
@@ -99,6 +98,20 @@ func (s *Class) AddClass(st *SemClass, concrete []SemType) {
 
 func (s *Class) GetClassStack() ClassesStack {
 	return s.CreatedClasses
+}
+
+func (c *Class) IsGlobal() bool {
+	return c.Attributes.Has("global")
+}
+
+func (c *Class) GlobalName() string {
+	if c.IsGlobal() {
+		if renameTo := c.Attributes.GetString("global"); renameTo != nil {
+			return *renameTo
+		}
+		return c.Name.Raw
+	}
+	panic("class is not global, cannot get global name")
 }
 
 /* Impl Class */
