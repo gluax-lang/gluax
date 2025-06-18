@@ -14,7 +14,6 @@ pub func error_level(m: string, level: number) -> unreachable {}
 
 #[global]
 pub func rawequal(v1: any, v2: any) -> bool {}
-
 #[global]
 pub func rawget(t: table, k: any) -> any {}
 #[global]
@@ -43,8 +42,10 @@ pub func tostring(v: any) -> string {}
 #[global]
 pub func next(t: table, prev_k: any) -> (any, any) {}
 
-/* End Globals */
+#[global]
+pub func select(p: any, ...any) -> ...any {}
 
+/* End Globals */
 
 pub func getfenv_f(f: anyfunc) -> map<any, any> {
     getfenv(f)
@@ -64,4 +65,8 @@ pub func printf(fmt: string, ...any) {
 
 pub func errorf(msg: string, ...any) -> unreachable {
     error(string::format(msg, ...))
+}
+
+pub func select_n(...any) -> number {
+    select("#", ...) unsafe_cast_as number
 }
