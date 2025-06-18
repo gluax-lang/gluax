@@ -3,7 +3,6 @@ package lexer
 import (
 	"fmt"
 	"strings"
-	"unicode"
 
 	"github.com/gluax-lang/gluax/common"
 	"github.com/gluax-lang/gluax/frontend"
@@ -332,57 +331,59 @@ func (lx *lexer) string() (Token, *diagnostic) {
 	}
 }
 
+func (lx *lexer) scanDigits(sb *strings.Builder, isDigit func(r rune) bool) (hasDigits bool) {
+	for c := lx.curChr; c != nil; c = lx.curChr {
+		if isDigit(*c) {
+			hasDigits = true
+			sb.WriteRune(*c)
+		} else if *c != '_' {
+			// Not a digit and not an underscore, so we're done.
+			break
+		}
+		// If it was a digit or an underscore, we advance.
+		lx.advance()
+	}
+	return hasDigits
+}
+
 func (lx *lexer) number() (Token, *diagnostic) {
 	// if does not start with a digit, then return nil
 	if !isAsciiDigit(lx.curChr) {
 		return nil, nil
 	}
 
+	isDecimalDigit := func(r rune) bool { return '0' <= r && r <= '9' }
+	isHexDigit := func(r rune) bool { return isDecimalDigit(r) || ('a' <= r && r <= 'f') || ('A' <= r && r <= 'F') }
+
 	var sb strings.Builder
 
 	// hexadecimal
 	if isChr(lx.curChr, '0') {
-		sb.WriteRune('0')
-		lx.advance()
-		if isChr(lx.curChr, 'x') || isChr(lx.curChr, 'X') {
-			sb.WriteRune(*lx.curChr)
-			lx.advance()
-			for c := lx.curChr; c != nil && unicode.Is(unicode.Hex_Digit, *c); c = lx.curChr {
-				sb.WriteRune(*c)
-				lx.advance()
+		if p := lx.peek(); p != nil && (*p == 'x' || *p == 'X') {
+			sb.WriteRune('0')
+			lx.advance()             // Consume '0'
+			sb.WriteRune(*lx.curChr) // Write 'x' or 'X'
+			lx.advance()             // Consume 'x' or 'X'
+
+			if !lx.scanDigits(&sb, isHexDigit) {
+				return nil, lx.error("missing hexadecimal digits after '0x'")
 			}
 			return newTokNumber(sb.String(), lx.currentSpan()), nil
 		}
 	}
 
-	for c := lx.curChr; isAsciiDigit(c); c = lx.curChr {
-		sb.WriteRune(*c)
-		lx.advance()
-	}
+	lx.scanDigits(&sb, isDecimalDigit)
 
 	// fractional part
 	if isChr(lx.curChr, '.') {
-		sb.WriteRune('.') // consume '.'
-		lx.advance()
-
-		// The next rune must start a sequence of ASCII digits.
-		if c := lx.curChr; isAsciiDigit(c) {
-			// consume the run of digits
-			for ; isAsciiDigit(c); c = lx.curChr {
-				sb.WriteRune(*c)
-				lx.advance()
-			}
-		} else if c != nil { // non-digit encountered immediately after '.'
-			return nil, common.ErrorDiag(
-				fmt.Sprintf("unexpected character: %c", *c),
-				lx.currentSpan(),
-			)
-		}
+		sb.WriteRune('.')
+		lx.advance() // Consume '.'
+		lx.scanDigits(&sb, isDecimalDigit)
 	}
 
 	// Exponent part: [eE][+-]?<digits>
 	if isChr(lx.curChr, 'e') || isChr(lx.curChr, 'E') {
-		sb.WriteRune(*lx.curChr) // consume 'e' or 'E'
+		sb.WriteRune(*lx.curChr) // Consume 'e' or 'E'
 		lx.advance()
 
 		// Optional sign
@@ -391,15 +392,8 @@ func (lx *lexer) number() (Token, *diagnostic) {
 			lx.advance()
 		}
 
-		// Must have at least one digit
-		if !isAsciiDigit(lx.curChr) {
-			return nil, common.ErrorDiag("missing digit for exponent", lx.currentSpan())
-		}
-
-		// Consume the run of digits
-		for c := lx.curChr; isAsciiDigit(c); c = lx.curChr {
-			sb.WriteRune(*c)
-			lx.advance()
+		if !lx.scanDigits(&sb, isDecimalDigit) {
+			return nil, lx.error("missing exponent digits")
 		}
 	}
 
