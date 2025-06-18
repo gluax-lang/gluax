@@ -95,6 +95,10 @@ func (v Value) Parameter() SemFunctionParam {
 	return v.data.(SemFunctionParam)
 }
 
+func (v Value) IsFunction() bool {
+	return v.Kind() == ValFunction
+}
+
 func (v Value) Function() SemFunction {
 	if v.Kind() != ValFunction {
 		panic("not a function")
