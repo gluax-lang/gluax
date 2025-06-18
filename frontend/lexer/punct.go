@@ -165,3 +165,136 @@ func (t TokPunct) AsString() string {
 func newTokPunct(p Punct, span common.Span) TokPunct {
 	return TokPunct{Punct: p, span: span}
 }
+
+/* Lexing */
+
+func (lx *lexer) punct(c *rune) Token {
+	switch *c {
+	case '+':
+		lx.advance()
+		return newTokPunct(PunctPlus, lx.currentSpan())
+	case '-':
+		lx.advance()
+		if isChr(lx.curChr, '>') {
+			lx.advance()
+			return newTokPunct(PunctArrow, lx.currentSpan())
+		}
+		return newTokPunct(PunctMinus, lx.currentSpan())
+	case '*':
+		lx.advance()
+		if isChr(lx.curChr, '*') {
+			lx.advance()
+			return newTokPunct(PunctExponent, lx.currentSpan())
+		}
+		return newTokPunct(PunctAsterisk, lx.currentSpan())
+	case '/':
+		lx.advance()
+		return newTokPunct(PunctSlash, lx.currentSpan())
+	case '%':
+		lx.advance()
+		return newTokPunct(PunctPercent, lx.currentSpan())
+	case '=':
+		lx.advance()
+		if isChr(lx.curChr, '=') {
+			lx.advance()
+			return newTokPunct(PunctEqualEqual, lx.currentSpan())
+		}
+		return newTokPunct(PunctEqual, lx.currentSpan())
+	case '!':
+		lx.advance()
+		if isChr(lx.curChr, '=') {
+			lx.advance()
+			return newTokPunct(PunctNotEqual, lx.currentSpan())
+		}
+		return newTokPunct(PunctBang, lx.currentSpan())
+	case '<':
+		lx.advance()
+		if isChr(lx.curChr, '=') {
+			lx.advance()
+			return newTokPunct(PunctLessThanEqual, lx.currentSpan())
+		}
+		return newTokPunct(PunctLessThan, lx.currentSpan())
+	case '>':
+		lx.advance()
+		if isChr(lx.curChr, '=') {
+			lx.advance()
+			return newTokPunct(PunctGreaterThanEqual, lx.currentSpan())
+		}
+		return newTokPunct(PunctGreaterThan, lx.currentSpan())
+	case '^':
+		lx.advance()
+		return newTokPunct(PunctCaret, lx.currentSpan())
+	case '.':
+		lx.advance()
+		if isChr(lx.curChr, '.') {
+			lx.advance()
+			if isChr(lx.curChr, '.') {
+				lx.advance()
+				return newTokPunct(PunctVararg, lx.currentSpan())
+			}
+			return newTokPunct(PunctConcat, lx.currentSpan())
+		}
+		return newTokPunct(PunctDot, lx.currentSpan())
+	case '#':
+		lx.advance()
+		return newTokPunct(PunctHash, lx.currentSpan())
+	case '&':
+		lx.advance()
+		if isChr(lx.curChr, '&') {
+			lx.advance()
+			return newTokPunct(PunctAndAnd, lx.currentSpan())
+		}
+		return newTokPunct(PunctAmpersand, lx.currentSpan())
+	case '|':
+		lx.advance()
+		if isChr(lx.curChr, '|') {
+			lx.advance()
+			return newTokPunct(PunctOrOr, lx.currentSpan())
+		}
+		return newTokPunct(PunctPipe, lx.currentSpan())
+	case ';':
+		lx.advance()
+		return newTokPunct(PunctSemicolon, lx.currentSpan())
+	case ':':
+		lx.advance()
+		if isChr(lx.curChr, ':') {
+			lx.advance()
+			return newTokPunct(PunctDoubleColon, lx.currentSpan())
+		}
+		return newTokPunct(PunctColon, lx.currentSpan())
+	case ',':
+		lx.advance()
+		return newTokPunct(PunctComma, lx.currentSpan())
+	case '(':
+		lx.advance()
+		return newTokPunct(PunctOpenParen, lx.currentSpan())
+	case ')':
+		lx.advance()
+		return newTokPunct(PunctCloseParen, lx.currentSpan())
+	case '{':
+		lx.advance()
+		return newTokPunct(PunctOpenBrace, lx.currentSpan())
+	case '}':
+		lx.advance()
+		return newTokPunct(PunctCloseBrace, lx.currentSpan())
+	case '[':
+		lx.advance()
+		return newTokPunct(PunctOpenBracket, lx.currentSpan())
+	case ']':
+		lx.advance()
+		return newTokPunct(PunctCloseBracket, lx.currentSpan())
+	case '?':
+		lx.advance()
+		return newTokPunct(PunctQuestion, lx.currentSpan())
+	case '@':
+		lx.advance()
+		return newTokPunct(PunctAt, lx.currentSpan())
+
+	// Lua 5.1 punctuation
+	case '~':
+		lx.advance()
+		return newTokPunct(PunctTilde, lx.currentSpan())
+	default:
+		return nil
+	}
+}
