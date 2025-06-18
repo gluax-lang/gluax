@@ -21,7 +21,7 @@ import (
 	protocol "github.com/gluax-lang/lsp"
 )
 
-const typesFile = "@@@types@@@"
+const typesFile = "__builtin_types__"
 
 func createImport(name string, analysis *Analysis) ast.SemImport {
 	tokStr := lexer.NewTokString(name, common.SpanDefault())
@@ -112,7 +112,7 @@ func (pa *ProjectAnalysis) globalsList() []string {
 
 func (pa *ProjectAnalysis) newAnalysis(path string) *Analysis {
 	scope := pa.currentState.RootScope
-	if path != typesFile {
+	if !pa.Config.Std || !strings.Contains(path, typesFile) {
 		scope = NewScope(pa.currentState.RootScope)
 	}
 	return &Analysis{
@@ -360,11 +360,12 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
 	pa.Main = pa.PathRelativeToWorkspace(mainPath)
 
 	if pa.Config.Std {
-		pa.overrides[typesFile] = ast.BuiltinTypes
-		if err := pa.AnalyzeFromEntryPoint(typesFile); err != nil {
+		builtinTypesFile := common.FilePathClean(filepath.Join(pa.workspace, typesFile))
+		pa.overrides[builtinTypesFile] = ast.BuiltinTypes
+		if err := pa.AnalyzeFromEntryPoint(builtinTypesFile); err != nil {
 			return fmt.Errorf("failed to analyze built-in types: %w", err)
 		}
-		delete(pa.overrides, typesFile)
+		delete(pa.overrides, builtinTypesFile)
 	}
 
 	pa.importGlobals()
