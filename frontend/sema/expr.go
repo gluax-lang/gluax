@@ -117,7 +117,6 @@ func (a *Analysis) handleQPathExpr(scope *Scope, qPath *ast.QPath) Type {
 		if methodP == nil {
 			a.panicf(qPath.Type.Span(), "no method found for `%s` in trait `%s`", methodName, as.Def.Name.Raw)
 		}
-		methodP.Class = class
 		qPath.ResolvedMethod = methodP
 		return ast.NewSemType(*methodP, qPath.Span())
 	} else {
@@ -568,6 +567,10 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 		}
 	}
 
+	if call.SemaFunc == nil {
+		call.SemaFunc = &funcTy
+	}
+
 	if call.IsTryCall {
 		return funcTy.Return
 	}
@@ -619,7 +622,7 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 	toCallTy := toCall.Type()
 	toCallName := toCallTy.String()
 
-	methods := a.findMethodsOnType(scope, toCallTy, call.Method.Raw)
+	methods := a.FindMethodsOnType(scope, toCallTy, call.Method.Raw)
 
 	if len(methods) == 0 {
 		a.panicf(call.Method.Span(), "no method named `%s` in `%s`", call.Method.Raw, toCallName)
@@ -633,6 +636,8 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 	if len(method.Params) < 1 || method.Def.Params[0].Name.Raw != "self" {
 		a.panicf(call.Method.Span(), "no method named `%s` in `%s`", call.Method.Raw, toCallName)
 	}
+
+	call.SemaFunc = &method
 
 	a.AddRef(method, call.Method.Span())
 

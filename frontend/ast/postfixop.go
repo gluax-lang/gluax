@@ -47,6 +47,7 @@ type Call struct {
 	Args      []Expr
 	IsTryCall bool
 	Catch     *Catch
+	SemaFunc  *SemFunction
 	span      common.Span
 }
 

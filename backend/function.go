@@ -159,22 +159,7 @@ func (cg *Codegen) genInlineCall(call *ast.Call, fun ast.SemFunction, toCall str
 }
 
 func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) string {
-	var fun ast.SemFunction
-	if call.Method != nil {
-		switch {
-		case toCallTy.IsClass():
-			st := toCallTy.Class()
-			funs := cg.Analysis.FindClassOrTraitMethod(st, call.Method.Raw, nil)
-			fun = funs[0]
-			fun.Class = st
-		case toCallTy.IsDynTrait():
-			dynTrait := toCallTy.DynTrait()
-			methods := cg.Analysis.GetTraitMethods(dynTrait.Trait, call.Method.Raw)
-			fun = methods[0]
-		}
-	} else {
-		fun = toCallTy.Function()
-	}
+	fun := call.SemaFunc
 
 	if fun.Def.Attributes.Has("no_op") {
 		// If the function has a "no_op" attribute, we don't generate any code for it.
@@ -203,14 +188,17 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 			case toCallTy.IsClass():
 				if fun.Trait != nil {
 					args := cg.getCallArgs(call, toCall)
-					return fmt.Sprintf("%s(%s)", cg.decorateFuncName(&fun), args)
+					return fmt.Sprintf("%s(%s)", cg.decorateFuncName(fun), args)
 				} else if toCallTy.IsClass() && toCallTy.Class().Def.Attributes.Has("no_metatable", "no__index") {
 					args := cg.getCallArgs(call, toCall)
-					return fmt.Sprintf("%s(%s)", cg.decorateFuncName(&fun), args)
+					return fmt.Sprintf("%s(%s)", cg.decorateFuncName(fun), args)
+				} else {
+					args := cg.genExprsLeftToRight(call.Args)
+					return fmt.Sprintf("%s:%s(%s)", toCall, fun.Def.Name.Raw, args)
 				}
 			case toCallTy.IsDynTrait():
 				args := cg.getCallArgs(call, toCall)
-				return fmt.Sprintf("%s(%s)", cg.decorateFuncName(&fun), args)
+				return fmt.Sprintf("%s(%s)", cg.decorateFuncName(fun), args)
 			default:
 				args := cg.genExprsLeftToRight(call.Args)
 				return fmt.Sprintf("%s(%s)", toCall, args)
@@ -248,7 +236,7 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 
 	var callExpr string
 	if canInline() {
-		callExpr = cg.genInlineCall(call, fun, toCall)
+		callExpr = cg.genInlineCall(call, *fun, toCall)
 	} else {
 		callExpr = buildCallExpr()
 	}

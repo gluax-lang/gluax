@@ -219,12 +219,7 @@ func (a *Analysis) FindClassMethodByTrait(st *ast.SemClass, methodName string, s
 	foundTraits := make(map[*ast.SemTrait]struct{})
 	var results []SemFunction
 
-	// collect methods from traits, only once per trait
-	var collectMethods func(cls *ast.SemClass)
-	collectMethods = func(cls *ast.SemClass) {
-		if cls == nil {
-			return
-		}
+	for cls := st; cls != nil; cls = cls.Super {
 		if bucket, exists := a.State.TraitsByClass[cls.Def]; exists {
 			for trait, metas := range bucket {
 				if _, already := foundTraits[trait]; already {
@@ -238,7 +233,7 @@ func (a *Analysis) FindClassMethodByTrait(st *ast.SemClass, methodName string, s
 				for _, meta := range metas {
 					if a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
 						if method, exists := meta.Methods[methodName]; exists {
-							method.Class = st
+							method.Class = cls
 							results = append(results, method)
 							foundTraits[trait] = struct{}{}
 							break // only one per trait
@@ -247,21 +242,22 @@ func (a *Analysis) FindClassMethodByTrait(st *ast.SemClass, methodName string, s
 				}
 			}
 		}
-		collectMethods(cls.Super)
 	}
 
-	collectMethods(st)
 	return results
 }
 
 func (a *Analysis) FindClassMethodForTraitOnly(st *ast.SemClass, trait *ast.SemTrait, methodName string) *SemFunction {
 	actual := st.Generics.Params
-	if bucket, exists := a.State.TraitsByClass[st.Def]; exists {
-		if metas, ok := bucket[trait]; ok {
-			for _, meta := range metas {
-				if a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
-					if method, exists := meta.Methods[methodName]; exists {
-						return &method
+	for cls := st; cls != nil; cls = cls.Super {
+		if bucket, exists := a.State.TraitsByClass[cls.Def]; exists {
+			if metas, ok := bucket[trait]; ok {
+				for _, meta := range metas {
+					if a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
+						if method, exists := meta.Methods[methodName]; exists {
+							method.Class = cls
+							return &method
+						}
 					}
 				}
 			}
@@ -302,35 +298,6 @@ func (a *Analysis) ClassImplementsTrait(st *ast.SemClass, asked *ast.SemTrait) b
 		return a.ClassImplementsTrait(st.Super, asked)
 	}
 	return false
-}
-
-func (a *Analysis) CollectAllTraitMethods(st *ast.SemClass) map[*ast.SemTrait][]SemFunction {
-	result := make(map[*ast.SemTrait][]SemFunction)
-	actual := st.Generics.Params
-
-	var collect func(cls *ast.SemClass)
-	collect = func(cls *ast.SemClass) {
-		if cls == nil {
-			return
-		}
-		if bucket, exists := a.State.TraitsByClass[cls.Def]; exists {
-			for trait, metas := range bucket {
-				for _, meta := range metas {
-					if a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
-						methods := make([]SemFunction, 0, len(meta.Methods))
-						for _, method := range meta.Methods {
-							methods = append(methods, method)
-						}
-						result[trait] = append(result[trait], methods...)
-					}
-				}
-			}
-		}
-		collect(cls.Super)
-	}
-
-	collect(st)
-	return result
 }
 
 func (a *Analysis) GetClassesImplementingTrait(trait *ast.SemTrait) map[*ast.SemClass][]SemFunction {
