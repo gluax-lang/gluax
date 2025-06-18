@@ -125,16 +125,23 @@ func (a *Analysis) handleQPathExpr(scope *Scope, qPath *ast.QPath) Type {
 	return a.anyType()
 }
 
+func isComparisonOp(op ast.BinaryOp) bool {
+	switch op {
+	case ast.BinaryOpLess,
+		ast.BinaryOpGreater,
+		ast.BinaryOpLessEqual,
+		ast.BinaryOpGreaterEqual,
+		ast.BinaryOpEqual,
+		ast.BinaryOpNotEqual:
+		return true
+	}
+	return false
+}
+
 func (a *Analysis) handleBinaryExpr(scope *Scope, binE *ast.ExprBinary) Type {
-	// check for disallowed chained binary expressions
 	if binE.Left.Kind() == ast.ExprKindBinary {
-		switch binE.Op {
-		case ast.BinaryOpLess,
-			ast.BinaryOpGreater,
-			ast.BinaryOpLessEqual,
-			ast.BinaryOpGreaterEqual,
-			ast.BinaryOpEqual,
-			ast.BinaryOpNotEqual:
+		leftBin := binE.Left.Binary()
+		if isComparisonOp(leftBin.Op) && isComparisonOp(binE.Op) {
 			a.panic(binE.Span(), "chained comparisons are not allowed")
 		}
 	}
