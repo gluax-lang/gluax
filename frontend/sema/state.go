@@ -35,6 +35,8 @@ type State struct {
 	TraitsByClass  map[*ast.Class]map[*ast.SemTrait][]*ClassTraitsMeta
 
 	DeclRefs []DeclWithRef
+
+	MainFunc *ast.SemFunction // The main function of the program, if any
 }
 
 func NewState(label string) *State {

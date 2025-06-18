@@ -15,33 +15,27 @@ func removeRedundantBlankLines(s string) string {
 }
 
 func GenerateProject(pA *sema.ProjectAnalysis) (string, string) {
-	serverCg := Codegen{
-		bufCtx: bufCtx{
-			buf: strings.Builder{},
-		},
-		publicIndex:      1,
-		publicMap:        make(map[string]int),
-		generatedClasses: make(map[string]struct{}),
-	}
-	serverCg.buf().Grow(1024 * 2)
-	headers(&serverCg)
-	serverCg.handleFiles(pA.ServerFiles())
-	serverCode := serverCg.buf().String()
-
-	clientCg := Codegen{
-		bufCtx: bufCtx{
-			buf: strings.Builder{},
-		},
-		publicIndex:      1,
-		publicMap:        make(map[string]int),
-		generatedClasses: make(map[string]struct{}),
-	}
-	clientCg.buf().Grow(1024 * 2)
-	headers(&clientCg)
-	clientCg.handleFiles(pA.ClientFiles())
-	clientCode := clientCg.buf().String()
-
+	serverCode := generateCode(pA.ServerState())
+	clientCode := generateCode(pA.ClientState())
 	return removeRedundantBlankLines(serverCode), removeRedundantBlankLines(clientCode)
+}
+
+func generateCode(state *sema.State) string {
+	cg := Codegen{
+		bufCtx: bufCtx{
+			buf: strings.Builder{},
+		},
+		publicIndex:      1,
+		publicMap:        make(map[string]int),
+		generatedClasses: make(map[string]struct{}),
+	}
+	cg.buf().Grow(1024 * 2)
+	headers(&cg)
+	cg.handleFiles(state.Files)
+	if mainFunc := state.MainFunc; mainFunc != nil {
+		cg.ln("%s()", cg.decorateFuncName(mainFunc))
+	}
+	return cg.buf().String()
 }
 
 func (cg *Codegen) handleFiles(files map[string]*sema.Analysis) {

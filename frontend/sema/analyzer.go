@@ -509,4 +509,26 @@ func (a *Analysis) analyzeImplementations() {
 
 	a.CheckConflictingMethodImplementations()
 	a.CheckConflictingTraitImplementations()
+
+	if a.Project.Main == a.Src && !a.Project.Config.Lib {
+		// check that `main` function exists in the main file
+		mainFuncValue := a.Scope.GetValue("main")
+		if mainFuncValue == nil {
+			a.panic(common.SpanDefault(), "main function not found")
+		}
+		if !mainFuncValue.IsFunction() {
+			a.panic(mainFuncValue.Span(), "`main` is not a function")
+		}
+		// check that main has no parameters and return type is `nil`
+		mainFunc := mainFuncValue.Function()
+		if len(mainFunc.Params) != 0 {
+			a.panicf(mainFunc.Span(), "`main` function must not have parameters")
+		}
+		returnType := mainFunc.Return
+		if !a.MatchTypesStrict(a.nilType(), returnType) {
+			a.panicf(mainFunc.Span(), "`main` function return type must be `nil`, got `%s`", returnType.String())
+		}
+
+		a.State.MainFunc = &mainFunc
+	}
 }
