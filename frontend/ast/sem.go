@@ -184,12 +184,14 @@ func (t SemType) IsLogical() bool { return t.IsBool() || t.IsNilable() }
 type SemaClassField struct {
 	Ty  SemType
 	Def ClassField
+	Idx int // Index of the field in the class, used for field access
 }
 
-func NewSemClassField(def ClassField, ty SemType) SemaClassField {
+func NewSemClassField(def ClassField, ty SemType, idx int) SemaClassField {
 	return SemaClassField{
 		Ty:  ty,
 		Def: def,
+		Idx: idx,
 	}
 }
 
@@ -330,6 +332,14 @@ func (c SemClass) IsGlobal() bool {
 
 func (c SemClass) GlobalName() string {
 	return c.Def.GlobalName()
+}
+
+func (c SemClass) GetFieldIndex(name string) int {
+	field, exists := c.Fields[name]
+	if !exists {
+		panic(fmt.Sprintf("field '%s' does not exist in class '%s'", name, c.Def.Name.Raw))
+	}
+	return field.Idx
 }
 
 /* FunctionType */

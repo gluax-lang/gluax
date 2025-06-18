@@ -48,7 +48,6 @@ func SetItemAttributes(item Item, attrs Attributes) bool {
 /* Class */
 
 type ClassField struct {
-	Id     int // the field id, in order of declaration
 	Name   lexer.TokIdent
 	Type   Type
 	Public bool

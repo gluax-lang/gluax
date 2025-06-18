@@ -71,16 +71,13 @@ func (p *parser) parseClass() ast.Item {
 		fields []ast.ClassField
 	)
 
-	fieldId := 1 // Start field IDs at 1
-
 	for !p.Token.Is("}") {
 		var attributes []ast.Attribute
 		for p.Token.Is("#") {
 			attributes = append(attributes, p.parseAttribute())
 		}
 
-		fields = append(fields, p.parseClassField(fieldId))
-		fieldId++ // Increment field ID for the next field
+		fields = append(fields, p.parseClassField())
 
 		// optional trailing comma
 		if !p.tryConsume(",") {
@@ -95,13 +92,12 @@ func (p *parser) parseClass() ast.Item {
 	return st
 }
 
-func (p *parser) parseClassField(id int) ast.ClassField {
+func (p *parser) parseClassField() ast.ClassField {
 	public := p.tryConsume("pub")
 	name := p.expectIdent()
 	p.expect(":")
 	ty := p.parseType()
 	return ast.ClassField{
-		Id:     id,
 		Name:   name,
 		Type:   ty,
 		Public: public,

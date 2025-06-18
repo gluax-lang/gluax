@@ -72,17 +72,9 @@ func (cg *Codegen) genClassInit(si *ast.ExprClassInit, st *ast.SemClass) string 
 	exprs := make([]ast.Expr, len(si.Fields))
 
 	for i, f := range si.Fields {
-		// Find the field definition to get its Id
-		fieldId := 0
-		for _, def := range st.Def.Fields {
-			if def.Name.Raw == f.Name.Raw {
-				fieldId = def.Id
-				break
-			}
-		}
 		fieldEvals[i] = fieldEval{
 			Name: f.Name.Raw,
-			Id:   fieldId,
+			Id:   st.GetFieldIndex(f.Name.Raw),
 		}
 		exprs[i] = f.Value
 	}
@@ -117,13 +109,6 @@ func (cg *Codegen) genClassInit(si *ast.ExprClassInit, st *ast.SemClass) string 
 
 func (cg *Codegen) genDotAccess(expr *ast.DotAccess, toIndex string, toIndexTy ast.SemType) string {
 	st := toIndexTy.Class()
-	fieldId := 0
-	for _, def := range st.Def.Fields {
-		if def.Name.Raw == expr.Name.Raw {
-			fieldId = def.Id
-			break
-		}
-	}
 	// Use numeric index for field access
-	return fmt.Sprintf("%s[%d--[[%s]]]", toIndex, fieldId, expr.Name.Raw)
+	return fmt.Sprintf("%s[%d--[[%s]]]", toIndex, st.GetFieldIndex(expr.Name.Raw), expr.Name.Raw)
 }

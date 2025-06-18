@@ -131,10 +131,12 @@ func (a *Analysis) buildGenericsTable(scope *Scope, st *SemClass, concrete []Typ
 }
 
 func (a *Analysis) collectClassFields(st *SemClass) {
+	curIdx := 1
 	if st.Super != nil {
 		for _, field := range st.Super.Fields {
 			name := field.Def.Name.Raw
 			st.Fields[name] = field
+			curIdx++
 		}
 	}
 	for _, field := range st.Def.Fields {
@@ -143,7 +145,8 @@ func (a *Analysis) collectClassFields(st *SemClass) {
 		}
 		stScope := st.Scope.(*Scope)
 		ty := a.resolveType(stScope, field.Type)
-		st.Fields[field.Name.Raw] = ast.NewSemClassField(field, ty)
+		st.Fields[field.Name.Raw] = ast.NewSemClassField(field, ty, curIdx)
+		curIdx++
 	}
 }
 
