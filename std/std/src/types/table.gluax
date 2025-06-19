@@ -1,6 +1,16 @@
 impl table {
     func new() -> Self {
-        @raw("return {}") -> Self
+        @raw("{@RETURN {} @}") -> Self
+    }
+
+    #[inline]
+    func set(self, key: any, value: any) {
+        @raw("{@1@}[{@2@}] = {@3@}", self, key, value);
+    }
+
+    #[inline]
+    func get(self, key: any) -> ?any {
+        @raw("{@RETURN {@1@}[{@2@}] @}", self, key) -> ?any
     }
 
     #[global = "table.concat"]
