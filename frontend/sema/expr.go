@@ -413,10 +413,13 @@ func (a *Analysis) handleForInExpr(scope *Scope, forIn *ast.ExprForIn) {
 		iterFunc := firstReturn.Function()
 		iterReturn = iterFunc.Return
 		iterReturnCount = iterFunc.ReturnCount()
+		forIn.PairsMethod = method
 	} else if method := a.FindClassMethod(st, "__x_iter_range"); method != nil {
 		iterReturn = a.tupleType(inExpr.Span(), a.numberType(), method.FirstReturnType())
 		iterReturnCount = 2
 		forIn.IsRange = true
+		forIn.RangeMethod = method
+		forIn.BoundMethod = a.FindClassMethod(st, "__x_iter_range_bound")
 	} else {
 		a.panic(inExpr.Span(), "cannot iterate over class without __x_iter_pairs method")
 	}
@@ -683,7 +686,7 @@ func (a *Analysis) handleElse(scope *Scope, elseOp *ast.Else, expr *ast.Expr) Ty
 	}
 	a.handleExpr(scope, &elseOp.Value)
 	a.Matches(exprTy.NilableInnerType(), elseOp.Value.Type(), elseOp.Value.Span())
-	return elseOp.Value.Type()
+	return exprTy.NilableInnerType()
 }
 
 func (a *Analysis) handleUnwrapNilable(_ *Scope, unwrapOp *ast.UnwrapNilable, expr *ast.Expr) Type {

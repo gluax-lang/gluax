@@ -29,10 +29,12 @@ func (a *Analysis) handleStmt(scope *Scope, raw ast.Stmt) (Type, FlowStatus) {
 
 	case *ast.StmtBreak:
 		a.handleBreak(scope, stmt)
-		return a.nilType(), FlowJump
+		unreachable := ast.NewSemType(ast.SemUnreachable{}, stmt.Span())
+		return unreachable, FlowJump
 	case *ast.StmtContinue:
 		a.handleContinue(scope, stmt)
-		return a.nilType(), FlowJump
+		unreachable := ast.NewSemType(ast.SemUnreachable{}, stmt.Span())
+		return unreachable, FlowJump
 
 	case *ast.StmtExpr:
 		flow := a.handleExprWithFlow(scope, &stmt.Expr)

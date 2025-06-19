@@ -444,6 +444,11 @@ type ExprForIn struct {
 	IsRange bool  // true if the for loop is a range (e.g. for i in 1..10)
 	IdxPath *Path // the path to the index variable, if any
 	span    common.Span
+
+	RangeMethod *SemFunction
+	BoundMethod *SemFunction // the method used to get the bounds of the range
+
+	PairsMethod *SemFunction // the method used to get the pairs of the range
 }
 
 func NewForInExpr(label *Ident, vars []Ident, inExpr Expr, body Block, span common.Span) Expr {

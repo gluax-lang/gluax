@@ -321,6 +321,8 @@ func (cg *Codegen) genPostfixExpr(p *ast.ExprPostfix) string {
 		cg.ln("end")
 		return temp
 	case *ast.UnwrapNilable:
+		// TODO: handle unwrapping nil value in DEBUG mode
+		return value
 		temp := cg.getTempVar()
 		cg.ln("%s = %s;", temp, value)
 		cg.ln("if %s == nil then", temp)
@@ -521,18 +523,28 @@ func (cg *Codegen) genForInExpr(e *ast.ExprForIn) string {
 		boundMethod := lexer.NewTokIdent("__x_iter_range_bound", e.InExpr.Span())
 		toCall := cg.getTempVar()
 		cg.ln("%s = %s;", toCall, cg.genExpr(e.InExpr))
-		boundCall := ast.Call{Method: &boundMethod}
+		boundCall := ast.Call{
+			Method:   &boundMethod,
+			SemaFunc: e.BoundMethod,
+		}
 		cg.ln("for %s = 1, %s do", names[0], cg.genCall(&boundCall, toCall, e.InExpr.Type()))
 		cg.pushIndent()
 		if len(names) > 1 {
 			rangeMethod := lexer.NewTokIdent("__x_iter_range", e.InExpr.Span())
-			rangeCall := ast.Call{Method: &rangeMethod, Args: []ast.Expr{ast.NewExpr(e.IdxPath)}}
+			rangeCall := ast.Call{
+				Method:   &rangeMethod,
+				Args:     []ast.Expr{ast.NewExpr(e.IdxPath)},
+				SemaFunc: e.RangeMethod,
+			}
 			cg.ln("local %s = %s;", names[1], cg.genCall(&rangeCall, toCall, e.InExpr.Type()))
 		}
 	} else {
 		method := lexer.NewTokIdent("__x_iter_pairs", e.InExpr.Span())
 		toCall := cg.genExpr(e.InExpr)
-		call := ast.Call{Method: &method}
+		call := ast.Call{
+			Method:   &method,
+			SemaFunc: e.PairsMethod,
+		}
 		cg.ln("for %s in %s do", strings.Join(names, ", "), cg.genCall(&call, toCall, e.InExpr.Type()))
 		cg.pushIndent()
 	}
