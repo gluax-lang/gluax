@@ -3,10 +3,57 @@ import "../debug";
 import "../base";
 
 impl number {
-    #[inline]
-    func to_string(self) -> string {
-        base::tostring(self)
-    }
+    /* Globals */
+
+    #[global = "tostring"]
+    func to_string(self) -> string {}
+
+    #[global = "math.abs"]
+    func abs(self) -> number {}
+
+    #[global = "math.acos"]
+    func acos(self) -> number {}
+
+    #[global = "math.asin"]
+    func asin(self) -> number {}
+
+    #[global = "math.atan"]
+    func atan(self) -> number {}
+
+    #[global = "math.ceil"]
+    func ceil(self) -> number {}
+
+    #[global = "math.cos"]
+    func cos(self) -> number {}
+
+    #[global = "math.cosh"]
+    func cosh(self) -> number {}
+
+    #[global = "math.deg"]
+    func deg(self) -> number {}
+
+    #[global = "math.exp"]
+    func exp(self) -> number {}
+
+    #[global = "math.floor"]
+    func floor(self) -> number {}
+
+    #[global = "math.frexp"]
+    func frexp(self) -> (number, number) {}
+
+    #[global = "math.log"]
+    func log(self, b: ?number) -> number {}
+
+    #[global = "math.log10"]
+    func log10(self) -> number {}
+
+    #[global = "math.max"]
+    func max(self, mi: number, ma: number, ...number) -> number {}
+
+    #[global = "math.min"]
+    func min(self, mi: number, ma: number, ...number) -> number {}
+
+    /* End Globals */
 
     #[inline]
     func to_char(self) -> string {
@@ -32,47 +79,4 @@ impl number {
 
     #[inline]
     func clamp(self, mi: number, ma: number) -> number { math::clamp(self, mi, ma) }
-
-    #[inline]
-    func abs(self) -> number { math::abs(self) }
-
-    #[inline]
-    func acos(self) -> number { math::acos(self) }
-
-    #[inline]
-    func asin(self) -> number { math::asin(self) }
-
-    #[inline]
-    func atan(self) -> number { math::atan(self) }
-
-    #[inline]
-    func ceil(self) -> number { math::ceil(self) }
-
-    #[inline]
-    func cos(self) -> number { math::cos(self) }
-
-    #[inline]
-    func cosh(self) -> number { math::cosh(self) }
-
-    #[inline]
-    func deg(self) -> number { math::deg(self) }
-
-    #[inline]
-    func exp(self) -> number { math::exp(self) }
-
-    #[inline]
-    func floor(self) -> number { math::floor(self) }
-
-    #[inline]
-    func frexp(self) -> (number, number) { math::frexp(self) }
-
-    #[inline]
-    func log(self, b: ?number) -> number { math::log(self, b) }
-
-    #[inline]
-    func log10(self) -> number { math::log10(self) }
-
-    func max(self, mi: number, ma: number, ...number) -> number { math::max(self, mi, ma, ...) }
-
-    func min(self, mi: number, ma: number, ...number) -> number { math::min(self, mi, ma, ...) }
 }

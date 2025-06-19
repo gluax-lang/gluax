@@ -45,6 +45,18 @@ pub func next(t: table, prev_k: any) -> (any, any) {}
 #[global]
 pub func select(p: any, ...any) -> ...any {}
 
+#[global]
+pub func type(v: any) -> string {}
+
+#[global = "unpack"]
+pub func unpack(tbl: table) -> ...any {}
+
+#[global = "unpack"]
+pub func unpack_from(tbl: table, s: number) -> ...any {}
+
+#[global = "unpack"]
+pub func unpack_range(tbl: table, s: number, e: number) -> ...any {}
+
 /* End Globals */
 
 pub func getfenv_f(f: anyfunc) -> map<any, any> {
@@ -70,3 +82,4 @@ pub func errorf(msg: string, ...any) -> unreachable {
 pub func select_n(...any) -> number {
     select("#", ...) unsafe_cast_as number
 }
+

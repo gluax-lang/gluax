@@ -5,31 +5,50 @@ import "../base";
 #[global = "string.sub"]
 func sub(s: string, s_p: number, e_p: ?number) -> string {}
 
-#[global = "string.char"]
-func char(...number) -> string {}
-
 #[global = "string.byte"]
 func byte(s: string, p: number) -> ?number {}
 
 #[global = "string.byte"]
 func bytes(s: string, s_p: number, e_p: number) -> ...number {}
 
-#[global = "string.format"]
-func format(fmt: string, ...any) -> string {}
-
-#[global = "string.rep"]
-func rep(s: string, n: number, sep: ?string) -> string {}
-
-#[global = "string.upper"]
-func upper(s: string) -> string {}
-
-#[global = "string.lower"]
-func lower(s: string) -> string {}
+#[global = "string.find"]
+func find(s: string, pattern: string, init: ?number, plain: ?bool) -> (?number, ?number, ...string) {}
 
 /* End Globals */
 
 impl string {
-    func char(...number) -> string { char(...) }
+    #[inline]
+    func __x_iter_range_bound(self) -> number { #self }
+
+    #[inline]
+    func __x_iter_range(self, idx: number) -> string {
+        sub(self, idx, idx)
+    }
+
+    /* Globals */
+
+    #[global = "string.char"]
+    func char(...number) -> string {}
+
+    #[global = "string.sub"]
+    func sub(self, s_p: number, e_p: ?number) -> string {}
+
+    #[global = "string.format"]
+    func format(self, ...any) -> string {}
+
+    #[global = "string.rep"]
+    func rep(self, n: number, sep: ?string) -> string {}
+
+    #[global = "string.upper"]
+    func upper(self) -> string {}
+
+    #[global = "string.lower"]
+    func lower(self) -> string {}
+
+    #[global = "string.reverse"]
+    func reverse(self) -> string {}
+
+    /* End Globals */
 
     #[inline]
     func to_number(self) -> ?number {
@@ -37,17 +56,7 @@ impl string {
     }
 
     #[inline]
-    func len(self) -> number {
-        @raw("{@RETURN #{@1@} @}", self) -> number
-    }
-
-    #[inline]
     func is_empty(self) -> bool { self == "" }
-
-    #[inline]
-    func sub(self, s_pos: number, e_pos: ?number) -> string {
-        sub(self, s_pos, e_pos)
-    }
 
     #[inline]
     func byte(self, s_pos: number) -> ?number {
@@ -74,22 +83,8 @@ impl string {
         suffix == "" || self.sub(-#suffix, nil) == suffix
     }
 
-    func format(self, ...any) -> string { format(self, ...) }
-
     #[inline]
-    func rep(self, n: number, sep: ?string) -> string { rep(self, n, sep) }
-
-    #[inline]
-    func upper(self) -> string { upper(self) }
-
-    #[inline]
-    func lower(self) -> string { lower(self) }
-
-    #[inline]
-    func __x_iter_range_bound(self) -> number { #self }
-
-    #[inline]
-    func __x_iter_range(self, idx: number) -> string {
-        sub(self, idx, idx)
+    func contains(self, s: string) -> bool {
+        (find(self, s, nil, true) unsafe_cast_as nil != nil) unsafe_cast_as bool
     }
 }

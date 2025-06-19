@@ -1,6 +1,8 @@
 impl<T> vec<T> {
     #[inline]
-    func len(self) -> number { #self }
+    func len(self) -> number {
+        @raw("{@RETURN #{@1@} @}", self) -> number
+    }
 
     #[inline]
     func push(self, v: T) {
@@ -13,7 +15,7 @@ impl<T> vec<T> {
     }
 
     #[inline]
-    func is_empty(self) -> bool { #self == 0 }
+    func is_empty(self) -> bool { self.len() == 0 }
 
     #[inline]
     func remove(self, idx: number) -> ?T {
@@ -31,7 +33,7 @@ impl<T> vec<T> {
     }
 
     #[inline]
-    func __x_iter_range_bound(self) -> number { #self }
+    func __x_iter_range_bound(self) -> number { self.len() }
 
     #[inline]
     func __x_iter_range(self, idx: number) -> T {
