@@ -101,6 +101,12 @@ func (lx *lexer) nextToken() (Token, *diagnostic) {
 		return TokEOF{span: span}, nil
 	}
 
+	if *c == 'r' {
+		if p := lx.peek(); p != nil && (*p == '"' || *p == '#') {
+			return lx.rawString()
+		}
+	}
+
 	// Comment
 	if *c == '/' {
 		if pC := lx.peek(); pC != nil {
