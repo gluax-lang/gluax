@@ -81,6 +81,18 @@ func (a *Analysis) matchClassType(s *SemClass, other Type) bool {
 		return true
 	}
 
+	if s.IsNilable() {
+		inner := s.InnerType()
+		if other.IsNil() {
+			return true
+		}
+		if other.IsNilable() {
+			otherInner := other.Class().InnerType()
+			return a.matchTypes(inner, otherInner)
+		}
+		return a.matchTypes(inner, other)
+	}
+
 	if other.Kind() != ast.SemClassKind {
 		return false
 	}
@@ -89,18 +101,6 @@ func (a *Analysis) matchClassType(s *SemClass, other Type) bool {
 
 	if oS.IsSubClassOf(s) {
 		return true
-	}
-
-	if s.IsNilable() {
-		inner := s.InnerType()
-		if other.IsNil() {
-			return true
-		}
-		if other.IsNilable() {
-			otherInner := oS.InnerType()
-			return a.matchTypes(inner, otherInner)
-		}
-		return a.matchTypes(inner, other)
 	}
 
 	if ast.IsBuiltinType(s.Def.Name.Raw) && ast.IsBuiltinType(oS.Def.Name.Raw) {
