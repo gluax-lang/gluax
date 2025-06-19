@@ -39,7 +39,7 @@ func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafRe
 				return nil
 			}
 			if i > 0 && !currentSym.IsPublic() {
-				a.panicf(seg.Span(), "`%s` is private", seg.Ident.Raw)
+				a.Errorf(seg.Span(), "`%s` is private", seg.Ident.Raw)
 			}
 			checkSegmentGenerics(a, seg)
 			if currentSym.IsImport() {
@@ -74,7 +74,7 @@ func (a *Analysis) resolvePathType(scope *Scope, path *ast.Path) Type {
 			return nil
 		}
 		if len(path.Segments) > 1 && !sym.IsPublic() {
-			a.panicf(leaf.Span(), "`%s` is private", leaf.Ident.Raw)
+			a.Errorf(leaf.Span(), "`%s` is private", leaf.Ident.Raw)
 		}
 
 		var ty *Type
@@ -107,7 +107,7 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 				return nil
 			}
 			if len(path.Segments) > 1 && !sym.IsPublic() {
-				a.panicf(leaf.Span(), "`%s` is private", raw)
+				a.Errorf(leaf.Span(), "`%s` is private", raw)
 			}
 			checkSegmentGenerics(a, leaf)
 			path.ResolvedSymbol = sym
@@ -170,7 +170,7 @@ func (a *Analysis) resolvePathSymbol(scope *Scope, path *ast.Path) Symbol {
 			return nil
 		}
 		if len(path.Segments) > 1 && !sym.IsPublic() {
-			a.panicf(leaf.Span(), "`%s` is private", raw)
+			a.Errorf(leaf.Span(), "`%s` is private", raw)
 		}
 		checkSegmentGenerics(a, leaf)
 		path.ResolvedSymbol = sym
