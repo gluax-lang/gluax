@@ -311,11 +311,23 @@ func (a *Analysis) unify(
 	return base
 }
 
-func (a *Analysis) canAccessClassMember(st *SemClass, memberPublic bool) bool {
+func (a *Analysis) canAccessClassField(clss *SemClass, memberPublic bool) bool {
 	if memberPublic {
 		return true
 	}
-	source := st.Def.Span().Source
+	source := clss.Def.Span().Source
+	// Private members are only accessible from the same source file
+	return a.Src == source
+}
+
+func (a *Analysis) canAccessClassMethod(method *SemFunction) bool {
+	if method.Trait != nil {
+		return true
+	}
+	if method.Def.Public {
+		return true
+	}
+	source := method.Def.Span().Source
 	// Private members are only accessible from the same source file
 	return a.Src == source
 }

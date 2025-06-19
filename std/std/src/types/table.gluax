@@ -1,30 +1,30 @@
 impl table {
-    func new() -> Self {
+    pub func new() -> Self {
         @raw("{@RETURN {} @}") -> Self
     }
 
     #[inline]
-    func set(self, key: any, value: any) {
+    pub func set(self, key: any, value: any) {
         @raw("{@1@}[{@2@}] = {@3@}", self, key, value);
     }
 
     #[inline]
-    func get(self, key: any) -> ?any {
+    pub func get(self, key: any) -> ?any {
         @raw("{@RETURN {@1@}[{@2@}] @}", self, key) -> ?any
     }
 
     #[global = "table.concat"]
-    func join(self, sep: ?string, s: ?number, e: ?number) -> string {}
+    pub func join(self, sep: ?string, s: ?number, e: ?number) -> string {}
 
     #[global = "table.remove"]
-    func remove(self, idx: number) -> ?any {}
+    pub func remove(self, idx: number) -> ?any {}
 
     #[global = "table.maxn"]
-    func maxn(self) -> number {}
+    pub func maxn(self) -> number {}
 
     #[global = "table.sort"]
-    func sort(self, cmp: ?func(any, any) -> bool) -> Self {}
+    pub func sort(self, cmp: ?func(any, any) -> bool) -> Self {}
 
     #[global = "unpack"]
-    func unpack(tbl: table, s: ?number, e: ?number) -> ...any {}
+    pub func unpack(tbl: table, s: ?number, e: ?number) -> ...any {}
 }

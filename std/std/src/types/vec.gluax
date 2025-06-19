@@ -2,53 +2,53 @@ import "../debug";
 
 impl<T> vec<T> {
     #[inline]
-    func len(self) -> number {
+    pub func len(self) -> number {
         @raw("{@RETURN #{@1@} @}", self) -> number
     }
 
     #[inline]
-    func push(self, v: T) {
+    pub func push(self, v: T) {
         @raw("do local self = {@1@}; self[#self+1] = {@2@} end;", self, v);
     }
 
     #[inline]
-    func pop(self) -> ?T {
+    pub func pop(self) -> ?T {
         @raw("do local self = {@1@}; local len = #self; if len == 0 then {@TEMP1@} = nil else {@TEMP1@}, self[len] = self[len], nil; end {@RETURN {@TEMP1@} @} end;", self) -> ?T
     }
 
     #[inline]
-    func is_empty(self) -> bool { self.len() == 0 }
+    pub func is_empty(self) -> bool { self.len() == 0 }
 
     #[global = "table.remove"]
-    func remove(self, idx: number) -> ?T {}
+    pub func remove(self, idx: number) -> ?T {}
 
     #[inline]
-    func get(self, idx: number) -> ?T {
+    pub func get(self, idx: number) -> ?T {
         @raw("{@RETURN {@1@}[{@2@}] @}", self, idx) -> ?T
     }
 
     #[inline]
-    func reverse(self) {
+    pub func reverse(self) {
         @raw("do local self = {@1@}; local len = #self; for i = 1, math.floor(len / 2) do self[i], self[len - i + 1] = self[len - i + 1], self[i] end end;", self);
     }
 
     #[inline]
-    func __x_iter_range_bound(self) -> number { self.len() }
+    pub func __x_iter_range_bound(self) -> number { self.len() }
 
     #[inline]
-    func __x_iter_range(self, idx: number) -> T {
+    pub func __x_iter_range(self, idx: number) -> T {
         @raw("{@RETURN {@1@}[{@2@}] @}", self, idx) -> T
     }
 
     #[global = "table.sort"]
-    func sort(self, cmp: ?func(T, T) -> bool) -> Self {}
+    pub func sort(self, cmp: ?func(T, T) -> bool) -> Self {}
 
     #[global = "unpack"]
-    func unpack(self, s: ?number, e: ?number) -> ...T {}
+    pub func unpack(self, s: ?number, e: ?number) -> ...T {}
 }
 
 impl vec<string> {
-    func join(self, sep: ?string, s: ?number, e: ?number) -> string {
+    pub func join(self, sep: ?string, s: ?number, e: ?number) -> string {
         debug::assert(if s {
             s? >= 1
         } else {
@@ -64,7 +64,7 @@ impl vec<string> {
 }
 
 impl vec<number> {
-    func join(self, sep: ?string, s: ?number, e: ?number) -> string {
+    pub func join(self, sep: ?string, s: ?number, e: ?number) -> string {
         debug::assert(if s {
             s? >= 1
         } else {

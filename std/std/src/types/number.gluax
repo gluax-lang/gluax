@@ -6,101 +6,101 @@ impl number {
     /* Globals */
 
     #[global = "tostring"]
-    func to_string(self) -> string {}
+    pub func to_string(self) -> string {}
 
     #[global = "math.abs"]
-    func abs(self) -> number {}
+    pub func abs(self) -> number {}
 
     #[global = "math.acos"]
-    func acos(self) -> number {}
+    pub func acos(self) -> number {}
 
     #[global = "math.asin"]
-    func asin(self) -> number {}
+    pub func asin(self) -> number {}
 
     #[global = "math.atan"]
-    func atan(self) -> number {}
+    pub func atan(self) -> number {}
 
     #[global = "math.ceil"]
-    func ceil(self) -> number {}
+    pub func ceil(self) -> number {}
 
     #[global = "math.cos"]
-    func cos(self) -> number {}
+    pub func cos(self) -> number {}
 
     #[global = "math.cosh"]
-    func cosh(self) -> number {}
+    pub func cosh(self) -> number {}
 
     #[global = "math.deg"]
-    func deg(self) -> number {}
+    pub func deg(self) -> number {}
 
     #[global = "math.exp"]
-    func exp(self) -> number {}
+    pub func exp(self) -> number {}
 
     #[global = "math.floor"]
-    func floor(self) -> number {}
+    pub func floor(self) -> number {}
 
     #[global = "math.frexp"]
-    func frexp(self) -> (number, number) {}
+    pub func frexp(self) -> (number, number) {}
 
     #[global = "math.log"]
-    func log(self, b: ?number) -> number {}
+    pub func log(self, b: ?number) -> number {}
 
     #[global = "math.log10"]
-    func log10(self) -> number {}
+    pub func log10(self) -> number {}
 
     #[global = "math.max"]
-    func max(self, mi: number, ma: number, ...number) -> number {}
+    pub func max(self, mi: number, ma: number, ...number) -> number {}
 
     #[global = "math.min"]
-    func min(self, mi: number, ma: number, ...number) -> number {}
+    pub func min(self, mi: number, ma: number, ...number) -> number {}
 
     #[global = "math.modf"]
-    func modf(self) -> (number, number) {}
+    pub func modf(self) -> (number, number) {}
 
     #[global = "math.pow"]
-    func pow(self, e: number) -> number {}
+    pub func pow(self, e: number) -> number {}
 
     #[global = "math.rad"]
-    func rad(self) -> number {}
+    pub func rad(self) -> number {}
 
     #[global = "math.sin"]
-    func sin(self) -> number {}
+    pub func sin(self) -> number {}
 
     #[global = "math.sinh"]
-    func sinh(self) -> number {}
+    pub func sinh(self) -> number {}
 
     #[global = "math.sqrt"]
-    func sqrt(self) -> number {}
+    pub func sqrt(self) -> number {}
 
     #[global = "math.tan"]
-    func tan(self) -> number {}
+    pub func tan(self) -> number {}
 
     #[global = "math.tanh"]
-    func tanh(self) -> number {}
+    pub func tanh(self) -> number {}
 
     /* End Globals */
 
     #[inline]
-    func to_char(self) -> string {
+    pub func to_char(self) -> string {
         debug::assert(self >= 0 && self <= 255, "number.to_char: value must be in range [0, 255], got %s", self);
         string::char(self)
     }
 
     #[inline]
-    func is_nan(self) -> bool { self != self }
+    pub func is_nan(self) -> bool { self != self }
 
     #[inline]
-    func is_inf(self) -> bool { self == math::HUGE || self == -math::HUGE }
+    pub func is_inf(self) -> bool { self == math::HUGE || self == -math::HUGE }
 
     #[inline]
-    func is_double(self) -> bool {
+    pub func is_double(self) -> bool {
         // a number like 1.7976931348623e308 will fail with % 1 ~= 0
         // but if you subtract 1 from it, it will still equal itself
         self % 1 != 0 || self - 1 == self
     }
 
     #[inline]
-    func is_int(self) -> bool { !self.is_double() }
+    pub func is_int(self) -> bool { !self.is_double() }
 
     #[inline]
-    func clamp(self, mi: number, ma: number) -> number { math::clamp(self, mi, ma) }
+    pub func clamp(self, mi: number, ma: number) -> number { math::clamp(self, mi, ma) }
 }

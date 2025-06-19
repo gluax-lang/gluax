@@ -623,7 +623,7 @@ func (a *Analysis) handleDotAccess(expr *ast.DotAccess, toIndex *ast.Expr) Type 
 
 	flds := st.Fields
 	if fld, ok := flds[field.Raw]; ok {
-		if !a.canAccessClassMember(st, fld.IsPublic()) {
+		if !a.canAccessClassField(st, fld.IsPublic()) {
 			a.Errorf(field.Span(), "field `%s` of class `%s` is private", field.Raw, st.Def.Name.Raw)
 		}
 		fldSym := ast.NewSymbol(field.Raw, &fld, fld.Def.Name.Span(), true)
@@ -652,6 +652,10 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 
 	if len(method.Params) < 1 || method.Def.Params[0].Name.Raw != "self" {
 		a.panicf(call.Method.Span(), "no method named `%s` in `%s`", call.Method.Raw, toCallName)
+	}
+
+	if !a.canAccessClassMethod(&method) {
+		a.Errorf(call.Method.Span(), "method `%s` of class `%s` is private", method.Def.Name.Raw, method.Class.Def.Name.Raw)
 	}
 
 	call.SemaFunc = &method

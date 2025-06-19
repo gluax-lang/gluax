@@ -135,6 +135,10 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 
 			method := methods[0]
 
+			if !a.canAccessClassMethod(&method) {
+				a.Errorf(leaf.Span(), "function `%s` of class `%s` is private", method.Def.Name.Raw, method.Class.Def.Name.Raw)
+			}
+
 			if resolvedTy.IsGeneric() {
 				childScope := NewScope(method.Scope.(*Scope))
 				if err := childScope.AddType("Self", resolvedTy); err != nil {

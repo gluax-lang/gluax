@@ -148,7 +148,9 @@ func (p *parser) parseImpl() ast.Item {
 		for p.Token.Is("#") {
 			attributes = append(attributes, p.parseAttribute())
 		}
+		pub := p.tryConsume("pub")
 		method := p.parseClassMethod(false)
+		method.Public = pub
 		method.Attributes = attributes
 		methods = append(methods, method)
 	}
@@ -214,6 +216,7 @@ func (p *parser) parseTrait() ast.Item {
 
 	for !p.Token.Is("}") {
 		method := p.parseClassMethod(true)
+		method.Public = true
 		methods = append(methods, method)
 	}
 

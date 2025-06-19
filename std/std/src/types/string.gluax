@@ -18,54 +18,54 @@ func find(s: string, pattern: string, init: ?number, plain: ?bool) -> (?number, 
 
 impl string {
     #[inline]
-    func __x_iter_range_bound(self) -> number { #self }
+    pub func __x_iter_range_bound(self) -> number { #self }
 
     #[inline]
-    func __x_iter_range(self, idx: number) -> string {
+    pub func __x_iter_range(self, idx: number) -> string {
         sub(self, idx, idx)
     }
 
     /* Globals */
 
     #[global = "string.char"]
-    func char(...number) -> string {}
+    pub func char(...number) -> string {}
 
     #[global = "string.sub"]
-    func sub(self, s_p: number, e_p: ?number) -> string {}
+    pub func sub(self, s_p: number, e_p: ?number) -> string {}
 
     #[global = "string.format"]
-    func format(self, ...any) -> string {}
+    pub func format(self, ...any) -> string {}
 
     #[global = "string.rep"]
-    func rep(self, n: number, sep: ?string) -> string {}
+    pub func rep(self, n: number, sep: ?string) -> string {}
 
     #[global = "string.upper"]
-    func upper(self) -> string {}
+    pub func upper(self) -> string {}
 
     #[global = "string.lower"]
-    func lower(self) -> string {}
+    pub func lower(self) -> string {}
 
     #[global = "string.reverse"]
-    func reverse(self) -> string {}
+    pub func reverse(self) -> string {}
 
     /* End Globals */
 
     #[inline]
-    func to_number(self) -> ?number {
+    pub func to_number(self) -> ?number {
         base::tonumber(self)
     }
 
     #[inline]
-    func is_empty(self) -> bool { self == "" }
+    pub func is_empty(self) -> bool { self == "" }
 
     #[inline]
-    func byte(self, s_pos: number) -> ?number {
+    pub func byte(self, s_pos: number) -> ?number {
         debug::assert(s_pos > 0, "string.byte: position must be greater than 0, got %s", s_pos);
         debug::assert(s_pos <= #self, "string.byte: position out of bounds, got %s, string length is %s", s_pos, #self);
         byte(self, s_pos)
     }
 
-    func bytes(self, s_pos: number, e_pos: number) -> ...number {
+    pub func bytes(self, s_pos: number, e_pos: number) -> ...number {
         debug::assert(s_pos > 0, "string.bytes: start position must be greater than 0, got %s", s_pos);
         debug::assert(s_pos <= #self, "string.bytes: start position out of bounds, got %s, string length is %s", s_pos, #self);
         debug::assert(e_pos >= s_pos, "string.bytes: end position must be greater than or equal to start position, got %s and %s", e_pos, s_pos);
@@ -74,17 +74,17 @@ impl string {
     }
 
     #[inline]
-    func starts_with(self, prefix: string) -> bool {
+    pub func starts_with(self, prefix: string) -> bool {
         self.sub(1, #prefix) == prefix
     }
 
     #[inline]
-    func ends_with(self, suffix: string) -> bool {
+    pub func ends_with(self, suffix: string) -> bool {
         suffix == "" || self.sub(-#suffix) == suffix
     }
 
     #[inline]
-    func contains(self, s: string) -> bool {
+    pub func contains(self, s: string) -> bool {
         (find(self, s, nil, true) unsafe_cast_as nil != nil) unsafe_cast_as bool
     }
 }
