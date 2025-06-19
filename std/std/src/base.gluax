@@ -42,6 +42,9 @@ pub func select(p: any, ...any) -> ...any {}
 #[global]
 pub func type(v: any) -> string {}
 
+#[global]
+pub func collectgarbage(a: ?string, a: ?number) -> any {}
+
 /* End Globals */
 
 pub func getfenv_f(f: anyfunc) -> map<any, any> {
