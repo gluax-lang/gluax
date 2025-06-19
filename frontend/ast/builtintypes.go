@@ -40,7 +40,6 @@ pub class nilable<T> { _priv: nil }
 pub class anyfunc { _priv: nil }
 
 #[no_metatable]
-#[no_impl]
 #[sealed]
 pub class table { _priv: nil }
 `
