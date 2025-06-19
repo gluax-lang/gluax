@@ -1,0 +1,17 @@
+impl table {
+    func new() -> Self {
+        @raw("return {}") -> Self
+    }
+
+    #[global = "table.concat"]
+    func join(self, sep: ?string, s: ?number, e: ?number) -> string {}
+
+    #[global = "table.remove"]
+    func remove(self, idx: number) -> ?any {}
+
+    #[global = "table.maxn"]
+    func maxn(self) -> number {}
+
+    #[global = "table.sort"]
+    func sort(self, cmp: ?func(any, any) -> bool) -> Self {}
+}
