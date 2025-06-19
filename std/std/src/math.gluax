@@ -66,6 +66,35 @@ pub func max(n: number, o: number, ...number) -> number {}
 #[global = "math.min"]
 pub func min(n: number, o: number, ...number) -> number {}
 
+#[global = "math.modf"]
+pub func modf(n: number) -> (number, number) {}
+
+#[global = "math.pow"]
+pub func pow(b: number, e: number) -> number {}
+
+#[global = "math.rad"]
+pub func rad(n: number) -> number {}
+
+#[global = "math.random"]
+pub func random() -> number {}
+
+#[global = "math.randomseed"]
+pub func randomseed(seed: number) {}
+
+#[global = "math.sin"]
+pub func sin(n: number) -> number {}
+
+#[global = "math.sinh"]
+pub func sinh(n: number) -> number {}
+
+#[global = "math.sqrt"]
+pub func sqrt(n: number) -> number {}
+
+#[global = "math.tan"]
+pub func tan(n: number) -> number {}
+
+#[global = "math.tanh"]
+pub func tanh(n: number) -> number {}
 
 /* End Globals */
 

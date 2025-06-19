@@ -53,6 +53,30 @@ impl number {
     #[global = "math.min"]
     func min(self, mi: number, ma: number, ...number) -> number {}
 
+    #[global = "math.modf"]
+    func modf(self) -> (number, number) {}
+
+    #[global = "math.pow"]
+    func pow(self, e: number) -> number {}
+
+    #[global = "math.rad"]
+    func rad(self) -> number {}
+
+    #[global = "math.sin"]
+    func sin(self) -> number {}
+
+    #[global = "math.sinh"]
+    func sinh(self) -> number {}
+
+    #[global = "math.sqrt"]
+    func sqrt(self) -> number {}
+
+    #[global = "math.tan"]
+    func tan(self) -> number {}
+
+    #[global = "math.tanh"]
+    func tanh(self) -> number {}
+
     /* End Globals */
 
     #[inline]
