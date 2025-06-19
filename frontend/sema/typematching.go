@@ -152,19 +152,20 @@ func (a *Analysis) matchClassTypeStrict(s *SemClass, other Type) bool {
 
 /* Function */
 
-func (a *Analysis) matchFunctionType(f SemFunction, other Type) bool {
-	if !other.IsFunction() {
-		return false
-	}
-	if len(f.Params) != len(other.Function().Params) {
+func (a *Analysis) matchFunction(f SemFunction, other SemFunction) bool {
+	if len(f.Params) != len(other.Params) {
 		return false
 	}
 	for i, p := range f.Params {
-		if !a.MatchTypesStrict(p, other.Function().Params[i]) {
+		if !a.MatchTypesStrict(p, other.Params[i]) {
 			return false
 		}
 	}
-	return a.MatchTypesStrict(f.Return, other.Function().Return)
+	return a.MatchTypesStrict(f.Return, other.Return)
+}
+
+func (a *Analysis) matchFunctionType(f SemFunction, other Type) bool {
+	return other.IsFunction() && a.matchFunction(f, other.Function())
 }
 
 /* Tuple */
