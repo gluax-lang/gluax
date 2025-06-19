@@ -471,6 +471,19 @@ func (a *Analysis) resolveImplementations() {
 			impl.Checks = append(impl.Checks, func() {
 				// this hack is needed, so something like `__x_iter_range` can check if `__x_iter_range_bound` exists or not
 				a.checkClassMethods(st, methodName)
+
+				if st.Super != nil {
+					if superMethod := a.FindClassMethod(st.Super, methodName); superMethod != nil {
+						if !a.matchFunction(*superMethod, funcTy) {
+							a.Errorf(
+								funcTy.Span(),
+								"method `%s` does not match superclass `%s` signature",
+								methodName,
+								superMethod.Class.Def.Name.Raw,
+							)
+						}
+					}
+				}
 			})
 		}
 		impl.GenericsScope = genericsScope
