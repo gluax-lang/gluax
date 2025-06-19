@@ -47,11 +47,11 @@ pub func collectgarbage(a: ?string, a: ?number) -> any {}
 
 /* End Globals */
 
-pub func getfenv_f(f: anyfunc) -> map<any, any> {
+pub func getfenv_func(f: anyfunc) -> map<any, any> {
     getfenv(f)
 }
 
-pub func getfenv_l(level: number) ! -> map<any, any> {
+pub func getfenv_level(level: number) ! -> map<any, any> {
     let success, res = pcall(getfenv, level);
     if !success {
         throw (res unsafe_cast_as string);
@@ -67,7 +67,19 @@ pub func errorf(msg: string, ...any) -> unreachable {
     error(string::format(msg, ...))
 }
 
-pub func select_n(...any) -> number {
+pub func selectn(...any) -> number {
     select("#", ...) unsafe_cast_as number
 }
 
+pub class debug {}
+
+impl debug {
+    #[global = "debug.getinfo"]
+    func getinfo_func(f: anyfunc, what: ?string) -> map<string, any> {}
+
+    #[global = "debug.getinfo"]
+    func getinfo_level(l: number, what: ?string) -> map<string, any> {}
+
+    #[global = "debug.Trace"]
+    func trace() {}
+}

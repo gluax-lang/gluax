@@ -2,9 +2,11 @@
 
 import "base";
 
-pub use base::print;
-pub use base::error;
 pub use base::_VERSION;
 
+pub use base::print;
 pub use base::printf;
+pub use base::error;
 pub use base::errorf;
+pub use base::select;
+pub use base::selectn;
