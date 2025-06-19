@@ -24,4 +24,7 @@ impl table {
 
     #[global = "table.sort"]
     func sort(self, cmp: ?func(any, any) -> bool) -> Self {}
+
+    #[global = "unpack"]
+    func unpack(tbl: table, s: ?number, e: ?number) -> ...any {}
 }

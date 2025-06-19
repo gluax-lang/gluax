@@ -80,7 +80,7 @@ impl string {
 
     #[inline]
     func ends_with(self, suffix: string) -> bool {
-        suffix == "" || self.sub(-#suffix, nil) == suffix
+        suffix == "" || self.sub(-#suffix) == suffix
     }
 
     #[inline]

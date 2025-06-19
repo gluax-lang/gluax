@@ -3,5 +3,6 @@ import "types/types";
 pub import "base";
 pub import "math";
 pub import "debug";
+pub import "bit";
 
 import "public";

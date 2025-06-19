@@ -1,3 +1,5 @@
+import "../debug";
+
 impl<T> vec<T> {
     #[inline]
     func len(self) -> number {
@@ -17,10 +19,8 @@ impl<T> vec<T> {
     #[inline]
     func is_empty(self) -> bool { self.len() == 0 }
 
-    #[inline]
-    func remove(self, idx: number) -> ?T {
-        @raw("{@RETURN table.remove({@1@}, {@2@}) @}", self, idx) -> ?T
-    }
+    #[global = "table.remove"]
+    func remove(self, idx: number) -> ?T {}
 
     #[inline]
     func get(self, idx: number) -> ?T {
@@ -38,5 +38,43 @@ impl<T> vec<T> {
     #[inline]
     func __x_iter_range(self, idx: number) -> T {
         @raw("{@RETURN {@1@}[{@2@}] @}", self, idx) -> T
+    }
+
+    #[global = "table.sort"]
+    func sort(self, cmp: ?func(T, T) -> bool) -> Self {}
+
+    #[global = "unpack"]
+    func unpack(self, s: ?number, e: ?number) -> ...T {}
+}
+
+impl vec<string> {
+    func join(self, sep: ?string, s: ?number, e: ?number) -> string {
+        debug::assert(if s {
+            s? >= 1
+        } else {
+            true
+        }, "vec.join: start index must be greater than or equal to 1, got %s", s);
+        debug::assert(if e {
+            e? <= self.len()
+        } else {
+            true
+        }, "vec.join: end index must be less than or equal to the length of the vector, got %s, length is %s", e, self.len());
+        table::join(self, sep, s, e)
+    }
+}
+
+impl vec<number> {
+    func join(self, sep: ?string, s: ?number, e: ?number) -> string {
+        debug::assert(if s {
+            s? >= 1
+        } else {
+            true
+        }, "vec.join: start index must be greater than or equal to 1, got %s", s);
+        debug::assert(if e {
+            e? <= self.len()
+        } else {
+            true
+        }, "vec.join: end index must be less than or equal to the length of the vector, got %s, length is %s", e, self.len());
+        table::join(self, sep, s, e)
     }
 }

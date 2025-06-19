@@ -7,10 +7,7 @@ pub let _VERSION: string = "";
 pub func print(...any) {}
 
 #[global]
-pub func error(m: string) -> unreachable {}
-
-#[global = "error"]
-pub func error_level(m: string, level: number) -> unreachable {}
+pub func error(m: string, l: ?number) -> unreachable {}
 
 #[global]
 pub func rawequal(v1: any, v2: any) -> bool {}
@@ -25,10 +22,7 @@ pub func getmetatable(t: any) -> any {}
 pub func setmetatable(t: any, m: any) {}
 
 #[global]
-pub func tonumber(v: any) -> ?number {}
-
-#[global = "tonumber"]
-pub func tonumber_base(v: any, base: ?number) -> ?number {}
+pub func tonumber(v: any, b: ?number) -> ?number {}
 
 #[global]
 pub func getfenv(v: any) -> map<any, any> {}
@@ -47,15 +41,6 @@ pub func select(p: any, ...any) -> ...any {}
 
 #[global]
 pub func type(v: any) -> string {}
-
-#[global = "unpack"]
-pub func unpack(tbl: table) -> ...any {}
-
-#[global = "unpack"]
-pub func unpack_from(tbl: table, s: number) -> ...any {}
-
-#[global = "unpack"]
-pub func unpack_range(tbl: table, s: number, e: number) -> ...any {}
 
 /* End Globals */
 

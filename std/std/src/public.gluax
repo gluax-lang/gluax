@@ -4,7 +4,6 @@ import "base";
 
 pub use base::print;
 pub use base::error;
-pub use base::error_level;
 pub use base::_VERSION;
 
 pub use base::printf;
