@@ -229,6 +229,9 @@ func (lx *lexer) rawString() (Token, *diagnostic) {
 		// Check for a potential closing quote.
 		if *lx.curChr == '"' {
 			lx.advance() // Consume '\"'.
+			if hashCount == 0 {
+				return NewTokString(sb.String(), lx.currentSpan()), nil
+			}
 
 			// See if it's followed by the correct number of hashes.
 			endHashCount := 0
