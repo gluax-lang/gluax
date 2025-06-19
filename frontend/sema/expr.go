@@ -557,14 +557,24 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 	requiredCount := len(fixedParams)
 	actualCount := len(processedArgs)
 
-	if actualCount < requiredCount {
-		a.panicf(call.Span(), "expected at least %d argument(s), found %d", requiredCount, actualCount)
+	lastRequired := requiredCount
+	for i := requiredCount - 1; i >= 0; i-- {
+		p := fixedParams[i]
+		if !p.IsNilable() && !p.IsNil() {
+			break
+		}
+		lastRequired = i
 	}
-	if !hasVararg && actualCount != requiredCount {
-		a.panicf(call.Span(), "expected exactly %d argument(s), found %d", requiredCount, actualCount)
+	minRequired := lastRequired // Only up to here are required
+
+	if actualCount < minRequired {
+		a.panicf(call.Span(), "expected at least %d argument(s), found %d", minRequired, actualCount)
+	}
+	if !hasVararg && actualCount > requiredCount {
+		a.panicf(call.Span(), "expected at most %d argument(s), found %d", requiredCount, actualCount)
 	}
 
-	for i := range requiredCount {
+	for i := 0; i < actualCount && i < requiredCount; i++ {
 		a.Matches(funcTy.Params[i], processedArgs[i], processedSpans[i])
 	}
 
