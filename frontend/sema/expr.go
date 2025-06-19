@@ -224,8 +224,8 @@ func (a *Analysis) handleUnaryExpr(scope *Scope, unE *ast.ExprUnary) Type {
 		}
 		return a.numberType()
 	case ast.UnaryOpLength:
-		if !ty.IsVec() && !ty.IsString() {
-			a.panic(unE.Span(), "unary length operator requires a vector or string value")
+		if !ty.IsString() {
+			a.panic(unE.Span(), "unary length operator requires a string value")
 		}
 		return a.numberType()
 	default:
