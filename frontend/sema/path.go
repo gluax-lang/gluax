@@ -41,7 +41,9 @@ func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafRe
 			if i > 0 && !currentSym.IsPublic() {
 				a.Errorf(seg.Span(), "`%s` is private", seg.Ident.Raw)
 			}
-			checkSegmentGenerics(a, seg)
+			if !currentSym.IsType() || !currentSym.Type().IsClass() {
+				checkSegmentGenerics(a, seg)
+			}
 			if currentSym.IsImport() {
 				imp := currentSym.Import()
 				customSym := *currentSym
@@ -118,7 +120,12 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 			var resolvedTy Type
 
 			if baseTy.IsClass() {
-				st := a.resolveClass(scope, baseTy.Class(), leaf.Generics, leaf.Span())
+				var typeGenerics []ast.Type
+				if len(path.Segments) >= 2 {
+					prevSeg := path.Segments[len(path.Segments)-2]
+					typeGenerics = prevSeg.Generics
+				}
+				st := a.resolveClass(scope, baseTy.Class(), typeGenerics, leaf.Span())
 				resolvedTy = ast.NewSemType(st, baseTy.Span())
 			} else {
 				checkSegmentGenerics(a, leaf)
