@@ -123,7 +123,8 @@ type ImplClass struct {
 	GenericsScope any
 	span          common.Span
 
-	Checks []func() // these checks are ran in analyzeImplementations
+	ClassSema *SemClass // semantic information, if available
+	Checks    []func()  // these checks are ran in analyzeImplementations
 }
 
 func NewImplClass(generics Generics, st Type, methods []Function, span common.Span) *ImplClass {

@@ -486,6 +486,24 @@ func (f SemFunction) Attributes() Attributes {
 	return f.Def.Attributes
 }
 
+func (f SemFunction) IsClassMethod() bool {
+	if f.Trait != nil {
+		return false
+	}
+
+	if f.Class == nil {
+		return false
+	}
+
+	for _, param := range f.Def.Params {
+		if param.Name.Raw == "self" {
+			return true
+		}
+	}
+
+	return false
+}
+
 /* Tuple */
 
 type SemTuple struct{ Elems []SemType }

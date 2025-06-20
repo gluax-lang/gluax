@@ -473,7 +473,7 @@ func (a *Analysis) resolveImplementations() {
 
 				if st.Super != nil {
 					if superMethod := a.FindClassMethod(st.Super, methodName); superMethod != nil {
-						if !a.matchFunction(*superMethod, funcTy) {
+						if superMethod.IsClassMethod() && !a.matchFunction(*superMethod, funcTy) {
 							a.Errorf(
 								funcTy.Span(),
 								"method `%s` does not match superclass `%s` signature",
@@ -485,6 +485,7 @@ func (a *Analysis) resolveImplementations() {
 				}
 			})
 		}
+		impl.ClassSema = st
 		impl.GenericsScope = genericsScope
 	}
 }
@@ -508,8 +509,10 @@ func (a *Analysis) analyzeImplementations() {
 		for _, check := range impl.Checks {
 			check()
 		}
-		for _, method := range impl.Methods {
-			_ = a.handleFunction(impl.GenericsScope.(*Scope), &method)
+		if !impl.ClassSema.IsGlobal() {
+			for _, method := range impl.Methods {
+				_ = a.handleFunction(impl.GenericsScope.(*Scope), &method)
+			}
 		}
 	}
 
