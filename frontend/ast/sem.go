@@ -482,6 +482,10 @@ func (f SemFunction) ReturnTypes() []SemType {
 	return []SemType{f.Return}
 }
 
+func (f SemFunction) Attributes() Attributes {
+	return f.Def.Attributes
+}
+
 /* Tuple */
 
 type SemTuple struct{ Elems []SemType }

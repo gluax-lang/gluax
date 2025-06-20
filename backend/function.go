@@ -194,7 +194,13 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 					return fmt.Sprintf("%s(%s)", cg.decorateFuncName(fun), args)
 				} else {
 					args := cg.genExprsLeftToRight(call.Args)
-					return fmt.Sprintf("%s:%s(%s)", toCall, fun.Def.Name.Raw, args)
+					var name string
+					if rename := fun.Attributes().GetString("method_rename"); rename != nil {
+						name = *rename
+					} else {
+						name = fun.Def.Name.Raw
+					}
+					return fmt.Sprintf("%s:%s(%s)", toCall, name, args)
 				}
 			case toCallTy.IsDynTrait():
 				args := cg.getCallArgs(call, toCall)
