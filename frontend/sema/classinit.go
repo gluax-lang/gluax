@@ -20,7 +20,7 @@ func (a *Analysis) handleClassInit(scope *Scope, si *ast.ExprClassInit) Type {
 
 	// 2) If no generics provided but class has generics => infer
 	var inferredGenerics []Type
-	if expected > 0 && len(si.Name.LastSegment().Generics) == 0 {
+	if expected > 0 && len(si.Name.LastSegment().Generics) == 0 && baseClass.Generics.UnboundCount() > 0 {
 		var err error
 		inferredGenerics, err = a.inferClassGenericsForInit(scope, baseClass, si.Fields)
 		if err != nil {
