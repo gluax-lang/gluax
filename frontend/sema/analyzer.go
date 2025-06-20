@@ -186,11 +186,11 @@ func (a *Analysis) nilableType(t Type, span Span) Type {
 	return a.instantiateBuiltinClass("nilable", span, t)
 }
 
-func (a *Analysis) tupleType(span Span, ty Type, other ...Type) Type {
-	return ast.NewSemType(
-		ast.SemTuple{Elems: append([]Type{ty}, other...)},
-		span,
-	)
+func (a *Analysis) tupleType(span Span, other ...Type) Type {
+	if len(other) == 0 {
+		panic("tupleType called with no types")
+	}
+	return ast.NewSemType(ast.SemTuple{Elems: other}, span)
 }
 
 func (a *Analysis) Matches(ty, other Type, span Span) {
