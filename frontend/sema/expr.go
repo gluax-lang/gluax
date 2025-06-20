@@ -167,8 +167,8 @@ func (a *Analysis) handleBinaryExpr(scope *Scope, binE *ast.ExprBinary) Type {
 		if !rty.IsLogical() {
 			a.Errorf(binE.Right.Span(), "expected boolean value, got: %s", rty.String())
 		}
-		binE.Left.AsCond = true
-		binE.Right.AsCond = true
+		binE.Left.AsCond = lty.IsNilable()
+		binE.Right.AsCond = rty.IsNilable()
 		return a.boolType()
 	case ast.BinaryOpLess, ast.BinaryOpGreater,
 		ast.BinaryOpLessEqual, ast.BinaryOpGreaterEqual:
@@ -274,7 +274,7 @@ func (a *Analysis) handleIfExpr(scope *Scope, ifE *ast.ExprIf) (Type, FlowStatus
 	if !condTy.IsNilable() {
 		a.Matches(a.boolType(), condTy, ifE.Main.Cond.Span())
 	}
-	ifE.Main.Cond.AsCond = true
+	ifE.Main.Cond.AsCond = condTy.IsNilable()
 
 	thenFlow := a.handleBlock(scope, &ifE.Main.Then)
 	thenTy := ifE.Main.Then.Type()
@@ -290,7 +290,7 @@ func (a *Analysis) handleIfExpr(scope *Scope, ifE *ast.ExprIf) (Type, FlowStatus
 		if !cTy.IsNilable() {
 			a.Matches(a.boolType(), cTy, br.Cond.Span())
 		}
-		br.Cond.AsCond = true
+		br.Cond.AsCond = cTy.IsNilable()
 
 		blockFlow := a.handleBlock(scope, &br.Then)
 		blockTy := br.Then.Type()
@@ -344,7 +344,7 @@ func (a *Analysis) handleWhileExpr(scope *Scope, whileE *ast.ExprWhile) {
 	if !condTy.IsNilable() {
 		a.Matches(a.boolType(), condTy, whileE.Cond.Span())
 	}
-	whileE.Cond.AsCond = true
+	whileE.Cond.AsCond = condTy.IsNilable()
 
 	child := scope.Child(true)
 	child.InLoop = true
