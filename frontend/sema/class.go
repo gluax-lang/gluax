@@ -260,6 +260,26 @@ func (a *Analysis) unify(
 	// If base is a class => unify generics param-by-param
 	if base.IsClass() {
 		bs := base.Class()
+
+		if bs.IsNilable() {
+			baseInner := bs.InnerType()
+
+			if actual.IsNil() {
+				// Cannot infer from 'nil'. Let caller decide if unbound generic is an error.
+				return base
+			}
+
+			if actual.IsNilable() {
+				actualInner := actual.Class().InnerType()
+				specializedInner := a.unify(baseInner, actualInner, placeholders, span)
+				return a.nilableType(specializedInner, base.Span())
+			}
+
+			// `actual` is not nilable, e.g. `string`. Unify inner with it.
+			specializedInner := a.unify(baseInner, actual, placeholders, span)
+			return a.nilableType(specializedInner, base.Span())
+		}
+
 		// actual must be a class
 		if !actual.IsClass() {
 			a.panicf(span, "type mismatch: expected class `%s`, got `%s`", bs.String(), actual.String())
