@@ -428,14 +428,13 @@ func (a *Analysis) resolveImplementations() {
 			}
 
 			methodCopy := method
-			methodCopy.Params = append([]Type{}, method.Params[1:]...)
+			methodCopy = a.HandleClassMethod(st, methodCopy, false)
 
 			stMethodCopy := stMethod
-			stMethodCopy.Params = append([]Type{}, stMethod.Params[1:]...)
+			stMethodCopy = a.HandleClassMethod(st, stMethodCopy, false)
 
-			stMethodTy := ast.NewSemType(stMethodCopy, st.Def.Name.Span())
-			if !a.matchFunctionType(methodCopy, stMethodTy) {
-				a.panicf(implTrait.Span(), "method `%s` doesn't match trait `%s`: expected %s, got %s", name, trait.Def.Name.Raw, method.String(), stMethodTy.String())
+			if !a.matchFunction(methodCopy, stMethodCopy) {
+				a.panicf(implTrait.Span(), "method `%s` doesn't match trait `%s`: expected %s, got %s", name, trait.Def.Name.Raw, methodCopy.String(), stMethodCopy.String())
 			}
 
 			stMethod.Trait = trait
