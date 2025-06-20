@@ -411,9 +411,14 @@ func (a *Analysis) handleForInExpr(scope *Scope, forIn *ast.ExprForIn) {
 	if method := a.FindClassMethod(st, "__x_iter_pairs"); method != nil {
 		firstReturn := method.FirstReturnType()
 		iterFunc := firstReturn.Function()
-		iterReturn = iterFunc.Return
 		iterReturnCount = iterFunc.ReturnCount()
 		forIn.PairsMethod = method
+
+		nonNilableTypes := make([]Type, iterReturnCount)
+		for i, retType := range iterFunc.ReturnTypes() {
+			nonNilableTypes[i] = retType.NilableInnerType()
+		}
+		iterReturn = a.tupleType(inExpr.Span(), nonNilableTypes...)
 	} else if method := a.FindClassMethod(st, "__x_iter_range"); method != nil {
 		iterReturn = a.tupleType(inExpr.Span(), a.numberType(), method.FirstReturnType())
 		iterReturnCount = 2

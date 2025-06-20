@@ -40,6 +40,13 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemClass, string){
 			a.Errorf(iterFunc.Return.Span(), "method `%s` iterator function cannot have vararg return", methodName)
 			return
 		}
+
+		for i, rt := range iterFunc.ReturnTypes() {
+			if !rt.IsNilable() {
+				a.Errorf(rt.Span(), "iterator function return value %d must be nilable", i+1)
+				return
+			}
+		}
 	},
 	"__x_iter_range": func(a *Analysis, st *ast.SemClass, methodName string) {
 		fun := a.FindClassMethod(st, methodName)
