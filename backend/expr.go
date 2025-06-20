@@ -90,9 +90,13 @@ func isSimpleExpr(e ast.Expr) bool {
 		return true
 	case ast.ExprKindParenthesized:
 		return isSimpleExpr(e.Parenthesized().Value)
-	default:
-		return false
+	case ast.ExprKindPath:
+		path := e.Path()
+		if len(path.Segments) == 1 {
+			return true
+		}
 	}
+	return false
 }
 
 func (cg *Codegen) genExpr(e ast.Expr) string {
@@ -197,9 +201,9 @@ func (cg *Codegen) genQPathExpr(qp *ast.QPath) string {
 }
 
 func (cg *Codegen) genBinaryExpr(binE *ast.ExprBinary) string {
-	lhs := cg.getTempVar()
-	cg.ln("%s = %s;", lhs, cg.genExprX(binE.Left))
-	rhs := cg.genExprX(binE.Right)
+	exprs := cg.genExprsToStrings([]ast.Expr{binE.Left, binE.Right})
+	lhs := exprs[0]
+	rhs := exprs[1]
 	var op string
 	switch binE.Op {
 	case ast.BinaryOpInvalid:
