@@ -99,8 +99,7 @@ func (a *Analysis) buildGenericsTable(scope *Scope, st *SemClass, concrete []Typ
 						// If the binding is a class, we need to ensure it implements the trait
 						// specified in the constraint.
 						if !a.ClassImplementsTrait(st, constraint.ResolvedSymbol.Trait()) {
-							a.panicf(a.GetClassSetupSpan(binding.Span()),
-								"class `%s` does not implement trait `%s`", binding.String(), constraint.ResolvedSymbol.Trait().Def.Name)
+							a.panicf(a.GetClassSetupSpan(binding.Span()), "class `%s` does not implement trait `%s`", binding.String(), constraint.ResolvedSymbol.Trait().Def.Name)
 						}
 					}
 				} else if binding.IsGeneric() {
@@ -115,8 +114,7 @@ func (a *Analysis) buildGenericsTable(scope *Scope, st *SemClass, concrete []Typ
 							}
 						}
 						if !implements {
-							a.panicf(a.GetClassSetupSpan(binding.Span()),
-								"generic `%s` does not implement trait `%s`", generic.Ident.Raw, trait.Def.Name)
+							a.panicf(a.GetClassSetupSpan(binding.Span()), "generic `%s` does not implement trait `%s`", generic.Ident.Raw, trait.Def.Name)
 						}
 					}
 				} else {
@@ -156,8 +154,7 @@ func (a *Analysis) instantiateClass(def *ast.Class, concrete []Type) *SemClass {
 	}
 
 	if len(concrete) != def.Generics.Len() {
-		a.panicf(a.GetClassSetupSpan(def.Span()),
-			"class `%s` expects %d generic argument(s), but %d provided", def.Name.Raw, def.Generics.Len(), len(concrete))
+		a.panicf(a.GetClassSetupSpan(def.Span()), "class `%s` expects %d generic argument(s), but %d provided", def.Name.Raw, def.Generics.Len(), len(concrete))
 	}
 
 	st := a.setupClass(def, concrete, true)
@@ -237,13 +234,13 @@ func (a *Analysis) unify(
 	if base.IsGeneric() {
 		baseName := base.Generic().Ident.Raw
 
-		// (a) Already bound?  Just return it — no more recursion.
+		// (a) Already bound? Just return it — no more recursion.
 		if bound, ok := placeholders[baseName]; ok {
 			return bound
 		}
 
 		// (b) If actual is also a generic that’s already bound,
-		//     bind base → that same concrete, and return.
+		// bind base -> that same concrete, and return.
 		if actual.IsGeneric() {
 			otherName := actual.Generic().Ident.Raw
 			if otherBound, ok := placeholders[otherName]; ok {
@@ -252,7 +249,7 @@ func (a *Analysis) unify(
 			}
 		}
 
-		// (c) Otherwise bind base → actual (whatever it is) and return.
+		// (c) Otherwise bind base -> actual (whatever it is) and return.
 		placeholders[baseName] = actual
 		return actual
 	}
@@ -325,9 +322,7 @@ func (a *Analysis) unify(
 		}
 		// unify each generic param
 		if len(bs.Generics.Params) != len(as.Generics.Params) {
-			a.panicf(span,
-
-				"class `%s` has %d generic param(s), but got %d in `%s`",
+			a.panicf(span, "class `%s` has %d generic param(s), but got %d in `%s`",
 				bs.Def.Name.Raw,
 				len(bs.Generics.Params),
 				len(as.Generics.Params),
