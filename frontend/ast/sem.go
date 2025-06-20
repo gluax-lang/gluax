@@ -475,6 +475,13 @@ func (f SemFunction) GlobalName() string {
 	return f.Def.GlobalName()
 }
 
+func (f SemFunction) ReturnTypes() []SemType {
+	if f.Return.IsTuple() {
+		return f.Return.Tuple().Elems
+	}
+	return []SemType{f.Return}
+}
+
 /* Tuple */
 
 type SemTuple struct{ Elems []SemType }
