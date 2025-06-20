@@ -33,6 +33,10 @@ func (cg *Codegen) generateClass(st *ast.SemClass) {
 	if !st.IsFullyConcrete() {
 		return // we don't generate classes with generics, because they will never be used
 	}
+	if st.IsGlobal() {
+		// global classes are just phantom, they exist in lua world!
+		return
+	}
 	name := cg.decorateClassName(st)
 	{
 		if _, ok := cg.generatedClasses[name]; ok {
