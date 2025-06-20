@@ -257,6 +257,39 @@ func (a *Analysis) unify(
 		return actual
 	}
 
+	if base.IsFunction() {
+		bf := base.Function()
+
+		// actual must be a function
+		if !actual.IsFunction() {
+			a.panicf(span, "type mismatch: expected function, got `%s`", actual.String())
+		}
+		af := actual.Function()
+
+		// same param count
+		if len(bf.Params) != len(af.Params) {
+			a.panicf(span, "function parameter count mismatch: expected %d, got %d", len(bf.Params), len(af.Params))
+		}
+
+		// Unify each param
+		newParams := make([]Type, len(bf.Params))
+		for i := range bf.Params {
+			pbase := bf.Params[i]
+			pact := af.Params[i]
+			specialized := a.unify(pbase, pact, placeholders, span)
+			newParams[i] = specialized
+		}
+
+		// Unify return type
+		newReturn := a.unify(bf.Return, af.Return, placeholders, span)
+
+		// Create a new function type with the specialized types
+		specializedFunc := bf
+		specializedFunc.Params = newParams
+		specializedFunc.Return = newReturn
+		return ast.NewSemType(specializedFunc, base.Span())
+	}
+
 	// If base is a class => unify generics param-by-param
 	if base.IsClass() {
 		bs := base.Class()
