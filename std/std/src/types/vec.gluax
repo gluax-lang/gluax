@@ -1,4 +1,5 @@
 import "../debug";
+import "../base";
 
 impl<T> vec<T> {
     #[inline]
@@ -9,6 +10,20 @@ impl<T> vec<T> {
     #[inline]
     pub func push(self, v: T) {
         @raw("do local self = {@1@}; self[#self+1] = {@2@} end;", self, v);
+    }
+
+    #[inline]
+    pub func insert(self, idx: number, v: T) {
+        let len = self.len();
+        if idx < 1 || idx > len + 1 {
+            base::errorf("vec.insert: index %s out of bounds [1, %s]", idx, len + 1);
+        }
+        @raw("table.insert({@1@}, {@2@}, {@3@});", self, idx, v);
+    }
+
+    #[inline]
+    pub func unsafe_set(self, idx: number, v: T) {
+        @raw("do {@1@}[{@2@}] = {@3@}; end;", self, idx, v);
     }
 
     #[inline]

@@ -2,33 +2,33 @@ import "../base";
 
 impl<K, V> map<K, V> {
     #[inline]
-    func get(self, key: K) -> ?V {
+    pub func get(self, key: K) -> ?V {
         @raw("{@RETURN {@1@}[{@2@}] @}", self, key) -> ?V
     }
 
     #[inline]
-    func set(self, key: K, value: V) {
+    pub func set(self, key: K, value: V) {
         @raw("{@1@}[{@2@}] = {@3@}", self, key, value);
     }
 
     #[inline]
-    func remove(self, key: K) {
+    pub func remove(self, key: K) {
         @raw("{@1@}[{@2@}] = nil;", self, key);
     }
 
     #[inline]
-    func take(self, key: K) -> ?V {
+    pub func take(self, key: K) -> ?V {
         @raw("do local self, key = {@1@}, {@2@}; {@TEMP1@}, self[key] = self[key], nil; {@RETURN {@TEMP1@} @} end;", self, key) -> ?V
     }
 
     // Same as `set`, but returns the previous value if it exists
     #[inline]
-    func insert(self, key: K, value: V) -> ?V {
+    pub func insert(self, key: K, value: V) -> ?V {
         @raw("do local self, key = {@1@}, {@2@}; {@TEMP1@}, self[key] = self[key], {@3@}; {@RETURN {@TEMP1@} @} end;", self, key, value) -> ?V
     }
 
     #[inline]
-    func __x_iter_pairs(self) -> (func(table, any) -> (K, V), Self) {
-        (base::next unsafe_cast_as func(table, any) -> (K, V), self)
+    func __x_iter_pairs(self) -> (func(table, any) -> (?K, ?V), Self) {
+        (base::next unsafe_cast_as func(table, any) -> (?K, ?V), self)
     }
 }

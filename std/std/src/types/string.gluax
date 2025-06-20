@@ -48,17 +48,14 @@ impl string {
     #[global = "string.reverse"]
     pub func reverse(self) -> string {}
 
+    #[global]
+    pub func tonumber(self) -> ?number {}
     /* End Globals */
-
-    #[inline]
-    pub func to_number(self) -> ?number {
-        base::tonumber(self)
-    }
 
     #[inline]
     pub func is_empty(self) -> bool { self == "" }
 
-    #[inline]
+#ifdef DEBUG
     pub func byte(self, s_pos: number) -> ?number {
         debug::assert(s_pos > 0, "string.byte: position must be greater than 0, got %s", s_pos);
         debug::assert(s_pos <= #self, "string.byte: position out of bounds, got %s, string length is %s", s_pos, #self);
@@ -72,6 +69,14 @@ impl string {
         debug::assert(e_pos <= #self, "string.bytes: end position out of bounds, got %s, string length is %s", e_pos, #self);
         return bytes(self, s_pos, e_pos);
     }
+#else
+    #[global = "string.byte"]
+    pub func byte(self, s_pos: number) -> ?number {}
+
+    #[global = "string.byte"]
+    pub func bytes(self, s_pos: number, e_pos: number) -> ...number {}
+#endif
+
 
     #[inline]
     pub func starts_with(self, prefix: string) -> bool {
