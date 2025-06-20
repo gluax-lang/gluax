@@ -209,15 +209,15 @@ func (cg *Codegen) genBinaryExpr(binE *ast.ExprBinary) string {
 	case ast.BinaryOpInvalid:
 		panic("unreachable")
 	case ast.BinaryOpBitwiseOr:
-		return fmt.Sprintf("bit.bor(%s,%s)", lhs, rhs)
+		return fmt.Sprintf("bit_bor(%s,%s)", lhs, rhs)
 	case ast.BinaryOpBitwiseAnd:
-		return fmt.Sprintf("bit.band(%s,%s)", lhs, rhs)
+		return fmt.Sprintf("bit_band(%s,%s)", lhs, rhs)
 	case ast.BinaryOpBitwiseXor:
-		return fmt.Sprintf("bit.bxor(%s,%s)", lhs, rhs)
+		return fmt.Sprintf("bit_bxor(%s,%s)", lhs, rhs)
 	case ast.BinaryOpBitwiseLeftShift:
-		return fmt.Sprintf("bit.lshift(%s,%s)", lhs, rhs)
+		return fmt.Sprintf("bit_lshift(%s,%s)", lhs, rhs)
 	case ast.BinaryOpBitwiseRightShift:
-		return fmt.Sprintf("bit.rshift(%s,%s)", lhs, rhs)
+		return fmt.Sprintf("bit_rshift(%s,%s)", lhs, rhs)
 	case ast.BinaryOpLogicalOr:
 		panic("unreachable")
 	case ast.BinaryOpLogicalAnd:
@@ -258,7 +258,7 @@ func (cg *Codegen) genUnaryExpr(unE *ast.ExprUnary) string {
 	case ast.UnaryOpNot:
 		return fmt.Sprintf("(not %s)", value)
 	case ast.UnaryOpBitwiseNot:
-		return fmt.Sprintf("bit.bnot(%s)", value)
+		return fmt.Sprintf("bit_bnot(%s)", value)
 	case ast.UnaryOpNegate:
 		return fmt.Sprintf("(-%s)", value)
 	case ast.UnaryOpLength:
