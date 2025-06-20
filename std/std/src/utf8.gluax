@@ -1,0 +1,241 @@
+import "base";
+
+#define ERR_INV_BYTE "invalid UTF-8 byte"
+
+// The FIRST byte of a valid UTF-8 character is always in the range 0x00 to 0xF4.
+#define RUNE_SELF 0x80
+#define RUNE_ERROR 0xFFFD
+
+// Lowest and highest continuation bytes
+#define LOCB 0x80
+#define HICB 0xBF
+
+// Masks
+#define MASK_X 0x3F
+#define MASK_2 0x1F
+#define MASK_3 0x0F
+#define MASK_4 0x07
+
+// Go weird constants
+#define XX 0xF1
+#define AS 0xF0
+#define S1 0x02
+#define S2 0x13
+#define S3 0x03
+#define S4 0x23
+#define S5 0x34
+#define S6 0x04
+#define S7 0x44
+
+let FIRST: vec<number> = vec{
+	// 0x00-0x0F
+	AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS,
+	// 0x10-0x1F
+	AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS,
+	// 0x20-0x2F
+	AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS,
+	// 0x30-0x3F
+	AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS,
+	// 0x40-0x4F
+	AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS,
+	// 0x50-0x5F
+	AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS,
+	// 0x60-0x6F
+	AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS,
+	// 0x70-0x7F
+	AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS,
+	// 0x80-0x8F
+	XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX,
+	// 0x90-0x9F
+	XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX,
+	// 0xA0-0xAF
+	XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX,
+	// 0xB0-0xBF
+	XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX,
+	// 0xC0-0xCF
+	XX, XX, S1, S1, S1, S1, S1, S1, S1, S1, S1, S1, S1, S1, S1, S1,
+	// 0xD0-0xDF
+	S1, S1, S1, S1, S1, S1, S1, S1, S1, S1, S1, S1, S1, S1, S1, S1,
+	// 0xE0-0xEF
+	S2, S3, S3, S3, S3, S3, S3, S3, S3, S3, S3, S3, S3, S4, S3, S3,
+	// 0xF0-0xFF
+	S5, S6, S6, S6, S7, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX,
+};
+
+let ACCEPTED_RANGES: vec<vec<number>> = vec{
+	vec{LOCB, HICB},
+	vec{0xA0, HICB},
+	vec{LOCB, 0x9F},
+	vec{0x90, HICB},
+	vec{LOCB, 0x8F},
+};
+
+func decode(s: string, pos: ?number) -> (number, number) {
+    let pos = pos else 1;
+    let n = #s;
+    if pos < 1 || pos > n {
+        return RUNE_ERROR, 0;
+    }
+    if n - pos + 1 < 1 {
+        return RUNE_ERROR, 0;
+    }
+    let s0, s1, s2, s3 = s.bytes(pos, pos + 3);
+    let s0 = s0?;
+    let x = FIRST.get(s0 + 1)?;
+    if x >= AS {
+        let mask = x << 31 >> 31;
+        return (s0 & ~mask) | (RUNE_ERROR & mask), 1;
+    }
+    let sz = x & 7;
+    let accept = ACCEPTED_RANGES.get((x >> 4) + 1)?;
+    if n - pos + 1 < sz {
+        return RUNE_ERROR, 1;
+    }
+    let s1 = s1?;
+    if s1 < accept.get(1)? || accept.get(2)? < s1 {
+        return RUNE_ERROR, 1;
+    }
+    if sz <= 2 {
+        return ((s0 & MASK_2) << 6) | (s1 & MASK_X), 2;
+    }
+    let s2 = s2?;
+    if s2 < LOCB || HICB < s2 {
+        return RUNE_ERROR, 1;
+    }
+    if sz <= 3 {
+        return (s0 & MASK_3) << 12 | (s1 & MASK_X) << 6 | (s2 & MASK_X), 3;
+    }
+    let s3 = s3?;
+    if s3 < LOCB || HICB < s3 {
+        return RUNE_ERROR, 1;
+    }
+    return (s0 & MASK_4) << 18 | (s1 & MASK_X) << 12 | (s2 & MASK_X) << 6 | (s3 & MASK_X), 4;
+}
+
+// quick version of decode that only returns the width of the UTF-8 character
+func width(s: string, pos: number) -> number {
+    let n = #s;
+    if pos < 1 || pos > n { return 0; }
+    if n - pos + 1 < 1 { return 0; }
+    let s0, s1, s2, s3 = s.bytes(pos, pos + 3);
+    let s0 = s0?;
+    let x = FIRST.get(s0 + 1)?;
+    if x >= AS { return 1; }
+    let sz = x & 7;
+    let accept = ACCEPTED_RANGES.get((x >> 4) + 1)?;
+    if n - pos + 1 < sz { return 1; }
+    let s1 = s1?;
+    if s1 < accept.get(1)? || accept.get(2)? < s1 { return 1; }
+    if sz <= 2 { return 2; }
+    let s2 = s2?;
+    if s2 < LOCB || HICB < s2 { return 1; }
+    if sz <= 3 { return 3; }
+    let s3 = s3?;
+    if s3 < LOCB || HICB < s3 { return 1; }
+    return 4;
+}
+
+pub func sub(s: string, i: number, j: ?number) -> string {
+    let n = #s;
+    let j_val = j else -1;
+
+    if n == 0 { return ""; }
+
+    // If any index is negative, we must count total codepoints first.
+    // This is the primary branching point for the optimization.
+    let start_cp = 0;
+    let end_cp = 0;
+
+    if i < 0 || j_val < 0 {
+        // Inefficient Path: This path is taken only when needed for negative indices.
+        let total_codepoints = 0;
+        let pos = 1;
+        while pos <= n {
+            let w = width(s, pos);
+            if w == 0 { break; } // Stop on invalid UTF-8
+            pos = pos + w;
+            total_codepoints = total_codepoints + 1;
+        }
+
+        start_cp = if i < 0 { total_codepoints + i + 1 } else { i };
+        end_cp = if j_val < 0 { total_codepoints + j_val + 1 } else { j_val };
+    } else {
+        // Efficient Path: Both indices are positive, no pre-scan needed.
+        start_cp = i;
+        end_cp = j_val;
+    }
+
+    if start_cp > end_cp || start_cp < 1 {
+        return "";
+    }
+
+    let codepoint_idx = 0;
+    let byte_pos = 1;
+    let start_byte = -1;
+    let end_byte = n;
+
+    while byte_pos <= n {
+        codepoint_idx = codepoint_idx + 1;
+
+        let w = width(s, byte_pos);
+        if w == 0 { break; } // Invalid UTF-8 sequence.
+
+        // If we've reached the starting codepoint, record its byte position.
+        if codepoint_idx == start_cp {
+            start_byte = byte_pos;
+        }
+
+        // If we've reached the ending codepoint, record its end byte position and stop scanning.
+        if codepoint_idx == end_cp {
+            end_byte = byte_pos + w - 1;
+            break;
+        }
+
+        byte_pos = byte_pos + w;
+    }
+
+    // If the start_cp was never found (i.e., it was larger than the total number of codepoints).
+    if start_byte == -1 {
+        return "";
+    }
+
+    return s.sub(start_byte, end_byte);
+}
+
+pub func len(s: string) -> number {
+    let codepoints = 0;
+    let pos = 1;
+    loop {
+        let w = width(s, pos);
+        if w == 0 { break; }
+        pos = pos + w;
+        codepoints = codepoints + 1;
+    }
+    return codepoints;
+}
+
+// Expects a valid Unicode code point.
+pub func char(code: number) -> string {
+    if code <= 0x7F {
+        return string::char(code);
+    } else if code <= 0x7FF {
+        return string::char(
+            (0xC0 | (code >> 6)),
+            (0x80 | (code & 0x3F))
+        );
+    } else if code <= 0xFFFF {
+        return string::char(
+            (0xE0 | (code >> 12)),
+            (0x80 | ((code >> 6) & 0x3F)),
+            (0x80 | (code & 0x3F))
+        );
+    } else if code <= 0x10FFFF {
+        return string::char(
+            (0xF0 | (code >> 18)),
+            (0x80 | ((code >> 12) & 0x3F)),
+            (0x80 | ((code >> 6) & 0x3F)),
+            (0x80 | (code & 0x3F))
+        );
+    }
+    base::error(ERR_INV_BYTE, 0)
+}
