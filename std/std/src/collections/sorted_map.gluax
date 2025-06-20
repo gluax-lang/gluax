@@ -1,0 +1,150 @@
+import "../base";
+import "../debug";
+
+// A map that maintains its keys in sorted order
+pub class SortedMap<K, V> {
+    keys: vec<K>,
+    values: map<K, V>,
+    cmp: ?func(K, K) -> bool,
+}
+
+impl<K, V> SortedMap<K, V> {
+    pub func new() -> Self {
+        Self {
+            keys: vec::<K>{},
+            values: map::<K, V>{},
+            cmp: nil,
+        }
+    }
+
+    // Binary search to find the position where key should be inserted
+    func find_insert_pos(self, key: K) -> number {
+        let cmp = self.cmp else {
+            // No comparator: always append to end
+            return self.keys.len() + 1;
+        };
+
+        let left = 1;
+        let right = self.keys.len();
+        while left <= right {
+            let mid = ((left + right) / 2).floor();
+            let mid_key = self.keys.get(mid)?;
+
+            let is_less = cmp(key, mid_key);
+            if is_less {
+                right = mid - 1;
+            } else {
+                left = mid + 1;
+            }
+        }
+        return left;
+    }
+
+    // Find the index of a key in the sorted keys array
+    func find_key_index(self, key: K) -> ?number {
+        for i = 1, self.keys.len() {
+            if self.keys.get(i)? == key {
+                return i;
+            }
+        }
+    }
+
+    pub func set_cmp(self, cmp_func: func(K, K) -> bool) {
+        self.cmp = cmp_func;
+        self.keys.sort(cmp_func);
+    }
+
+    #[inline]
+    pub func get(self, key: K) -> ?V {
+        self.values.get(key)
+    }
+
+    #[inline]
+    pub func get_at(self, idx: number) -> (?K, ?V) {
+        let key = self.keys.get(idx) else {
+            return nil, nil;
+        };
+        (key, self.values.get(key)?)
+    }
+
+    #[inline]
+    pub func get_value_at(self, idx: number) -> ?V {
+        let key = self.keys.get(idx) else {
+            return nil;
+        };
+        self.values.get(key)
+    }
+
+    pub func get_key_at(self, idx: number) -> ?K {
+        self.keys.get(idx)
+    }
+
+    #[inline]
+    pub func set(self, key: K, value: V) {
+        self.insert(key, value);
+    }
+
+    pub func insert(self, key: K, value: V) -> ?V {
+        let old_value = self.values.get(key);
+        self.values.set(key, value);
+        if !old_value {
+            let pos = self.find_insert_pos(key);
+            self.keys.insert(pos, key);
+        }
+        return old_value;
+    }
+
+    #[inline]
+    pub func remove(self, key: K) {
+        self.take(key);
+    }
+
+    pub func take(self, key: K) -> ?V {
+        let value = self.values.take(key);
+        if value {
+            let key_index = self.find_key_index(key)?;
+            self.keys.remove(key_index);
+        }
+        return value;
+    }
+
+    #[inline]
+    pub func len(self) -> number {
+        self.keys.len()
+    }
+
+    #[inline]
+    pub func is_empty(self) -> bool {
+        self.keys.is_empty()
+    }
+
+    // Get the first (smallest) key-value pair
+    pub func first(self) -> (?K, ?V) {
+        let first_key = self.keys.get(1);
+        if first_key {
+            let key = first_key?;
+            let value = self.values.get(key)?;
+            return (key, value);
+        }
+        return nil, nil;
+    }
+
+    // Get the last (largest) key-value pair
+    pub func last(self) -> (?K, ?V) {
+        let last_key = self.keys.get(self.keys.len());
+        if last_key {
+            let key = last_key?;
+            let value = self.values.get(key)?;
+            return (key, value);
+        }
+        return nil, nil;
+    }
+
+    #[inline]
+    pub func __x_iter_range_bound(self) -> number { self.keys.len() }
+
+    #[inline]
+    pub func __x_iter_range(self, idx: number) -> V {
+        self.get_value_at(idx)?
+    }
+}

@@ -1,0 +1,3 @@
+import "sorted_map";
+
+pub use sorted_map::SortedMap;
