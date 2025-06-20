@@ -179,6 +179,14 @@ func (t SemType) IsNumber() bool  { return t.isNamed("number") }
 func (t SemType) IsString() bool  { return t.isNamed("string") }
 func (t SemType) IsLogical() bool { return t.IsBool() || t.IsNilable() }
 
+// FirstType returns the first type in a tuple or the type itself if it's not a tuple.
+func (t SemType) FirstType() SemType {
+	if t.IsTuple() {
+		return t.Tuple().Elems[0]
+	}
+	return t
+}
+
 /* ClassType */
 
 type SemaClassField struct {

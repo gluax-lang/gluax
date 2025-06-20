@@ -509,6 +509,9 @@ func (a *Analysis) analyzeImplementations() {
 		for _, check := range impl.Checks {
 			check()
 		}
+		if impl.ClassSema == nil {
+			continue
+		}
 		if !impl.ClassSema.IsGlobal() {
 			for _, method := range impl.Methods {
 				_ = a.handleFunction(impl.GenericsScope.(*Scope), &method)

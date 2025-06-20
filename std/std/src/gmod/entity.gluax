@@ -1,0 +1,46 @@
+#[global]
+pub class Entity {}
+
+impl Entity {
+    #[global = "Entity"]
+    pub func get(i: number) -> ?Self {}
+
+    #[global = "ents.GetAll"]
+    pub func all() -> vec<Entity> {}
+}
+
+impl Entity {
+    #[global = "ents.Iterator"]
+    pub func iter() -> (func(Entity, any) -> (?number, ?Entity), vec<Entity>, number) {}
+}
+
+impl Entity {
+    #[method_rename = "Activate"]
+    pub func activate(self) {}
+
+    #[method_rename = "EntIndex"]
+    pub func index(self) -> number {}
+
+    #[method_rename = "IsValid"]
+    pub func is_valid(self) -> bool {}
+
+    #[method_rename = "Health"]
+    pub func health(self) -> number {}
+
+    #[method_rename = "SetHealth"]
+    pub func set_health(self, health: number) {}
+
+    #[method_rename = "GetMaxHealth"]
+    pub func max_health(self) -> number {}
+
+    #[method_rename = "GetClass"]
+    pub func get_class(self) -> string {}
+
+    #[method_rename = "IsPlayer"]
+    pub func is_player(self) -> bool {}
+
+    #[method_rename = "Alive"]
+    pub func is_alive(self) -> bool {}
+}
+
+

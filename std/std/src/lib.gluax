@@ -6,5 +6,6 @@ pub import "debug";
 pub import "bit";
 pub import "utf8";
 pub import "collections/index" as collections;
+import "gmod/index";
 
 import "public";

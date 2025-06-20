@@ -1,0 +1,24 @@
+import "entity";
+
+#[global]
+pub class Player: entity::Entity {}
+
+impl Player {
+    #[global = "Player"]
+    pub func get(i: number) -> ?Self {}
+
+    #[method_rename = "GetName"]
+    pub func name(self) -> string {}
+
+    #[method_rename = "SteamID"]
+    pub func steam_id(self) -> string {}
+
+    #[method_rename = "SteamID64"]
+    pub func steam_id64(self) -> string {}
+
+    #[method_rename = "UserID"]
+    pub func user_id(self) -> number {}
+
+    #[method_rename = "Team"]
+    pub func team(self) -> number {}
+}

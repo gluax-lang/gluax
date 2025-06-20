@@ -513,8 +513,6 @@ func (cg *Codegen) genForNumExpr(e *ast.ExprForNum) string {
 func (cg *Codegen) genForInExpr(e *ast.ExprForIn) string {
 	lopLbl := cg.tempLoop(e.Label)
 
-	isRange := e.IsRange
-
 	cg.ln("do")
 	cg.pushIndent()
 
@@ -523,7 +521,8 @@ func (cg *Codegen) genForInExpr(e *ast.ExprForIn) string {
 		names[i] = v.Raw
 	}
 
-	if isRange {
+	switch e.State {
+	case ast.ForInClassRange:
 		boundMethod := lexer.NewTokIdent("__x_iter_range_bound", e.InExpr.Span())
 		toCall := cg.getTempVar()
 		cg.ln("%s = %s;", toCall, cg.genExpr(e.InExpr))
@@ -542,7 +541,7 @@ func (cg *Codegen) genForInExpr(e *ast.ExprForIn) string {
 			}
 			cg.ln("local %s = %s;", names[1], cg.genCall(&rangeCall, toCall, e.InExpr.Type()))
 		}
-	} else {
+	case ast.ForInClassPairs:
 		method := lexer.NewTokIdent("__x_iter_pairs", e.InExpr.Span())
 		toCall := cg.genExpr(e.InExpr)
 		call := ast.Call{
@@ -551,6 +550,11 @@ func (cg *Codegen) genForInExpr(e *ast.ExprForIn) string {
 		}
 		cg.ln("for %s in %s do", strings.Join(names, ", "), cg.genCall(&call, toCall, e.InExpr.Type()))
 		cg.pushIndent()
+	case ast.ForInFuncPairs:
+		cg.ln("for %s in %s do", strings.Join(names, ", "), cg.genExpr(e.InExpr))
+		cg.pushIndent()
+	default:
+		panic("unreachable; unhandled for-in state")
 	}
 
 	cg.pushLoop(lopLbl)

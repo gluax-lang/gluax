@@ -1,6 +1,7 @@
 // This file is used to export symbols as public, to basically be public in every file.
 
 import "base";
+import "gmod/index" as gmod;
 
 pub use base::_VERSION;
 
@@ -10,3 +11,5 @@ pub use base::error;
 pub use base::errorf;
 pub use base::select;
 pub use base::selectn;
+
+pub use gmod::Entity;

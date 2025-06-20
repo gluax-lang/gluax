@@ -399,34 +399,49 @@ func (a *Analysis) handleForInExpr(scope *Scope, forIn *ast.ExprForIn) {
 	inExpr := &forIn.InExpr
 	a.handleExpr(scope, inExpr)
 
-	inExprTy := inExpr.Type()
-	if !inExprTy.IsClass() {
-		a.panicf(inExpr.Span(), "expected class type, got: %s", inExprTy.String())
-	}
-
 	var iterReturn Type
 	var iterReturnCount int
 
-	st := inExprTy.Class()
-	if method := a.FindClassMethod(st, "__x_iter_pairs"); method != nil {
-		firstReturn := method.FirstReturnType()
-		iterFunc := firstReturn.Function()
-		iterReturnCount = iterFunc.ReturnCount()
-		forIn.PairsMethod = method
+	inExprTy := inExpr.Type()
+
+	if inExprTy.IsClass() {
+		clss := inExprTy.Class()
+		if method := a.FindClassMethod(clss, "__x_iter_pairs"); method != nil {
+			firstReturn := method.FirstReturnType()
+			iterFunc := firstReturn.Function()
+			iterReturnCount = iterFunc.ReturnCount()
+			forIn.PairsMethod = method
+			forIn.State = ast.ForInClassPairs
+
+			nonNilableTypes := make([]Type, iterReturnCount)
+			for i, retType := range iterFunc.ReturnTypes() {
+				nonNilableTypes[i] = retType.NilableInnerType()
+			}
+			iterReturn = a.tupleType(inExpr.Span(), nonNilableTypes...)
+		} else if method := a.FindClassMethod(clss, "__x_iter_range"); method != nil {
+			iterReturn = a.tupleType(inExpr.Span(), a.numberType(), method.FirstReturnType())
+			iterReturnCount = 2
+			forIn.State = ast.ForInClassRange
+			forIn.RangeMethod = method
+			forIn.BoundMethod = a.FindClassMethod(clss, "__x_iter_range_bound")
+		} else {
+			a.panic(inExpr.Span(), "cannot iterate over class without __x_iter_pairs method")
+		}
+	} else if inExprTy.FirstType().IsFunction() {
+		fun := inExprTy.FirstType().Function()
+		checkPairsIterFunc(a, fun)
+
+		iterReturnCount = fun.ReturnCount()
+		forIn.PairsMethod = &fun
+		forIn.State = ast.ForInFuncPairs
 
 		nonNilableTypes := make([]Type, iterReturnCount)
-		for i, retType := range iterFunc.ReturnTypes() {
+		for i, retType := range fun.ReturnTypes() {
 			nonNilableTypes[i] = retType.NilableInnerType()
 		}
 		iterReturn = a.tupleType(inExpr.Span(), nonNilableTypes...)
-	} else if method := a.FindClassMethod(st, "__x_iter_range"); method != nil {
-		iterReturn = a.tupleType(inExpr.Span(), a.numberType(), method.FirstReturnType())
-		iterReturnCount = 2
-		forIn.IsRange = true
-		forIn.RangeMethod = method
-		forIn.BoundMethod = a.FindClassMethod(st, "__x_iter_range_bound")
 	} else {
-		a.panic(inExpr.Span(), "cannot iterate over class without __x_iter_pairs method")
+		a.panicf(inExpr.Span(), "expected iterable type, got: %s", inExprTy.String())
 	}
 
 	variableCount := len(forIn.Vars)
@@ -452,7 +467,7 @@ func (a *Analysis) handleForInExpr(scope *Scope, forIn *ast.ExprForIn) {
 		varType := varsTypes[i]
 		idxVariable := ast.NewSingleVariable(v, varType)
 		a.AddValue(child, varName, ast.NewValue(idxVariable), v.Span())
-		if i == 0 && forIn.IsRange {
+		if i == 0 && forIn.State == ast.ForInClassRange {
 			idxPath := ast.NewSimplePath(lexer.NewTokIdent(varName, v.Span()))
 			idxPath.ResolvedSymbol = child.GetSymbol(varName)
 			forIn.IdxPath = &idxPath

@@ -22,7 +22,7 @@ impl<T> vec<T> {
     }
 
     #[inline]
-    pub func unsafe_set(self, idx: number, v: T) {
+    pub func set_unchecked(self, idx: number, v: T) {
         @raw("do {@1@}[{@2@}] = {@3@}; end;", self, idx, v);
     }
 

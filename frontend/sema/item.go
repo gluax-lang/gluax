@@ -6,6 +6,20 @@ import (
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
+func checkPairsIterFunc(a *Analysis, fun SemFunction) {
+	if fun.HasVarargReturn() {
+		a.Error(fun.Span(), "iterator function cannot have vararg return")
+		return
+	}
+
+	for i, rt := range fun.ReturnTypes() {
+		if !rt.IsNilable() {
+			a.Errorf(rt.Span(), "iterator function return value %d must be nilable", i+1)
+			return
+		}
+	}
+}
+
 var toCheckFuncs = map[string]func(*Analysis, *ast.SemClass, string){
 	"__x_iter_pairs": func(a *Analysis, st *ast.SemClass, methodName string) {
 		fun := a.FindClassMethod(st, methodName)
@@ -35,18 +49,7 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemClass, string){
 			return
 		}
 
-		iterFunc := firstReturn.Function()
-		if iterFunc.HasVarargReturn() {
-			a.Errorf(iterFunc.Return.Span(), "method `%s` iterator function cannot have vararg return", methodName)
-			return
-		}
-
-		for i, rt := range iterFunc.ReturnTypes() {
-			if !rt.IsNilable() {
-				a.Errorf(rt.Span(), "iterator function return value %d must be nilable", i+1)
-				return
-			}
-		}
+		checkPairsIterFunc(a, firstReturn.Function())
 	},
 	"__x_iter_range": func(a *Analysis, st *ast.SemClass, methodName string) {
 		fun := a.FindClassMethod(st, methodName)
