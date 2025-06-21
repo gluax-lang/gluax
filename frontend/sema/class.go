@@ -14,7 +14,7 @@ func getGenericParamTraits(g ast.GenericParam) []*ast.SemTrait {
 }
 
 func (a *Analysis) setupTypeGenerics(scope *Scope, generics ast.Generics, concrete []Type) *Scope {
-	scope = NewScope(scope)
+	scope = scope.Child(false)
 	for i, g := range generics.Params {
 		var binding Type
 		if concrete == nil {

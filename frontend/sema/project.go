@@ -73,7 +73,7 @@ func (pa *ProjectAnalysis) getStateFiles() map[string]*Analysis {
 func (pa *ProjectAnalysis) newAnalysis(path string) *Analysis {
 	scope := pa.currentState.RootScope
 	if !pa.Config.Std || !strings.Contains(path, typesFile) {
-		scope = NewScope(pa.currentState.RootScope)
+		scope = pa.currentState.RootScope.Child(false)
 	}
 	return &Analysis{
 		Workspace: pa.workspace,

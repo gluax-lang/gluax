@@ -147,7 +147,7 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 			}
 
 			if resolvedTy.IsGeneric() {
-				childScope := NewScope(method.Scope.(*Scope))
+				childScope := method.Scope.(*Scope).Child(false)
 				if err := childScope.AddType("Self", resolvedTy); err != nil {
 					a.Error(resolvedTy.Span(), err.Error())
 				}
