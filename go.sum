@@ -18,6 +18,8 @@ github.com/gluax-lang/lsp v0.0.0-20250611014220-2b3118d8d406 h1:sSYS9RmhM9wGT4JT
 github.com/gluax-lang/lsp v0.0.0-20250611014220-2b3118d8d406/go.mod h1:0fc3h9JCzrPMhYmkfjOuLNEXVXe3RfnA4BHFy8IaA3E=
 github.com/gluax-lang/lsp v0.0.0-20250617205842-226512c6fe3e h1:WQZC5X10k8EGKjvm5lr4O4bxjGtqCyNp/6ehrIecrTo=
 github.com/gluax-lang/lsp v0.0.0-20250617205842-226512c6fe3e/go.mod h1:0fc3h9JCzrPMhYmkfjOuLNEXVXe3RfnA4BHFy8IaA3E=
+github.com/gluax-lang/lsp v0.0.0-20250621190739-ac2cb0a6dc33 h1:OywV/dxuuYV0q6lcIzWFwGNN3oc8WggLfyrGqTO6lco=
+github.com/gluax-lang/lsp v0.0.0-20250621190739-ac2cb0a6dc33/go.mod h1:0fc3h9JCzrPMhYmkfjOuLNEXVXe3RfnA4BHFy8IaA3E=
 github.com/go-playground/assert/v2 v2.2.0 h1:JvknZsQTYeFEAhQwI4qEt9cyV5ONwRHC+lYKSsYSR8s=
 github.com/go-playground/assert/v2 v2.2.0/go.mod h1:VDjEfimB/XKnb+ZQfWdccd7VUvScMdVu0Titje2rxJ4=
 github.com/go-playground/locales v0.14.1 h1:EWaQ/wswjilfKLTECiXz7Rh+3BjFhfDFKv/oXslEjJA=
