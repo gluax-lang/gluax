@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gluax-lang/gluax/frontend"
 	"github.com/gluax-lang/gluax/frontend/ast"
 	"github.com/gluax-lang/gluax/frontend/lexer"
 )
@@ -14,14 +15,14 @@ func (cg *Codegen) tempLoop(name *ast.Ident) loopLabel {
 	if name == nil {
 		idx := strconv.Itoa(cg.tempIdx)
 		label = loopLabel{
-			cont: CONTINUE_PREFIX + idx,
-			brk:  BREAK_PREFIX + idx,
+			cont: frontend.CONTINUE_PREFIX + idx,
+			brk:  frontend.BREAK_PREFIX + idx,
 		}
 		cg.tempIdx++
 	} else {
 		label = loopLabel{
-			cont: CONTINUE_PREFIX + name.Raw,
-			brk:  BREAK_PREFIX + name.Raw,
+			cont: frontend.CONTINUE_PREFIX + name.Raw,
+			brk:  frontend.BREAK_PREFIX + name.Raw,
 		}
 	}
 	return label

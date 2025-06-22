@@ -1,5 +1,7 @@
 package codegen
 
+import "github.com/gluax-lang/gluax/frontend"
+
 func fastLocalsHeaders(cg *Codegen) {
 	cg.ln("--[[fast access locals]]")
 	cg.ln("local string, table, bit, math = string, table, bit, math;")
@@ -13,5 +15,5 @@ func fastLocalsHeaders(cg *Codegen) {
 
 func publicHeaders(cg *Codegen) {
 	cg.ln("--[[public symbols]]")
-	cg.ln("local %s = {};", PUBLIC_TBL)
+	cg.ln("local %s = {};", frontend.PUBLIC_TBL)
 }

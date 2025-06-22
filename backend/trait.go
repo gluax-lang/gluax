@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gluax-lang/gluax/frontend"
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
 func (cg *Codegen) decorateTraitName(tr *ast.Trait, class *ast.SemClass) string {
 	raw := tr.Name.Raw
 	var sb strings.Builder
-	sb.WriteString(TRAIT_PREFIX)
+	sb.WriteString(frontend.TRAIT_PREFIX)
 	sb.WriteString(raw)
 	sb.WriteString(fmt.Sprintf("_%d", tr.Span().ID))
 	if class != nil {

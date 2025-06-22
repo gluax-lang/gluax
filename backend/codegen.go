@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gluax-lang/gluax/frontend"
 	"github.com/gluax-lang/gluax/frontend/ast"
 	"github.com/gluax-lang/gluax/frontend/lexer"
 	"github.com/gluax-lang/gluax/frontend/sema"
@@ -115,7 +116,7 @@ func (cg *Codegen) ln(format string, args ...any) {
 }
 
 func (cg *Codegen) temp() string {
-	name := fmt.Sprintf(TEMP_PREFIX, cg.tempIdx)
+	name := fmt.Sprintf(frontend.TEMP_PREFIX, cg.tempIdx)
 	cg.tempIdx++
 	return name
 }
@@ -128,12 +129,12 @@ func (cg *Codegen) namedTemp(name string) string {
 
 func (cg *Codegen) getPublic(symName string) string {
 	if idx, exists := cg.publicMap[symName]; exists {
-		return fmt.Sprintf("%s[%d]", PUBLIC_TBL, idx)
+		return fmt.Sprintf("%s[%d]", frontend.PUBLIC_TBL, idx)
 	}
 	idx := cg.publicIndex
 	cg.publicIndex++
 	cg.publicMap[symName] = idx
-	return fmt.Sprintf("%s[%d]", PUBLIC_TBL, idx)
+	return fmt.Sprintf("%s[%d]", frontend.PUBLIC_TBL, idx)
 }
 
 func (cg *Codegen) isPublic(symName string) bool {

@@ -3,6 +3,7 @@ package codegen
 import (
 	"strings"
 
+	"github.com/gluax-lang/gluax/frontend"
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
@@ -45,7 +46,7 @@ func (cg *Codegen) genStmt(stmt ast.Stmt) (string, bool) {
 func (cg *Codegen) genStmtContinue(stmt *ast.StmtContinue) {
 	var label string
 	if stmt.Label != nil {
-		label = CONTINUE_PREFIX + stmt.Label.Raw
+		label = frontend.CONTINUE_PREFIX + stmt.Label.Raw
 	} else {
 		label = cg.innermostLoop().cont
 	}
@@ -55,7 +56,7 @@ func (cg *Codegen) genStmtContinue(stmt *ast.StmtContinue) {
 func (cg *Codegen) genStmtBreak(stmt *ast.StmtBreak) {
 	var label string
 	if stmt.Label != nil {
-		label = BREAK_PREFIX + stmt.Label.Raw
+		label = frontend.BREAK_PREFIX + stmt.Label.Raw
 	} else {
 		label = cg.innermostLoop().brk
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gluax-lang/gluax/frontend"
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
@@ -15,7 +16,7 @@ func (cg *Codegen) decorateLetName(l *ast.Let, n int) string {
 	raw := name.Raw
 	if l.IsItem {
 		id := fmt.Sprintf("_%d", name.Span().ID)
-		return cg.getPublic(LOCAL_PREFIX + raw + id)
+		return cg.getPublic(frontend.LOCAL_PREFIX + raw + id)
 	}
 	return raw
 }

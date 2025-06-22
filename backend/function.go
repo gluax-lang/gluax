@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gluax-lang/gluax/frontend"
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
@@ -21,7 +22,7 @@ func (cg *Codegen) decorateFuncName(f *ast.SemFunction) string {
 		return stName + "." + raw
 	}
 	var sb strings.Builder
-	sb.WriteString(FUNC_PREFIX)
+	sb.WriteString(frontend.FUNC_PREFIX)
 	sb.WriteString(raw)
 	if f.Def.IsItem {
 		id := fmt.Sprintf("_%d", f.Def.Span().ID)
@@ -117,7 +118,7 @@ func (cg *Codegen) genInlineCall(call *ast.Call, fun ast.SemFunction, toCall str
 		cg.ln("local %s = %s;", strings.Join(params, ", "), cg.getCallArgs(call, toCall))
 	}
 
-	returnLabel := cg.namedTemp(RETURN_PREFIX)
+	returnLabel := cg.namedTemp(frontend.RETURN_PREFIX)
 
 	// Generate return locals
 	returnCount := fun.ReturnCount()

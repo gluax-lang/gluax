@@ -5,12 +5,13 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/gluax-lang/gluax/frontend"
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
 func (cg *Codegen) decorateClassName_internal(cls *ast.SemClass) string {
 	var sb strings.Builder
-	sb.WriteString(CLASS_PREFIX)
+	sb.WriteString(frontend.CLASS_PREFIX)
 	sb.WriteString(cls.Def.Name.Raw)
 	sb.WriteString(fmt.Sprintf("_%d", cls.Def.Span().ID))
 	sb.WriteString(fmt.Sprintf("_%p", cls))
@@ -46,7 +47,7 @@ func (cg *Codegen) generateClass(st *ast.SemClass) {
 	}
 	cg.ln("%s = {", name)
 	cg.pushIndent()
-	cg.ln("%s = true,", CLASS_MARKER_PREFIX)
+	cg.ln("%s = true,", frontend.CLASS_MARKER_PREFIX)
 	for name, method := range cg.Analysis.FindAllClassMethods(st) {
 		// we need to handle it with body, to make sure body calls are generated correctly
 		hMethod := cg.Analysis.HandleClassMethod(st, *method, true)
