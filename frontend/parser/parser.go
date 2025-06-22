@@ -223,3 +223,23 @@ func (p *parser) parseCommaSeparatedDelimited(
 	}
 	p.expect(closing)
 }
+
+func (p *parser) canRecover() bool {
+	switch p.Token.AsString() {
+	case "let", "return", "throw", "break", "continue", "{", "}",
+		"if", "for", "while", "loop":
+		return true
+	default:
+		return false
+	}
+}
+
+func (p *parser) expectOrRecover(expected string) {
+	if !p.tryConsume(expected) {
+		if p.canRecover() {
+			p.Error(p.span(), fmt.Sprintf("expected '%s'", expected))
+		} else {
+			common.PanicDiag(fmt.Sprintf("expected '%s'", expected), p.span())
+		}
+	}
+}

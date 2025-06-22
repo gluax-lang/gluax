@@ -53,13 +53,12 @@ func (p *parser) parseLet(isItem bool) *ast.Let {
 	p.expect("=")
 
 	var values []ast.Expr
-	p.parseCommaSeparatedDelimited(";", func(p *parser) {
+	values = append(values, p.parseExpr(ExprCtxNormal))
+	for p.tryConsume(",") {
 		values = append(values, p.parseExpr(ExprCtxNormal))
-	})
-
-	if len(values) == 0 {
-		common.PanicDiag("missing right-hand side in let statement", p.prevSpan())
 	}
+
+	p.expectOrRecover(";")
 
 	span := SpanFrom(spanStart, p.prevSpan())
 	let := ast.NewLet(names, types, values, span, isItem)
