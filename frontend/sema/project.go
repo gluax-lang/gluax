@@ -346,10 +346,14 @@ func (pa *ProjectAnalysis) processState(state *State, workspace string) error {
 		pa.overrides = oldOverrides
 		publicPath := common.FilePathClean(filepath.Join("std", "src", "public.gluax"))
 		publicAnalysis := pa.currentState.Files[publicPath]
-		for name, sym := range publicAnalysis.Scope.Symbols {
-			if sym.IsPublic() {
-				pa.currentState.RootScope.Symbols[name] = sym
+		for name, symA := range publicAnalysis.Scope.Symbols {
+			nameSyms := make([]ast.Symbol, 0, len(symA))
+			for _, sym := range symA {
+				if sym.IsPublic() {
+					nameSyms = append(nameSyms, sym)
+				}
 			}
+			pa.currentState.RootScope.Symbols[name] = nameSyms
 		}
 	}
 	if err := pa.processPackage(workspace, true); err != nil {

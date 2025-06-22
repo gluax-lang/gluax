@@ -10,16 +10,17 @@ import (
 type Scope struct {
 	Parent   *Scope
 	Children []*Scope
-	Symbols  map[string]Symbol
+	Symbols  map[string][]Symbol
 	Func     *ast.SemFunction // the function that this scope is in, if any
 	InLoop   bool
 	Labels   map[string]struct{}
+	Span     *Span
 }
 
 func NewScope(parent *Scope) *Scope {
 	scope := &Scope{
 		Parent:  parent,
-		Symbols: make(map[string]Symbol),
+		Symbols: make(map[string][]Symbol),
 		Labels:  make(map[string]struct{}),
 	}
 	return scope
@@ -44,6 +45,12 @@ func (s *Scope) Child(copyState bool) *Scope {
 		child.Labels = maps.Clone(s.Labels)
 	}
 	s.Children = append(s.Children, child)
+	return child
+}
+
+func (s *Scope) ChildWithScope(copyState bool, span Span) *Scope {
+	child := s.Child(copyState)
+	child.Span = &span
 	return child
 }
 
@@ -73,15 +80,15 @@ func (s *Scope) AddSymbol(name string, sym Symbol) error {
 	if s.GetSymbol(name) != nil {
 		return fmt.Errorf("duplicate definition of %s", name)
 	}
-	s.Symbols[name] = sym
+	s.Symbols[name] = append(s.Symbols[name], sym)
 	return nil
 }
 
 func (s *Scope) GetSymbol(name string) *Symbol {
 	var result *Symbol
 	s.walkScopes(func(scope *Scope) bool {
-		if sym, ok := scope.Symbols[name]; ok {
-			result = &sym
+		if symbols, ok := scope.Symbols[name]; ok && len(symbols) > 0 {
+			result = &symbols[len(symbols)-1]
 			return true
 		}
 		return false
@@ -103,18 +110,9 @@ func (s *Scope) AddValueVisibility(name string, val Value, span Span, public boo
 			return fmt.Errorf("duplicate definition of %s", name)
 		}
 	}
-	s.Symbols[name] = ast.NewSymbol(name, &val, span, public)
+	symbol := ast.NewSymbol(name, &val, span, public)
+	s.Symbols[name] = append(s.Symbols[name], symbol)
 	return nil
-}
-
-func (s *Scope) RemoveSymbol(name string) {
-	s.walkScopes(func(scope *Scope) bool {
-		if _, ok := scope.Symbols[name]; ok {
-			delete(scope.Symbols, name)
-			return true
-		}
-		return false
-	})
 }
 
 func (s *Scope) GetValue(name string) *Value {
@@ -139,7 +137,7 @@ func (s *Scope) AddTypeVisibility(name string, ty Type, public bool) error {
 func (s *Scope) ForceAddType(name string, ty Type) {
 	span := ty.Span()
 	sym := ast.NewSymbol(name, &ty, span, true)
-	s.Symbols[name] = sym
+	s.Symbols[name] = append(s.Symbols[name], sym)
 }
 
 func (s *Scope) GetType(name string) *Type {
@@ -189,9 +187,11 @@ func (s *Scope) IsSymbolPublic(name string) bool {
 
 func (s *Scope) IsTraitInScope(trait *ast.SemTrait) bool {
 	return s.walkScopes(func(scope *Scope) bool {
-		for _, sym := range scope.Symbols {
-			if sym.Kind() == ast.SymTrait && sym.Trait() == trait {
-				return true
+		for _, symbolSlice := range scope.Symbols {
+			for _, sym := range symbolSlice {
+				if sym.Kind() == ast.SymTrait && sym.Trait() == trait {
+					return true
+				}
 			}
 		}
 		return false
