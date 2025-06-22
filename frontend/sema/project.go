@@ -109,10 +109,14 @@ func (pa *ProjectAnalysis) parseFile(path string) (*Analysis, error) {
 		return analysis, fmt.Errorf("lexing failed")
 	}
 
-	astRoot, diag := parser.Parse(toks)
-	if diag != nil {
-		analysis.Diags = append(analysis.Diags, *diag)
+	astRoot, errors, hardErr := parser.Parse(toks)
+	if hardErr {
+		analysis.Diags = append(analysis.Diags, errors...)
 		return analysis, fmt.Errorf("parsing failed")
+	}
+
+	if len(errors) > 0 {
+		analysis.Diags = append(analysis.Diags, errors...)
 	}
 
 	analysis.Ast = astRoot
