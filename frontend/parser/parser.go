@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gluax-lang/gluax/common"
+	"github.com/gluax-lang/gluax/frontend"
 	"github.com/gluax-lang/gluax/frontend/ast"
 	"github.com/gluax-lang/gluax/frontend/lexer"
 	protocol "github.com/gluax-lang/lsp"
@@ -28,9 +29,10 @@ type parser struct {
 	TokenStream []lexer.Token
 	Token       lexer.Token
 	Pos         uint32
+	Diags       []diagnostic
 }
 
-func Parse(tkS []lexer.Token) (astRet *ast.Ast, err *diagnostic) {
+func Parse(tkS []lexer.Token) (astRet *ast.Ast, errors []diagnostic, hardError bool) {
 	p := &parser{
 		TokenStream: tkS,
 		Token:       tkS[0],
@@ -39,7 +41,10 @@ func Parse(tkS []lexer.Token) (astRet *ast.Ast, err *diagnostic) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			err = errorToDiagnostic(r)
+			err := errorToDiagnostic(r)
+			p.Diags = append(p.Diags, *err)
+			errors = p.Diags
+			hardError = true
 		}
 	}()
 
@@ -90,7 +95,17 @@ func Parse(tkS []lexer.Token) (astRet *ast.Ast, err *diagnostic) {
 		}
 	}
 
+	errors = p.Diags
+
 	return
+}
+
+func (p *parser) Error(span common.Span, msg string) {
+	p.Diags = append(p.Diags, *common.ErrorDiag(msg, span))
+}
+
+func (p *parser) Errorf(span common.Span, format string, args ...any) {
+	p.Error(span, fmt.Sprintf(format, args...))
 }
 
 // advance moves the parser forward by one token.
@@ -149,6 +164,9 @@ func (p *parser) expectIdentMsgX(msg string, flags Flags) lexer.TokIdent {
 		p.advance()
 		return lexer.NewTokIdent("_", tok.Span())
 	}
+	if flags.Has(FlagInjectFakeIdent) {
+		return lexer.NewTokIdent(frontend.PARSING_ERROR_PREFIX, tok.Span())
+	}
 	common.PanicDiag(fmt.Sprintf("%s, got: %s", msg, tok.String()), tok.Span())
 	panic("unreachable") // love go
 }
@@ -159,6 +177,10 @@ func (p *parser) expectIdentMsg(msg string) lexer.TokIdent {
 
 func (p *parser) expectIdent() lexer.TokIdent {
 	return p.expectIdentMsg("expected identifier")
+}
+
+func (p *parser) expectIdentRecover() lexer.TokIdent {
+	return p.expectIdentMsgX("expected identifier", FlagInjectFakeIdent)
 }
 
 // peekOffset returns the token at p.Pos + n, clamped to [0, len-1].

@@ -20,7 +20,7 @@ func (p *parser) parsePostfixExpr(ctx ExprCtx, left ast.Expr) ast.Expr {
 		dotSpan := p.span()
 		p.advance() // eat '.'
 
-		field := p.expectIdent()
+		field := p.expectIdentRecover()
 		if p.Token.Is("(") { // method call
 			op = p.parseCall(dotSpan, &field)
 		} else { // plain field access

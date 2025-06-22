@@ -14,6 +14,7 @@ const (
 	FlagTypeVarArg
 
 	FlagAllowUnderscore
+	FlagInjectFakeIdent
 
 	FlagTurboFishGenerics
 )
@@ -60,6 +61,9 @@ func (f Flags) String() string {
 	}
 	if f.Has(FlagFuncReturnUnreachable) {
 		parts = append(parts, "FuncReturnUnreachable")
+	}
+	if f.Has(FlagInjectFakeIdent) {
+		parts = append(parts, "InjectFakeIdent")
 	}
 	return strings.Join(parts, "|")
 }
