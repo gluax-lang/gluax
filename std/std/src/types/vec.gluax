@@ -3,6 +3,16 @@ import "../base";
 
 impl<T> vec<T> {
     #[inline]
+    func __x_iter_range_bound(self) -> number { self.len() }
+
+    #[inline]
+    func __x_iter_range(self, idx: number) -> T {
+        @raw("{@RETURN {@1@}[{@2@}] @}", self, idx) -> T
+    }
+}
+
+impl<T> vec<T> {
+    #[inline]
     pub func len(self) -> number {
         @raw("{@RETURN #{@1@} @}", self) -> number
     }
@@ -45,14 +55,6 @@ impl<T> vec<T> {
     #[inline]
     pub func reverse(self) {
         @raw("do local self = {@1@}; local len = #self; for i = 1, math.floor(len / 2) do self[i], self[len - i + 1] = self[len - i + 1], self[i] end end;", self);
-    }
-
-    #[inline]
-    pub func __x_iter_range_bound(self) -> number { self.len() }
-
-    #[inline]
-    pub func __x_iter_range(self, idx: number) -> T {
-        @raw("{@RETURN {@1@}[{@2@}] @}", self, idx) -> T
     }
 
     #[global = "table.sort"]

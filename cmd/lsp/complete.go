@@ -62,6 +62,9 @@ func (h *Handler) Complete(p *lsp.CompletionParams) (*lsp.CompletionList, error)
 			if toIndexTy.IsClass() {
 				clss := toIndexTy.Class()
 				for _, field := range clss.Fields {
+					if !sA.CanAccessClassField(clss, field.IsPublic()) {
+						continue
+					}
 					list = append(list, lsp.CompletionItem{
 						Label:  field.Def.Name.Raw,
 						Kind:   lsp.CompletionItemKindField,
@@ -81,12 +84,15 @@ func (h *Handler) Complete(p *lsp.CompletionParams) (*lsp.CompletionList, error)
 			if !method.IsFirstParamSelf() {
 				continue
 			}
-			added[name] = struct{}{} // Mark this method as added
+			if !sA.CanAccessClassMethod(&method) {
+				continue
+			}
+			added[name] = struct{}{}
 			list = append(list, lsp.CompletionItem{
 				Label:            method.Def.Name.Raw,
 				Kind:             lsp.CompletionItemKindMethod,
 				Detail:           method.LSPString(),
-				InsertText:       method.Def.Name.Raw + "($0)", // Insert with parens and snippet cursor
+				InsertText:       method.Def.Name.Raw + "($0)",
 				InsertTextFormat: lsp.InsertTextFormatSnippet,
 			})
 		}
@@ -99,19 +105,24 @@ func (h *Handler) Complete(p *lsp.CompletionParams) (*lsp.CompletionList, error)
 	}
 outDotCompletion:
 
-	// println("SEARCHING SCOPE")
-
 	var list []lsp.CompletionItem
-	for _, symSlice := range scope.Symbols {
-		for _, sym := range symSlice {
-			if sym.IsImport() || sym.IsTrait() || sym.IsType() {
-				continue // Skip imports, traits, and types
+	visited := make(map[string]struct{})
+	for s := scope; s != nil; s = s.Parent {
+		for _, symSlice := range s.Symbols {
+			for _, sym := range symSlice {
+				if sym.IsImport() || sym.IsTrait() || sym.IsType() {
+					continue
+				}
+				if _, ok := visited[sym.Name]; ok {
+					continue
+				}
+				visited[sym.Name] = struct{}{}
+				list = append(list, lsp.CompletionItem{
+					Label:  sym.Name,
+					Kind:   lsp.CompletionItemKindVariable,
+					Detail: sym.LSPString(),
+				})
 			}
-			list = append(list, lsp.CompletionItem{
-				Label:  sym.Name,
-				Kind:   lsp.CompletionItemKindVariable,
-				Detail: sym.LSPString(),
-			})
 		}
 	}
 

@@ -2,6 +2,7 @@ import "../base";
 import "../debug";
 
 // A map that maintains its keys in sorted order
+#[sealed]
 pub class SortedMap<K, V> {
     keys: vec<K>,
     values: map<K, V>,

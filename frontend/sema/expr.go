@@ -648,7 +648,7 @@ func (a *Analysis) handleDotAccess(expr *ast.DotAccess, toIndex *ast.Expr) Type 
 
 	flds := st.Fields
 	if fld, ok := flds[field.Raw]; ok {
-		if !a.canAccessClassField(st, fld.IsPublic()) {
+		if !a.CanAccessClassField(st, fld.IsPublic()) {
 			a.Errorf(field.Span(), "field `%s` of class `%s` is private", field.Raw, st.Def.Name.Raw)
 		}
 		fldSym := ast.NewSymbol(field.Raw, &fld, fld.Def.Name.Span(), true)
@@ -688,7 +688,7 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 		return a.nilType()
 	}
 
-	if !a.canAccessClassMethod(&method) {
+	if !a.CanAccessClassMethod(&method) {
 		a.Errorf(call.Method.Span(), "method `%s` of class `%s` is private", method.Def.Name.Raw, method.Class.Def.Name.Raw)
 	}
 

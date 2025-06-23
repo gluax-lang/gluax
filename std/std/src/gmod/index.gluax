@@ -1,5 +1,10 @@
 import "entity";
 import "player";
+import "color";
 
 pub use entity::Entity;
+pub use entity::NULL;
+
 pub use player::Player;
+
+pub use color::Color;

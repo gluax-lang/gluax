@@ -1,9 +1,12 @@
 #[global]
 pub class Entity {}
 
+#[global]
+pub let NULL: Entity = Entity::get(0);
+
 impl Entity {
     #[global = "Entity"]
-    pub func get(i: number) -> ?Self {}
+    pub func get(i: number) -> Self {}
 
     #[global = "ents.GetAll"]
     pub func all() -> vec<Entity> {}
@@ -42,5 +45,3 @@ impl Entity {
     #[method_rename = "Alive"]
     pub func is_alive(self) -> bool {}
 }
-
-

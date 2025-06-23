@@ -359,7 +359,7 @@ func (a *Analysis) unify(
 	return base
 }
 
-func (a *Analysis) canAccessClassField(clss *SemClass, memberPublic bool) bool {
+func (a *Analysis) CanAccessClassField(clss *SemClass, memberPublic bool) bool {
 	if memberPublic {
 		return true
 	}
@@ -368,7 +368,7 @@ func (a *Analysis) canAccessClassField(clss *SemClass, memberPublic bool) bool {
 	return a.Src == source
 }
 
-func (a *Analysis) canAccessClassMethod(method *SemFunction) bool {
+func (a *Analysis) CanAccessClassMethod(method *SemFunction) bool {
 	if method.Trait != nil {
 		return true
 	}

@@ -3,8 +3,6 @@ import "../debug";
 import "../base";
 
 impl number {
-    /* Globals */
-
     #[global = "tostring"]
     pub func to_string(self) -> string {}
 
@@ -76,9 +74,9 @@ impl number {
 
     #[global = "math.tanh"]
     pub func tanh(self) -> number {}
+}
 
-    /* End Globals */
-
+impl number {
     #[inline]
     pub func to_char(self) -> string {
         debug::assert(self >= 0 && self <= 255, "number.to_char: value must be in range [0, 255], got %s", self);

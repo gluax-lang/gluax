@@ -2,6 +2,14 @@ import "../base";
 
 impl<K, V> map<K, V> {
     #[inline]
+    func __x_iter_pairs(self) -> (func(table, any) -> (?K, ?V), Self) {
+        (base::next unsafe_cast_as func(table, any) -> (?K, ?V), self)
+    }
+}
+
+
+impl<K, V> map<K, V> {
+    #[inline]
     pub func get(self, key: K) -> ?V {
         @raw("{@RETURN {@1@}[{@2@}] @}", self, key) -> ?V
     }
@@ -25,10 +33,5 @@ impl<K, V> map<K, V> {
     #[inline]
     pub func insert(self, key: K, value: V) -> ?V {
         @raw("do local self, key = {@1@}, {@2@}; {@TEMP1@}, self[key] = self[key], {@3@}; {@RETURN {@TEMP1@} @} end;", self, key, value) -> ?V
-    }
-
-    #[inline]
-    func __x_iter_pairs(self) -> (func(table, any) -> (?K, ?V), Self) {
-        (base::next unsafe_cast_as func(table, any) -> (?K, ?V), self)
     }
 }

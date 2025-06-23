@@ -1,5 +1,3 @@
-/* Globals */
-
 #[global]
 pub let _VERSION: string = "";
 
@@ -44,8 +42,6 @@ pub func type(v: any) -> string {}
 
 #[global]
 pub func collectgarbage(a: ?string, a: ?number) -> any {}
-
-/* End Globals */
 
 pub func getfenv_func(f: anyfunc) -> map<any, any> {
     getfenv(f)

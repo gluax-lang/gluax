@@ -5,7 +5,7 @@ pub class Player: entity::Entity {}
 
 impl Player {
     #[global = "Player"]
-    pub func get(i: number) -> ?Self {}
+    pub func get(i: number) -> Self {}
 
     #[method_rename = "GetName"]
     pub func name(self) -> string {}

@@ -13,3 +13,5 @@ pub use base::select;
 pub use base::selectn;
 
 pub use gmod::Entity;
+pub use gmod::Player;
+pub use gmod::NULL;

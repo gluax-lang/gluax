@@ -142,7 +142,7 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 
 			method := methods[0]
 
-			if !a.canAccessClassMethod(&method) {
+			if !a.CanAccessClassMethod(&method) {
 				a.Errorf(leaf.Span(), "function `%s` of class `%s` is private", method.Def.Name.Raw, method.Class.Def.Name.Raw)
 			}
 

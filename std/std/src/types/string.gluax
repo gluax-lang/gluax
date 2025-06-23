@@ -1,7 +1,6 @@
 import "../debug";
 import "../base";
 
-/* Globals */
 #[global = "string.sub"]
 func sub(s: string, s_p: number, e_p: ?number) -> string {}
 
@@ -14,8 +13,6 @@ func bytes(s: string, s_p: number, e_p: number) -> ...number {}
 #[global = "string.find"]
 func find(s: string, pattern: string, init: ?number, plain: ?bool) -> (?number, ?number, ...string) {}
 
-/* End Globals */
-
 impl string {
     #[inline]
     pub func __x_iter_range_bound(self) -> number { #self }
@@ -24,9 +21,9 @@ impl string {
     pub func __x_iter_range(self, idx: number) -> string {
         sub(self, idx, idx)
     }
+}
 
-    /* Globals */
-
+impl string {
     #[global = "string.char"]
     pub func char(...number) -> string {}
 
@@ -48,10 +45,11 @@ impl string {
     #[global = "string.reverse"]
     pub func reverse(self) -> string {}
 
-    #[global]
-    pub func tonumber(self) -> ?number {}
-    /* End Globals */
+    #[global = "tonumber"]
+    pub func to_number(self) -> ?number {}
+}
 
+impl string {
     #[inline]
     pub func is_empty(self) -> bool { self == "" }
 
@@ -76,7 +74,6 @@ impl string {
     #[global = "string.byte"]
     pub func bytes(self, s_pos: number, e_pos: number) -> ...number {}
 #endif
-
 
     #[inline]
     pub func starts_with(self, prefix: string) -> bool {
