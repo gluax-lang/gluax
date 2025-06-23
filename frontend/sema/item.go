@@ -28,7 +28,7 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemClass, string){
 			return
 		}
 
-		if fun.Def.Params[0].Name.Raw != "self" {
+		if !fun.IsFirstParamSelf() {
 			a.Error(fun.Def.Params[0].Type.Span(), "first parameter must be `self`")
 			return
 		}
@@ -63,7 +63,7 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemClass, string){
 			return
 		}
 
-		if fun.Def.Params[0].Name.Raw != "self" {
+		if !fun.IsFirstParamSelf() {
 			a.Errorf(fun.Def.Params[0].Type.Span(), "first parameter must be `self`")
 			return
 		}
@@ -95,7 +95,7 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemClass, string){
 			return
 		}
 
-		if fun.Def.Params[0].Name.Raw != "self" {
+		if !fun.IsFirstParamSelf() {
 			a.Errorf(fun.Def.Params[0].Type.Span(), "first parameter must be `self`")
 			return
 		}
@@ -137,7 +137,7 @@ func (a *Analysis) handleUse(scope *Scope, it *ast.Use) {
 func (a *Analysis) GetTraitMethods(trait *ast.SemTrait, name string) []ast.SemFunction {
 	var found []ast.SemFunction
 	for _, method := range trait.Methods {
-		if method.Def.Name.Raw == name {
+		if name == "" || method.Def.Name.Raw == name {
 			found = append(found, method)
 		}
 	}

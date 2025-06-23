@@ -34,6 +34,17 @@ func (v LSPRef) RefSpan() common.Span {
 	return v.span
 }
 
+func (v LSPRef) GetDecl() LSPSymbol {
+	return v.decl
+}
+
+func (v LSPRef) GetSymbol() *Symbol {
+	if sym, ok := v.decl.(Symbol); ok {
+		return &sym
+	}
+	return nil
+}
+
 type LSPString struct {
 	value string
 	span  common.Span

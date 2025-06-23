@@ -171,129 +171,127 @@ func newTokPunct(p Punct, span common.Span) TokPunct {
 func (lx *lexer) punct(c *rune) Token {
 	switch *c {
 	case '+':
-		lx.advance()
-		return newTokPunct(PunctPlus, lx.currentSpan())
+		lx.Advance()
+		return newTokPunct(PunctPlus, lx.CurrentSpan())
 	case '-':
-		lx.advance()
-		if isChr(lx.curChr, '>') {
-			lx.advance()
-			return newTokPunct(PunctArrow, lx.currentSpan())
+		lx.Advance()
+		if IsChr(lx.CurChr, '>') {
+			lx.Advance()
+			return newTokPunct(PunctArrow, lx.CurrentSpan())
 		}
-		return newTokPunct(PunctMinus, lx.currentSpan())
+		return newTokPunct(PunctMinus, lx.CurrentSpan())
 	case '*':
-		lx.advance()
-		if isChr(lx.curChr, '*') {
-			lx.advance()
-			return newTokPunct(PunctExponent, lx.currentSpan())
+		lx.Advance()
+		if IsChr(lx.CurChr, '*') {
+			lx.Advance()
+			return newTokPunct(PunctExponent, lx.CurrentSpan())
 		}
-		return newTokPunct(PunctAsterisk, lx.currentSpan())
+		return newTokPunct(PunctAsterisk, lx.CurrentSpan())
 	case '/':
-		lx.advance()
-		return newTokPunct(PunctSlash, lx.currentSpan())
+		lx.Advance()
+		return newTokPunct(PunctSlash, lx.CurrentSpan())
 	case '%':
-		lx.advance()
-		return newTokPunct(PunctPercent, lx.currentSpan())
+		lx.Advance()
+		return newTokPunct(PunctPercent, lx.CurrentSpan())
 	case '=':
-		lx.advance()
-		if isChr(lx.curChr, '=') {
-			lx.advance()
-			return newTokPunct(PunctEqualEqual, lx.currentSpan())
+		lx.Advance()
+		if IsChr(lx.CurChr, '=') {
+			lx.Advance()
+			return newTokPunct(PunctEqualEqual, lx.CurrentSpan())
 		}
-		return newTokPunct(PunctEqual, lx.currentSpan())
+		return newTokPunct(PunctEqual, lx.CurrentSpan())
 	case '!':
-		lx.advance()
-		if isChr(lx.curChr, '=') {
-			lx.advance()
-			return newTokPunct(PunctNotEqual, lx.currentSpan())
+		lx.Advance()
+		if IsChr(lx.CurChr, '=') {
+			lx.Advance()
+			return newTokPunct(PunctNotEqual, lx.CurrentSpan())
 		}
-		return newTokPunct(PunctBang, lx.currentSpan())
+		return newTokPunct(PunctBang, lx.CurrentSpan())
 	case '<':
-		lx.advance()
-		if isChr(lx.curChr, '=') {
-			lx.advance()
-			return newTokPunct(PunctLessThanEqual, lx.currentSpan())
+		lx.Advance()
+		if IsChr(lx.CurChr, '=') {
+			lx.Advance()
+			return newTokPunct(PunctLessThanEqual, lx.CurrentSpan())
 		}
-		return newTokPunct(PunctLessThan, lx.currentSpan())
+		return newTokPunct(PunctLessThan, lx.CurrentSpan())
 	case '>':
-		lx.advance()
-		if isChr(lx.curChr, '=') {
-			lx.advance()
-			return newTokPunct(PunctGreaterThanEqual, lx.currentSpan())
+		lx.Advance()
+		if IsChr(lx.CurChr, '=') {
+			lx.Advance()
+			return newTokPunct(PunctGreaterThanEqual, lx.CurrentSpan())
 		}
-		return newTokPunct(PunctGreaterThan, lx.currentSpan())
+		return newTokPunct(PunctGreaterThan, lx.CurrentSpan())
 	case '^':
-		lx.advance()
-		return newTokPunct(PunctCaret, lx.currentSpan())
+		lx.Advance()
+		return newTokPunct(PunctCaret, lx.CurrentSpan())
 	case '.':
-		lx.advance()
-		if isChr(lx.curChr, '.') {
-			lx.advance()
-			if isChr(lx.curChr, '.') {
-				lx.advance()
-				return newTokPunct(PunctVararg, lx.currentSpan())
+		lx.Advance()
+		if IsChr(lx.CurChr, '.') {
+			lx.Advance()
+			if IsChr(lx.CurChr, '.') {
+				lx.Advance()
+				return newTokPunct(PunctVararg, lx.CurrentSpan())
 			}
-			return newTokPunct(PunctConcat, lx.currentSpan())
+			return newTokPunct(PunctConcat, lx.CurrentSpan())
 		}
-		return newTokPunct(PunctDot, lx.currentSpan())
+		return newTokPunct(PunctDot, lx.CurrentSpan())
 	case '#':
-		lx.advance()
-		return newTokPunct(PunctHash, lx.currentSpan())
+		lx.Advance()
+		return newTokPunct(PunctHash, lx.CurrentSpan())
 	case '&':
-		lx.advance()
-		if isChr(lx.curChr, '&') {
-			lx.advance()
-			return newTokPunct(PunctAndAnd, lx.currentSpan())
+		lx.Advance()
+		if IsChr(lx.CurChr, '&') {
+			lx.Advance()
+			return newTokPunct(PunctAndAnd, lx.CurrentSpan())
 		}
-		return newTokPunct(PunctAmpersand, lx.currentSpan())
+		return newTokPunct(PunctAmpersand, lx.CurrentSpan())
 	case '|':
-		lx.advance()
-		if isChr(lx.curChr, '|') {
-			lx.advance()
-			return newTokPunct(PunctOrOr, lx.currentSpan())
+		lx.Advance()
+		if IsChr(lx.CurChr, '|') {
+			lx.Advance()
+			return newTokPunct(PunctOrOr, lx.CurrentSpan())
 		}
-		return newTokPunct(PunctPipe, lx.currentSpan())
+		return newTokPunct(PunctPipe, lx.CurrentSpan())
 	case ';':
-		lx.advance()
-		return newTokPunct(PunctSemicolon, lx.currentSpan())
+		lx.Advance()
+		return newTokPunct(PunctSemicolon, lx.CurrentSpan())
 	case ':':
-		lx.advance()
-		if isChr(lx.curChr, ':') {
-			lx.advance()
-			return newTokPunct(PunctDoubleColon, lx.currentSpan())
+		lx.Advance()
+		if IsChr(lx.CurChr, ':') {
+			lx.Advance()
+			return newTokPunct(PunctDoubleColon, lx.CurrentSpan())
 		}
-		return newTokPunct(PunctColon, lx.currentSpan())
+		return newTokPunct(PunctColon, lx.CurrentSpan())
 	case ',':
-		lx.advance()
-		return newTokPunct(PunctComma, lx.currentSpan())
+		lx.Advance()
+		return newTokPunct(PunctComma, lx.CurrentSpan())
 	case '(':
-		lx.advance()
-		return newTokPunct(PunctOpenParen, lx.currentSpan())
+		lx.Advance()
+		return newTokPunct(PunctOpenParen, lx.CurrentSpan())
 	case ')':
-		lx.advance()
-		return newTokPunct(PunctCloseParen, lx.currentSpan())
+		lx.Advance()
+		return newTokPunct(PunctCloseParen, lx.CurrentSpan())
 	case '{':
-		lx.advance()
-		return newTokPunct(PunctOpenBrace, lx.currentSpan())
+		lx.Advance()
+		return newTokPunct(PunctOpenBrace, lx.CurrentSpan())
 	case '}':
-		lx.advance()
-		return newTokPunct(PunctCloseBrace, lx.currentSpan())
+		lx.Advance()
+		return newTokPunct(PunctCloseBrace, lx.CurrentSpan())
 	case '[':
-		lx.advance()
-		return newTokPunct(PunctOpenBracket, lx.currentSpan())
+		lx.Advance()
+		return newTokPunct(PunctOpenBracket, lx.CurrentSpan())
 	case ']':
-		lx.advance()
-		return newTokPunct(PunctCloseBracket, lx.currentSpan())
+		lx.Advance()
+		return newTokPunct(PunctCloseBracket, lx.CurrentSpan())
 	case '?':
-		lx.advance()
-		return newTokPunct(PunctQuestion, lx.currentSpan())
+		lx.Advance()
+		return newTokPunct(PunctQuestion, lx.CurrentSpan())
 	case '@':
-		lx.advance()
-		return newTokPunct(PunctAt, lx.currentSpan())
-
-	// Lua 5.1 punctuation
+		lx.Advance()
+		return newTokPunct(PunctAt, lx.CurrentSpan())
 	case '~':
-		lx.advance()
-		return newTokPunct(PunctTilde, lx.currentSpan())
+		lx.Advance()
+		return newTokPunct(PunctTilde, lx.CurrentSpan())
 	default:
 		return nil
 	}

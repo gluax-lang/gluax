@@ -41,6 +41,7 @@ type Analysis struct {
 	Ast                   *ast.Ast
 	State                 *State // current state of the analysis
 	currentClassSetupSpan *Span  // used to track the span of the current class setup
+	Exprs                 []*ast.Expr
 }
 
 func (a *Analysis) SetClassSetupSpan(span Span) bool {
@@ -122,7 +123,7 @@ func (a *Analysis) InlayHintType(label string, span Span) {
 	kind := protocol.InlayHintKindType
 	a.InlayHints = append(a.InlayHints, protocol.InlayHint{
 		Position: protocol.Position{
-			Line:      span.LineStart - 1,
+			Line:      span.LineStart,
 			Character: span.ColumnEnd,
 		},
 		Label: []protocol.InlayHintLabelPart{
@@ -332,8 +333,7 @@ func (a *Analysis) resolveImplementations() {
 			if _, exists := trait.Methods[name]; exists {
 				a.panicf(method.Name.Span(), "duplicate method `%s` in trait `%s`", name, traitDef.Name.Raw)
 			}
-			params := method.Params
-			if len(params) < 1 || params[0].Name.Raw != "self" {
+			if !method.IsFirstParamSelf() {
 				a.panicf(method.Name.Span(), "trait `%s` method `%s` must have a `self` parameter as the first parameter", traitDef.Name.Raw, method.Name.Raw)
 			}
 			funcTy := a.handleFunctionSignature(SelfScope, &method)
@@ -422,8 +422,7 @@ func (a *Analysis) resolveImplementations() {
 					a.panicf(implTrait.Span(), "class `%s` does not implement trait `%s` method `%s`", st.Def.Name.Raw, trait.Def.Name.Raw, name)
 				}
 			}
-			params := stMethod.Def.Params
-			if len(params) < 1 || params[0].Name.Raw != "self" {
+			if !stMethod.IsFirstParamSelf() {
 				a.panicf(implTrait.Span(), "class `%s` method `%s` must have a `self` parameter as the first parameter", st.Def.Name.Raw, name)
 			}
 

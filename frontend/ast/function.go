@@ -67,6 +67,18 @@ func (f *Function) GlobalName() string {
 	panic("function is not global, cannot get global name")
 }
 
+func (f *Function) IsFirstParamSelf() bool {
+	params := f.Params
+	if len(params) < 1 {
+		return false
+	}
+	firstParam := params[0]
+	if firstParam.Name == nil {
+		return false
+	}
+	return firstParam.Name.Raw == "self"
+}
+
 type FunctionParam struct {
 	Name *lexer.TokIdent // nil if defining function as a type definition
 	Type Type            // nil if vararg

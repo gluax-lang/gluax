@@ -249,6 +249,7 @@ func (p *parser) parseParenthesizedExpr() ast.Expr {
 	p.expect(")")
 
 	// return ast.NewParenthesizedExpr(expr, SpanFrom(spanStart, p.prevSpan()))
+	expr.SetSpan(SpanFrom(spanStart, p.prevSpan()))
 	return expr
 }
 

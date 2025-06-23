@@ -82,3 +82,17 @@ func (p *Chars) Next() *rune {
 	p.advance()
 	return &r
 }
+
+func (p *Chars) Pos() int {
+	if !p.hasNext {
+		return len(p.input) // EOF position is the end of the input
+	}
+	return p.pos
+}
+
+func (p *Chars) Width() int {
+	if !p.hasNext {
+		return noWidth
+	}
+	return p.width
+}

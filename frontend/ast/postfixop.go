@@ -7,6 +7,7 @@ import (
 
 type PostfixOp interface {
 	isPostfixOp()
+	Span() common.Span
 }
 
 /* DotAccess */

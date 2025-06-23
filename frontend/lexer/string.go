@@ -42,140 +42,140 @@ func NewTokString(s string, span common.Span) TokString {
 
 func (lx *lexer) string() (Token, *diagnostic) {
 	// A string can start with either a single or double quote.
-	if !isChr(lx.curChr, '"') /* && !isChr(lx.curChr, '\'') */ {
+	if !IsChr(lx.CurChr, '"') /* && !isChr(lx.curChr, '\'') */ {
 		return nil, nil
 	}
-	delim := *lx.curChr // Store the delimiter (' or ") to find the end.
-	lx.advance()        // Consume the opening delimiter.
+	delim := *lx.CurChr // Store the delimiter (' or ") to find the end.
+	lx.Advance()        // Consume the opening delimiter.
 
 	var sb strings.Builder
 
 	// Loop until we find the matching closing delimiter.
 	for {
 		// Check for end of file or an unescaped newline.
-		if lx.curChr == nil {
-			return nil, lx.error("unterminated string literal")
+		if lx.CurChr == nil {
+			return nil, lx.Error("unterminated string literal")
 		}
 
 		// Found the closing delimiter, the string is complete.
-		if *lx.curChr == delim {
-			lx.advance() // Consume the closing delimiter.
-			return NewTokString(sb.String(), lx.currentSpan()), nil
+		if *lx.CurChr == delim {
+			lx.Advance() // Consume the closing delimiter.
+			return NewTokString(sb.String(), lx.CurrentSpan()), nil
 		}
 
 		// Check for an escape sequence.
-		if *lx.curChr == '\\' {
-			lx.advance() // Consume '\'.
-			if lx.curChr == nil {
-				return nil, lx.error("unterminated string literal")
+		if *lx.CurChr == '\\' {
+			lx.Advance() // Consume '\'.
+			if lx.CurChr == nil {
+				return nil, lx.Error("unterminated string literal")
 			}
 
 			// If the backslash is followed by a newline, we treat it as a line continuation.
 			// This means we skip the newline and any leading whitespace on the next line.
-			if *lx.curChr == '\n' || *lx.curChr == '\r' {
+			if *lx.CurChr == '\n' || *lx.CurChr == '\r' {
 				// Handle both LF and CRLF line endings.
-				if *lx.curChr == '\r' && isChr(lx.peek(), '\n') {
-					lx.advance() // Consume '\r'.
+				if *lx.CurChr == '\r' && IsChr(lx.Peek(), '\n') {
+					lx.Advance() // Consume '\r'.
 				}
-				lx.advance() // Consume '\n' (or standalone '\r').
+				lx.Advance() // Consume '\n' (or standalone '\r').
 
 				// Skip leading whitespace on the next line.
-				for isWsChr(lx.curChr) {
-					lx.advance()
+				for IsWsChr(lx.CurChr) {
+					lx.Advance()
 				}
 				continue
 			}
 
 			// Now, determine which escape sequence we have.
-			switch *lx.curChr {
+			switch *lx.CurChr {
 			case 'a':
 				sb.WriteByte('\a')
-				lx.advance()
+				lx.Advance()
 			case 'b':
 				sb.WriteByte('\b')
-				lx.advance()
+				lx.Advance()
 			case 'f':
 				sb.WriteByte('\f')
-				lx.advance()
+				lx.Advance()
 			case 'n':
 				sb.WriteByte('\n')
-				lx.advance()
+				lx.Advance()
 			case 'r':
 				sb.WriteByte('\r')
-				lx.advance()
+				lx.Advance()
 			case 't':
 				sb.WriteByte('\t')
-				lx.advance()
+				lx.Advance()
 			case 'v':
 				sb.WriteByte('\v')
-				lx.advance()
+				lx.Advance()
 			case '\\':
 				sb.WriteByte('\\')
-				lx.advance()
+				lx.Advance()
 			case '"':
 				sb.WriteByte('"')
-				lx.advance()
+				lx.Advance()
 			case '\'':
 				sb.WriteByte('\'')
-				lx.advance()
+				lx.Advance()
 			// The \z escape skips all subsequent whitespace.
 			case 'z':
-				lx.advance() // Consume 'z'.
-				for isWsChr(lx.curChr) {
-					lx.advance()
+				lx.Advance() // Consume 'z'.
+				for IsWsChr(lx.CurChr) {
+					lx.Advance()
 				}
 
 			// Hexadecimal escape: \xXX (e.g., \x41 is 'A').
 			case 'x':
-				lx.advance() // Consume 'x'.
+				lx.Advance() // Consume 'x'.
 				var val uint32
-				if !isHexDigit(lx.curChr) {
-					return nil, lx.error("malformed hexadecimal escape sequence")
+				if !isHexDigit(lx.CurChr) {
+					return nil, lx.Error("malformed hexadecimal escape sequence")
 				}
-				val = hexValue(*lx.curChr) << 4 // First hex digit.
-				lx.advance()
+				val = hexValue(*lx.CurChr) << 4 // First hex digit.
+				lx.Advance()
 
-				if !isHexDigit(lx.curChr) {
-					return nil, lx.error("malformed hexadecimal escape sequence")
+				if !isHexDigit(lx.CurChr) {
+					return nil, lx.Error("malformed hexadecimal escape sequence")
 				}
-				val += hexValue(*lx.curChr) // Second hex digit.
-				lx.advance()
+				val += hexValue(*lx.CurChr) // Second hex digit.
+				lx.Advance()
 				sb.WriteByte(byte(val))
 
 			// Unicode escape: \u{...} (e.g., \u{1F60A} is 😊).
 			case 'u':
-				lx.advance() // Consume 'u'.
-				if !isChr(lx.curChr, '{') {
-					return nil, lx.error("malformed Unicode escape sequence, missing '{'")
+				lx.Advance() // Consume 'u'.
+				if !IsChr(lx.CurChr, '{') {
+					return nil, lx.Error("malformed Unicode escape sequence, missing '{'")
 				}
-				lx.advance() // Consume '{'.
+				lx.Advance() // Consume '{'.
 
 				var val uint32
 				digitCount := 0
 				for {
-					if isChr(lx.curChr, '}') {
+					if IsChr(lx.CurChr, '}') {
 						break
 					}
-					if !isHexDigit(lx.curChr) {
-						return nil, lx.error("malformed Unicode escape sequence, invalid hex digit")
+					if !isHexDigit(lx.CurChr) {
+						return nil, lx.Error("malformed Unicode escape sequence, invalid hex digit")
 					}
 					digitCount++
-					val = (val << 4) | hexValue(*lx.curChr)
+					val = (val << 4) | hexValue(*lx.CurChr)
 					// Check if the codepoint is in the valid Unicode range.
 					if val >= 0x110000 {
-						return nil, lx.error("invalid Unicode escape sequence, value out of range")
+						return nil, lx.Error("invalid Unicode escape sequence, value out of range")
 					}
-					lx.advance()
+					lx.Advance()
 				}
 
 				if digitCount == 0 {
-					return nil, lx.error("malformed Unicode escape sequence, empty braces")
+					return nil, lx.Error("malformed Unicode escape sequence, empty braces")
 				}
-				lx.advance() // Consume '}'.
+				lx.Advance() // Consume '}'.
 
 				// Surrogate pairs are not valid in this context.
 				if val >= 0xD800 && val < 0xE000 {
-					return nil, lx.error("invalid Unicode escape sequence, surrogate values are not allowed")
+					return nil, lx.Error("invalid Unicode escape sequence, surrogate values are not allowed")
 				}
 				sb.WriteRune(rune(val))
 
@@ -183,66 +183,66 @@ func (lx *lexer) string() (Token, *diagnostic) {
 			case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 				var val uint16
 				// Read up to three decimal digits.
-				for i := 0; i < 3 && isAsciiDigit(lx.curChr); i++ {
-					val = val*10 + uint16(*lx.curChr-'0')
-					lx.advance()
+				for i := 0; i < 3 && isAsciiDigit(lx.CurChr); i++ {
+					val = val*10 + uint16(*lx.CurChr-'0')
+					lx.Advance()
 				}
 
 				if val > 255 {
-					return nil, lx.error("invalid decimal escape sequence, value out of range (0-255)")
+					return nil, lx.Error("invalid decimal escape sequence, value out of range (0-255)")
 				}
 				sb.WriteByte(byte(val))
 
 			default:
-				return nil, lx.error(fmt.Sprintf("invalid escape sequence: \\%c", *lx.curChr))
+				return nil, lx.Error(fmt.Sprintf("invalid escape sequence: \\%c", *lx.CurChr))
 			}
 			continue // Continue the loop after processing the escape.
 		}
 
 		// This is just a regular character, add it to our string.
-		sb.WriteRune(*lx.curChr)
-		lx.advance()
+		sb.WriteRune(*lx.CurChr)
+		lx.Advance()
 	}
 }
 
 func (lx *lexer) rawString() (Token, *diagnostic) {
-	lx.advance() // Consume 'r'
+	lx.Advance() // Consume 'r'
 
 	hashCount := 0
-	for isChr(lx.curChr, '#') {
+	for IsChr(lx.CurChr, '#') {
 		hashCount++
-		lx.advance()
+		lx.Advance()
 	}
 
-	if !isChr(lx.curChr, '"') {
-		return nil, lx.error("expected '\"' to start raw string literal")
+	if !IsChr(lx.CurChr, '"') {
+		return nil, lx.Error("expected '\"' to start raw string literal")
 	}
-	lx.advance() // Consume '\"'.
+	lx.Advance() // Consume '\"'.
 
 	var sb strings.Builder
 
 	for {
-		if lx.curChr == nil {
-			return nil, lx.error("unterminated raw string literal")
+		if lx.CurChr == nil {
+			return nil, lx.Error("unterminated raw string literal")
 		}
 
 		// Check for a potential closing quote.
-		if *lx.curChr == '"' {
-			lx.advance() // Consume '\"'.
+		if *lx.CurChr == '"' {
+			lx.Advance() // Consume '\"'.
 			if hashCount == 0 {
-				return NewTokString(sb.String(), lx.currentSpan()), nil
+				return NewTokString(sb.String(), lx.CurrentSpan()), nil
 			}
 
 			// See if it's followed by the correct number of hashes.
 			endHashCount := 0
-			for isChr(lx.curChr, '#') {
+			for IsChr(lx.CurChr, '#') {
 				endHashCount++
-				lx.advance()
+				lx.Advance()
 			}
 
 			// If the hash counts match, we've found the end.
 			if endHashCount == hashCount {
-				return NewTokString(sb.String(), lx.currentSpan()), nil
+				return NewTokString(sb.String(), lx.CurrentSpan()), nil
 			}
 
 			// It was just a quote and some hashes inside the string.
@@ -253,8 +253,8 @@ func (lx *lexer) rawString() (Token, *diagnostic) {
 		}
 
 		// It's a regular character, add it to our string.
-		sb.WriteRune(*lx.curChr)
-		lx.advance()
+		sb.WriteRune(*lx.CurChr)
+		lx.Advance()
 	}
 }
 

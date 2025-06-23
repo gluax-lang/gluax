@@ -3,6 +3,7 @@ package sema
 import (
 	"strconv"
 
+	"github.com/gluax-lang/gluax/frontend"
 	"github.com/gluax-lang/gluax/frontend/ast"
 	"github.com/gluax-lang/gluax/frontend/lexer"
 )
@@ -96,6 +97,7 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 		panic("unreachable: unknown expression kind " + expr.Kind().String())
 	}
 	expr.SetType(retTy)
+	a.Exprs = append(a.Exprs, expr)
 	return flow
 }
 
@@ -654,27 +656,36 @@ func (a *Analysis) handleDotAccess(expr *ast.DotAccess, toIndex *ast.Expr) Type 
 		return fld.Ty
 	}
 
-	a.panicf(field.Span(), "no field named `%s` in `%s`", field.Raw, st.Def.Name.Raw)
-	panic("unreachable")
+	if field.Raw != frontend.PARSING_ERROR_PREFIX {
+		a.Errorf(field.Span(), "no field named `%s` in `%s`", field.Raw, st.Def.Name.Raw)
+	}
+	return a.nilType()
 }
 
 func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Expr) Type {
+	name := call.Method.Raw
+	if name == frontend.PARSING_ERROR_PREFIX {
+		return a.nilType()
+	}
 	toCallTy := toCall.Type()
 	toCallName := toCallTy.String()
 
-	methods := a.FindMethodsOnType(scope, toCallTy, call.Method.Raw)
+	methods := a.FindMethodsOnType(scope, toCallTy, name)
 
 	if len(methods) == 0 {
-		a.panicf(call.Method.Span(), "no method named `%s` in `%s`", call.Method.Raw, toCallName)
+		a.Errorf(call.Method.Span(), "no method named `%s` in `%s`", name, toCallName)
+		return a.nilType()
 	}
 	if len(methods) > 1 {
-		a.panicf(call.Method.Span(), "ambiguous method call `%s` in `%s`", call.Method.Raw, toCallName)
+		a.Errorf(call.Method.Span(), "ambiguous method call `%s` in `%s`", name, toCallName)
+		return a.nilType()
 	}
 
 	method := methods[0]
 
-	if len(method.Params) < 1 || method.Def.Params[0].Name.Raw != "self" {
-		a.panicf(call.Method.Span(), "no method named `%s` in `%s`", call.Method.Raw, toCallName)
+	if !method.IsFirstParamSelf() {
+		a.Errorf(call.Method.Span(), "no method named `%s` in `%s`", name, toCallName)
+		return a.nilType()
 	}
 
 	if !a.canAccessClassMethod(&method) {

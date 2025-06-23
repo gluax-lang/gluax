@@ -50,7 +50,7 @@ func (cg *Codegen) generateClass(st *ast.SemClass) {
 	cg.ln("%s = true,", frontend.CLASS_MARKER_PREFIX)
 	for name, method := range cg.Analysis.FindAllClassMethods(st) {
 		// we need to handle it with body, to make sure body calls are generated correctly
-		hMethod := cg.Analysis.HandleClassMethod(st, *method, true)
+		hMethod := cg.Analysis.HandleClassMethod(st, method, true)
 		cg.ln("%s = %s,", name, cg.genFunction(&hMethod))
 	}
 	cg.popIndent()

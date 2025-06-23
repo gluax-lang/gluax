@@ -503,13 +503,11 @@ func (f SemFunction) IsClassMethod() bool {
 		return false
 	}
 
-	for _, param := range f.Def.Params {
-		if param.Name.Raw == "self" {
-			return true
-		}
-	}
+	return f.IsFirstParamSelf()
+}
 
-	return false
+func (f SemFunction) IsFirstParamSelf() bool {
+	return f.Def.IsFirstParamSelf()
 }
 
 /* Tuple */

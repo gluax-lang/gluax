@@ -44,6 +44,10 @@ func NewSymbol[T symbolData](name string, data T, span common.Span, public bool)
 	}
 }
 
+func (s Symbol) Data() symbolData {
+	return s.data
+}
+
 func (s Symbol) Span() common.Span {
 	return s.span
 }

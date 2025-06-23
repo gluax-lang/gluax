@@ -47,26 +47,26 @@ func IsIdentStr(t Token, s string) bool {
 func (lx *lexer) identifier() (Token, *diagnostic) {
 	var sb strings.Builder
 
-	if !isIdentStart(*lx.curChr) {
-		return nil, lx.error(fmt.Sprintf("unexpected character: %c", *lx.curChr))
+	if !IsIdentStart(*lx.CurChr) {
+		return nil, lx.Error(fmt.Sprintf("unexpected character: %c", *lx.CurChr))
 	}
 
-	sb.WriteRune(*lx.curChr)
-	lx.advance()
+	sb.WriteRune(*lx.CurChr)
+	lx.Advance()
 
-	for c := lx.curChr; c != nil && isIdentContinue(*c); c = lx.curChr {
+	for c := lx.CurChr; c != nil && IsIdentContinue(*c); c = lx.CurChr {
 		sb.WriteRune(*c)
-		lx.advance()
+		lx.Advance()
 	}
 
 	if strings.HasPrefix(sb.String(), frontend.PreservedPrefix) {
-		return nil, lx.error(fmt.Sprintf("cannot have identifier starting with %s", frontend.PreservedPrefix))
+		return nil, lx.Error(fmt.Sprintf("cannot have identifier starting with %s", frontend.PreservedPrefix))
 	}
 
-	return NewTokIdent(sb.String(), lx.currentSpan()), nil
+	return NewTokIdent(sb.String(), lx.CurrentSpan()), nil
 }
 
-func isIdentStart(r rune) bool {
+func IsIdentStart(r rune) bool {
 	// ASCII letters
 	if ('A' <= r && r <= 'Z') || ('a' <= r && r <= 'z') {
 		return true
@@ -82,13 +82,13 @@ func isIdentStart(r rune) bool {
 	return false
 }
 
-func isIdentContinue(r rune) bool {
+func IsIdentContinue(r rune) bool {
 	// Digits are allowed after the first rune.
 	if '0' <= r && r <= '9' {
 		return true
 	}
 	// Otherwise the same rules as the first rune.
-	return isIdentStart(r)
+	return IsIdentStart(r)
 }
 
 func IsValidIdent(s string) bool {
@@ -97,14 +97,18 @@ func IsValidIdent(s string) bool {
 	}
 	for i, r := range s {
 		if i == 0 {
-			if !isIdentStart(r) {
+			if !IsIdentStart(r) {
 				return false
 			}
 		} else {
-			if !isIdentContinue(r) {
+			if !IsIdentContinue(r) {
 				return false
 			}
 		}
 	}
 	return true
+}
+
+func IsValidIdentRune(r rune) bool {
+	return IsIdentStart(r) || IsIdentContinue(r)
 }

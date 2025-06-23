@@ -165,7 +165,8 @@ func (p *parser) expectIdentMsgX(msg string, flags Flags) lexer.TokIdent {
 		return lexer.NewTokIdent("_", tok.Span())
 	}
 	if flags.Has(FlagInjectFakeIdent) {
-		return lexer.NewTokIdent(frontend.PARSING_ERROR_PREFIX, tok.Span())
+		p.Errorf(tok.Span(), "%s, got: %s", msg, tok.String())
+		return lexer.NewTokIdent(frontend.PARSING_ERROR_PREFIX, p.prevSpan())
 	}
 	common.PanicDiag(fmt.Sprintf("%s, got: %s", msg, tok.String()), tok.Span())
 	panic("unreachable") // love go

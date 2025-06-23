@@ -105,6 +105,7 @@ type Expr struct {
 	// lua always returns the last value of a condition, nil or not (s = a and b)
 	// so it will break our code because it will be expecting a bool
 	AsCond bool
+	span   *common.Span
 }
 
 func NewExpr[T exprData](data T) Expr {
@@ -128,7 +129,14 @@ func (e *Expr) SetType(sem SemType) {
 }
 
 func (e Expr) Span() common.Span {
+	if e.span != nil {
+		return *e.span
+	}
 	return e.data.Span()
+}
+
+func (e *Expr) SetSpan(span common.Span) {
+	e.span = &span
 }
 
 func (e *Expr) Path() *Path {

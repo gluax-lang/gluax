@@ -5,7 +5,7 @@ import (
 )
 
 func (a *Analysis) handleBlock(scope *Scope, block *ast.Block) FlowStatus {
-	child := scope.Child(true)
+	child := scope.ChildWithScope(true, block.Span())
 	blockTy, blockFlow := a.nilType(), FlowNormal
 	lastStmtSpan := block.Span()
 

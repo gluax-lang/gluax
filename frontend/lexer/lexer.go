@@ -11,17 +11,17 @@ type diagnostic = protocol.Diagnostic
 // lexer is a hand-rolled, rune-based scanner.
 type lexer struct {
 	src                    string // source is the file being scanned
-	chars                  *peekable.Chars
-	curChr                 *rune
-	line, column           uint32
-	savedLine, savedColumn uint32
+	Chars                  *peekable.Chars
+	CurChr                 *rune
+	Line, Column           uint32
+	SavedLine, SavedColumn uint32
 }
 
 func Lex(src, code string) ([]Token, *diagnostic) {
 	var tokens []Token
-	lx := newLexer(src, code)
+	lx := NewLexer(src, code)
 	for {
-		tok, err := lx.nextToken()
+		tok, err := lx.NextToken()
 		if err != nil {
 			return nil, err
 		}
@@ -33,66 +33,66 @@ func Lex(src, code string) ([]Token, *diagnostic) {
 	return tokens, nil
 }
 
-// newLexer returns a fresh lexer initialised with src.
-func newLexer(src, code string) *lexer {
+// NewLexer returns a fresh lexer initialised with src.
+func NewLexer(src, code string) *lexer {
 	chars := peekable.NewPeekableChars(code)
 	lx := &lexer{
 		src:    src,
-		chars:  chars,
-		curChr: chars.Next(),
-		line:   1, column: 1,
-		savedLine: 1, savedColumn: 1,
+		Chars:  chars,
+		CurChr: chars.Next(),
+		Line:   0, Column: 0,
+		SavedLine: 0, SavedColumn: 0,
 	}
 	return lx
 }
 
-func (lx *lexer) currentSpan() common.Span {
-	span := common.SpanNew(lx.savedLine, lx.line, lx.savedColumn, lx.column-1)
+func (lx *lexer) CurrentSpan() common.Span {
+	span := common.SpanNew(lx.SavedLine, lx.Line, lx.SavedColumn, lx.Column)
 	span.Source = lx.src
 	return span
 }
 
-func (lx *lexer) advance() {
-	c := lx.curChr
+func (lx *lexer) Advance() {
+	c := lx.CurChr
 	if c != nil {
 		if *c == '\n' {
-			lx.line++
-			lx.column = 1
+			lx.Line++
+			lx.Column = 0
 		} else {
-			lx.column++
+			lx.Column++
 		}
 	}
-	lx.curChr = lx.chars.Next()
+	lx.CurChr = lx.Chars.Next()
 }
 
-func (lx *lexer) peek() *rune {
-	return lx.chars.Peek()
+func (lx *lexer) Peek() *rune {
+	return lx.Chars.Peek()
 }
 
-func (lx *lexer) error(msg string) *diagnostic {
-	span := common.SpanNew(lx.savedLine, lx.line, lx.savedColumn, common.MaxUint32(lx.column-1, 1))
+func (lx *lexer) Error(msg string) *diagnostic {
+	span := common.SpanNew(lx.SavedLine, lx.Line, lx.SavedColumn, lx.Column)
 	span.Source = lx.src
 	return common.ErrorDiag(msg, span)
 }
 
-// skipWs skips whitespaces to the next non-whitespace character.
-func (lx *lexer) skipWs() {
+// SkipWs skips whitespaces to the next non-whitespace character.
+func (lx *lexer) SkipWs() {
 	for {
-		c := lx.curChr
-		if !isWsChr(c) {
+		c := lx.CurChr
+		if !IsWsChr(c) {
 			break
 		}
-		lx.advance() // skip
+		lx.Advance() // skip
 	}
-	lx.savedLine = lx.line
-	lx.savedColumn = lx.column
+	lx.SavedLine = lx.Line
+	lx.SavedColumn = lx.Column
 }
 
-func (lx *lexer) nextToken() (Token, *diagnostic) {
-	lastLine, lastColumn := lx.line, lx.column
-	lx.skipWs() // skip whitespaces
+func (lx *lexer) NextToken() (Token, *diagnostic) {
+	lastLine, lastColumn := lx.Line, lx.Column
+	lx.SkipWs() // skip whitespaces
 
-	c := lx.curChr
+	c := lx.CurChr
 
 	// EOF
 	if c == nil {
@@ -102,25 +102,25 @@ func (lx *lexer) nextToken() (Token, *diagnostic) {
 	}
 
 	if *c == 'r' {
-		if p := lx.peek(); p != nil && (*p == '"' || *p == '#') {
+		if p := lx.Peek(); p != nil && (*p == '"' || *p == '#') {
 			return lx.rawString()
 		}
 	}
 
 	// Comment
 	if *c == '/' {
-		if pC := lx.peek(); pC != nil {
+		if pC := lx.Peek(); pC != nil {
 			switch *pC {
 			case '/':
 				comment := lx.comment()
-				return lx.nextToken() // just for now
+				return lx.NextToken() // just for now
 				return comment, nil
 			case '*':
 				comment, dig := lx.multilineComment()
 				if dig != nil {
 					return nil, dig
 				}
-				return lx.nextToken() // just for now
+				return lx.NextToken() // just for now
 				return comment, nil
 			}
 		}
@@ -159,11 +159,11 @@ func (lx *lexer) nextToken() (Token, *diagnostic) {
 	return identTok, nil
 }
 
-func isChr(c *rune, e rune) bool {
+func IsChr(c *rune, e rune) bool {
 	return c != nil && *c == e
 }
 
-func isWsChr(c *rune) bool {
+func IsWsChr(c *rune) bool {
 	if c == nil {
 		return false
 	}

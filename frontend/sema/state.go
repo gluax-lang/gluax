@@ -220,31 +220,76 @@ func (a *Analysis) FindClassMethodByTrait(st *ast.SemClass, methodName string, s
 	var results []SemFunction
 
 	for cls := st; cls != nil; cls = cls.Super {
-		if bucket, exists := a.State.TraitsByClass[cls.Def]; exists {
-			for trait, metas := range bucket {
-				if _, already := foundTraits[trait]; already {
-					continue // already found in subclass
-				}
+		bucket, exists := a.State.TraitsByClass[cls.Def]
+		if !exists {
+			continue
+		}
+		for trait, metas := range bucket {
+			if _, already := foundTraits[trait]; already {
+				continue // already found in subclass
+			}
 
-				if scope != nil && !scope.IsTraitInScope(trait) {
+			if scope != nil && !scope.IsTraitInScope(trait) {
+				continue
+			}
+
+			for _, meta := range metas {
+				if !a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
 					continue
 				}
-
-				for _, meta := range metas {
-					if a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
-						if method, exists := meta.Methods[methodName]; exists {
-							method.Class = cls
-							results = append(results, method)
-							foundTraits[trait] = struct{}{}
-							break // only one per trait
-						}
+				if methodName == "" {
+					for _, method := range meta.Methods {
+						results = append(results, method)
 					}
+					foundTraits[trait] = struct{}{}
+					break // only one per trait
+				} else if method, exists := meta.Methods[methodName]; exists {
+					method.Class = cls
+					results = append(results, method)
+					foundTraits[trait] = struct{}{}
+					break // only one per trait
 				}
 			}
 		}
 	}
 
 	return results
+}
+
+func (a *Analysis) FindAllClassAndTraitMethods(st *ast.SemClass, scope *Scope) []SemFunction {
+	actual := st.Generics.Params
+	var result []SemFunction
+
+	for cls := st; cls != nil; cls = cls.Super {
+		methodsByName := a.State.MethodsByClass[cls.Def]
+		for _, list := range methodsByName {
+			for _, meta := range list {
+				if !a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
+					continue
+				}
+				result = append(result, a.HandleClassMethod(st, meta.Method, false))
+			}
+		}
+	}
+
+	for cls := st; cls != nil; cls = cls.Super {
+		bucket, exists := a.State.TraitsByClass[cls.Def]
+		if !exists {
+			continue
+		}
+		for _, metas := range bucket {
+			for _, meta := range metas {
+				if !a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
+					continue
+				}
+				for _, method := range meta.Methods {
+					result = append(result, method)
+				}
+			}
+		}
+	}
+
+	return result
 }
 
 func (a *Analysis) FindClassMethodForTraitOnly(st *ast.SemClass, trait *ast.SemTrait, methodName string) *SemFunction {
@@ -266,9 +311,9 @@ func (a *Analysis) FindClassMethodForTraitOnly(st *ast.SemClass, trait *ast.SemT
 	return nil
 }
 
-func (a *Analysis) FindAllClassMethods(st *ast.SemClass) map[string]*SemFunction {
+func (a *Analysis) FindAllClassMethods(st *ast.SemClass) map[string]SemFunction {
 	actual := st.Generics.Params
-	result := make(map[string]*SemFunction)
+	result := make(map[string]SemFunction)
 
 	methodsByName := a.State.MethodsByClass[st.Def]
 	for name, list := range methodsByName {
@@ -276,8 +321,7 @@ func (a *Analysis) FindAllClassMethods(st *ast.SemClass) map[string]*SemFunction
 			if !a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
 				continue
 			}
-			inst := a.HandleClassMethod(st, meta.Method, false)
-			result[name] = &inst
+			result[name] = a.HandleClassMethod(st, meta.Method, false)
 			break // Take the first valid implementation for this method name
 		}
 	}

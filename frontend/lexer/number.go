@@ -37,7 +37,7 @@ func newTokNumber(s string, span common.Span) TokNumber {
 
 func (lx *lexer) number() (Token, *diagnostic) {
 	// if does not start with a digit, then return nil
-	if !isAsciiDigit(lx.curChr) {
+	if !isAsciiDigit(lx.CurChr) {
 		return nil, nil
 	}
 
@@ -47,46 +47,46 @@ func (lx *lexer) number() (Token, *diagnostic) {
 	var sb strings.Builder
 
 	// hexadecimal
-	if isChr(lx.curChr, '0') {
-		if p := lx.peek(); p != nil && (*p == 'x' || *p == 'X') {
+	if IsChr(lx.CurChr, '0') {
+		if p := lx.Peek(); p != nil && (*p == 'x' || *p == 'X') {
 			sb.WriteRune('0')
-			lx.advance()             // Consume '0'
-			sb.WriteRune(*lx.curChr) // Write 'x' or 'X'
-			lx.advance()             // Consume 'x' or 'X'
+			lx.Advance()             // Consume '0'
+			sb.WriteRune(*lx.CurChr) // Write 'x' or 'X'
+			lx.Advance()             // Consume 'x' or 'X'
 
 			if !lx.scanDigits(&sb, isHexDigit) {
-				return nil, lx.error("missing hexadecimal digits after '0x'")
+				return nil, lx.Error("missing hexadecimal digits after '0x'")
 			}
-			return newTokNumber(sb.String(), lx.currentSpan()), nil
+			return newTokNumber(sb.String(), lx.CurrentSpan()), nil
 		}
 	}
 
 	lx.scanDigits(&sb, isDecimalDigit)
 
 	// fractional part
-	if isChr(lx.curChr, '.') {
+	if IsChr(lx.CurChr, '.') {
 		sb.WriteRune('.')
-		lx.advance() // Consume '.'
+		lx.Advance() // Consume '.'
 		lx.scanDigits(&sb, isDecimalDigit)
 	}
 
 	// Exponent part: [eE][+-]?<digits>
-	if isChr(lx.curChr, 'e') || isChr(lx.curChr, 'E') {
-		sb.WriteRune(*lx.curChr) // Consume 'e' or 'E'
-		lx.advance()
+	if IsChr(lx.CurChr, 'e') || IsChr(lx.CurChr, 'E') {
+		sb.WriteRune(*lx.CurChr) // Consume 'e' or 'E'
+		lx.Advance()
 
 		// Optional sign
-		if isChr(lx.curChr, '+') || isChr(lx.curChr, '-') {
-			sb.WriteRune(*lx.curChr)
-			lx.advance()
+		if IsChr(lx.CurChr, '+') || IsChr(lx.CurChr, '-') {
+			sb.WriteRune(*lx.CurChr)
+			lx.Advance()
 		}
 
 		if !lx.scanDigits(&sb, isDecimalDigit) {
-			return nil, lx.error("missing exponent digits")
+			return nil, lx.Error("missing exponent digits")
 		}
 	}
 
-	return newTokNumber(sb.String(), lx.currentSpan()), nil
+	return newTokNumber(sb.String(), lx.CurrentSpan()), nil
 }
 
 func isAsciiDigit(c *rune) bool {
@@ -94,7 +94,7 @@ func isAsciiDigit(c *rune) bool {
 }
 
 func (lx *lexer) scanDigits(sb *strings.Builder, isDigit func(r rune) bool) (hasDigits bool) {
-	for c := lx.curChr; c != nil; c = lx.curChr {
+	for c := lx.CurChr; c != nil; c = lx.CurChr {
 		if isDigit(*c) {
 			hasDigits = true
 			sb.WriteRune(*c)
@@ -103,7 +103,7 @@ func (lx *lexer) scanDigits(sb *strings.Builder, isDigit func(r rune) bool) (has
 			break
 		}
 		// If it was a digit or an underscore, we advance.
-		lx.advance()
+		lx.Advance()
 	}
 	return hasDigits
 }

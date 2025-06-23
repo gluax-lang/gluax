@@ -21,21 +21,14 @@ type Span struct {
 	Source                 string // nil == unknown
 }
 
-func adjustN(n uint32) uint32 {
-	if n <= 1 {
-		return 0
-	}
-	return n - 1
-}
-
 func (s Span) ToRange() protocol.Range {
 	return protocol.Range{
 		Start: protocol.Position{
-			Line:      adjustN(s.LineStart),
-			Character: adjustN(s.ColumnStart),
+			Line:      s.LineStart,
+			Character: s.ColumnStart,
 		},
 		End: protocol.Position{
-			Line:      adjustN(s.LineEnd),
+			Line:      s.LineEnd,
 			Character: s.ColumnEnd,
 		},
 	}
@@ -56,10 +49,10 @@ func (s Span) String() string {
 func SpanDefault() Span {
 	return Span{
 		ID:          nextSpanID(),
-		LineStart:   1,
-		LineEnd:     1,
-		ColumnStart: 1,
-		ColumnEnd:   1,
+		LineStart:   0,
+		LineEnd:     0,
+		ColumnStart: 0,
+		ColumnEnd:   0,
 	}
 }
 
@@ -76,10 +69,10 @@ func SpanNew(lineStart, lineEnd, columnStart, columnEnd uint32) Span {
 func SpanSrc(src string) Span {
 	return Span{
 		ID:          nextSpanID(),
-		LineStart:   1,
-		LineEnd:     1,
-		ColumnStart: 1,
-		ColumnEnd:   1,
+		LineStart:   0,
+		LineEnd:     0,
+		ColumnStart: 0,
+		ColumnEnd:   0,
 		Source:      src,
 	}
 }
