@@ -2,7 +2,6 @@ package codegen
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/gluax-lang/gluax/frontend"
@@ -65,50 +64,26 @@ func (cg *Codegen) generateClass(st *ast.SemClass) {
 }
 
 func (cg *Codegen) genClassInit(si *ast.ExprClassInit, st *ast.SemClass) string {
-	var sb strings.Builder
-
-	type fieldEval struct {
-		Name string
-		Id   int
-		Temp string
-	}
-
-	fieldEvals := make([]fieldEval, len(si.Fields))
 	exprs := make([]ast.Expr, len(si.Fields))
-
 	for i, f := range si.Fields {
-		fieldEvals[i] = fieldEval{
-			Name: f.Name.Raw,
-			Id:   st.GetFieldIndex(f.Name.Raw),
-		}
 		exprs[i] = f.Value
 	}
 
-	tempNames := cg.genExprsToTempVars(exprs)
-
-	for i := range fieldEvals {
-		fieldEvals[i].Temp = tempNames[i]
-	}
-
+	tempNames := cg.genExprsToStrings(exprs)
 	toSetTo := cg.decorateClassName(st)
 
-	// Sort by field Id for table initialization
-	sorted := make([]fieldEval, len(fieldEvals))
-	copy(sorted, fieldEvals)
-	sort.Slice(sorted, func(i, j int) bool {
-		return sorted[i].Id < sorted[j].Id
-	})
-
+	var sb strings.Builder
 	sb.WriteString("setmetatable({")
-	for i, fe := range sorted {
+
+	for i, f := range si.Fields {
 		if i > 0 {
 			sb.WriteString(", ")
 		}
-		sb.WriteString(fe.Temp)
-		sb.WriteString(fmt.Sprintf("--[[%s]]", fe.Name))
+		fieldIndex := st.GetFieldIndex(f.Name.Raw)
+		sb.WriteString(fmt.Sprintf("[%d]=%s--[[%s]]", fieldIndex, tempNames[i], f.Name.Raw))
 	}
-	sb.WriteString(fmt.Sprintf("}, %s)", toSetTo))
 
+	sb.WriteString(fmt.Sprintf("}, %s)", toSetTo))
 	return sb.String()
 }
 

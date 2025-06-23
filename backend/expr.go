@@ -43,19 +43,6 @@ func (cg *Codegen) innermostLoop() loopLabel {
 	panic("no loop labels, should not happen")
 }
 
-func (cg *Codegen) genExprsToTempVars(exprs []ast.Expr) []string {
-	if len(exprs) == 0 {
-		return nil
-	}
-	var locals []string
-	for _, expr := range exprs {
-		local := cg.getTempVar()
-		locals = append(locals, local)
-		cg.ln("%s = %s;", local, cg.genExpr(expr))
-	}
-	return locals
-}
-
 func (cg *Codegen) genExprsToStrings(exprs []ast.Expr) []string {
 	if len(exprs) == 0 {
 		return nil
