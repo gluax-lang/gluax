@@ -351,7 +351,7 @@ func (pa *ProjectAnalysis) processState(state *State, workspace string) error {
 		publicPath := common.FilePathClean(filepath.Join("std", "src", "public.gluax"))
 		publicAnalysis := pa.currentState.Files[publicPath]
 		for name, symA := range publicAnalysis.Scope.Symbols {
-			nameSyms := make([]ast.Symbol, 0, len(symA))
+			nameSyms := make([]*ast.Symbol, 0, len(symA))
 			for _, sym := range symA {
 				if sym.IsPublic() {
 					nameSyms = append(nameSyms, sym)

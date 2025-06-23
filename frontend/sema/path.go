@@ -29,7 +29,7 @@ func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafRe
 	fakeSemImport := ast.NewSemImport(fakeImport, "", a)
 	fakeSemImport.Scope = scope
 	fakeSymbol := ast.NewSymbol("", &fakeSemImport, common.Span{}, false)
-	currentSym := &fakeSymbol
+	currentSym := fakeSymbol
 
 	for i, seg := range segs[:len(segs)-1] {
 		if currentSym.IsImport() {
@@ -158,7 +158,7 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 
 			val := ast.NewValue(method)
 			valSym := ast.NewSymbol(raw, &val, method.Def.Name.Span(), method.Def.Public)
-			path.ResolvedSymbol = &valSym
+			path.ResolvedSymbol = valSym
 			a.AddRef(valSym, leaf.Span())
 			return &val
 		}
@@ -170,7 +170,7 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 	return *t
 }
 
-func (a *Analysis) resolvePathSymbol(scope *Scope, path *ast.Path) Symbol {
+func (a *Analysis) resolvePathSymbol(scope *Scope, path *ast.Path) *Symbol {
 	t := resolvePathGeneric(a, scope, path, func(sym *Symbol, leaf *ast.PathSegment) *Symbol {
 		raw := leaf.Ident.Raw
 		if !sym.IsImport() {
@@ -191,7 +191,7 @@ func (a *Analysis) resolvePathSymbol(scope *Scope, path *ast.Path) Symbol {
 	if t == nil {
 		a.panicf(path.Span(), "symbol `%s` not found", path.String())
 	}
-	return *t
+	return t
 }
 
 func (a *Analysis) resolvePathTrait(scope *Scope, path *ast.Path) *ast.SemTrait {

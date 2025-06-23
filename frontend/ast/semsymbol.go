@@ -35,8 +35,8 @@ type Symbol struct {
 	data   symbolData
 }
 
-func NewSymbol[T symbolData](name string, data T, span common.Span, public bool) Symbol {
-	return Symbol{
+func NewSymbol[T symbolData](name string, data T, span common.Span, public bool) *Symbol {
+	return &Symbol{
 		Name:   name,
 		span:   span,
 		data:   data,
@@ -46,6 +46,10 @@ func NewSymbol[T symbolData](name string, data T, span common.Span, public bool)
 
 func (s Symbol) Data() symbolData {
 	return s.data
+}
+
+func (s *Symbol) SetData(data symbolData) {
+	s.data = data
 }
 
 func (s Symbol) Span() common.Span {

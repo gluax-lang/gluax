@@ -10,7 +10,7 @@ import (
 type Scope struct {
 	Parent   *Scope
 	Children []*Scope
-	Symbols  map[string][]Symbol
+	Symbols  map[string][]*Symbol
 	Func     *ast.SemFunction // the function that this scope is in, if any
 	InLoop   bool
 	Labels   map[string]struct{}
@@ -20,7 +20,7 @@ type Scope struct {
 func NewScope(parent *Scope) *Scope {
 	scope := &Scope{
 		Parent:  parent,
-		Symbols: make(map[string][]Symbol),
+		Symbols: make(map[string][]*Symbol),
 		Labels:  make(map[string]struct{}),
 	}
 	return scope
@@ -76,7 +76,7 @@ func (s *Scope) LabelExists(name string) bool {
 	})
 }
 
-func (s *Scope) AddSymbol(name string, sym Symbol) error {
+func (s *Scope) AddSymbol(name string, sym *Symbol) error {
 	if s.GetSymbol(name) != nil {
 		return fmt.Errorf("duplicate definition of %s", name)
 	}
@@ -88,7 +88,7 @@ func (s *Scope) GetSymbol(name string) *Symbol {
 	var result *Symbol
 	s.walkScopes(func(scope *Scope) bool {
 		if symbols, ok := scope.Symbols[name]; ok && len(symbols) > 0 {
-			result = &symbols[len(symbols)-1]
+			result = symbols[len(symbols)-1]
 			return true
 		}
 		return false
