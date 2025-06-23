@@ -124,7 +124,7 @@ func (a *Analysis) InlayHintType(label string, span Span) {
 	a.InlayHints = append(a.InlayHints, protocol.InlayHint{
 		Position: protocol.Position{
 			Line:      span.LineStart,
-			Character: span.ColumnEnd,
+			Character: span.ColumnEndUTF16,
 		},
 		Label: []protocol.InlayHintLabelPart{
 			{Value: label},

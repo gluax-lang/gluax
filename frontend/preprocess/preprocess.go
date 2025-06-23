@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode/utf16"
 
 	"maps"
 
@@ -53,7 +54,6 @@ func Preprocess(input string, defaultMacros map[string]string) (string, *diagnos
 type condState struct {
 	active      bool
 	hasBeenTrue bool // Track if any branch has been active
-	span        Span
 }
 
 type preprocessor struct {
@@ -155,8 +155,7 @@ func (p *preprocessor) handleIfdef(trimmed string, lineNum uint32, line string) 
 	name := caps[1]
 	parentActive := p.isAllActive()
 	isActive := parentActive && p.isMacroDefined(name)
-	span := common.SpanNew(lineNum, lineNum, 0, uint32(len(line)))
-	p.condStack = append(p.condStack, condState{isActive, isActive, span})
+	p.condStack = append(p.condStack, condState{isActive, isActive})
 	p.outputLines = append(p.outputLines, "")
 	return nil
 }
@@ -166,8 +165,7 @@ func (p *preprocessor) handleIfndef(trimmed string, lineNum uint32, line string)
 	name := caps[1]
 	parentActive := p.isAllActive()
 	isActive := parentActive && !p.isMacroDefined(name)
-	span := common.SpanNew(lineNum, lineNum, 0, uint32(len(line)))
-	p.condStack = append(p.condStack, condState{isActive, isActive, span})
+	p.condStack = append(p.condStack, condState{isActive, isActive})
 	p.outputLines = append(p.outputLines, "")
 	return nil
 }
@@ -290,6 +288,7 @@ func (p *preprocessor) isParentActive() bool {
 }
 
 func (p *preprocessor) throwErr(msg string, lineNum uint32, line string) *diagnostic {
-	span := common.SpanNew(lineNum, lineNum, 0, uint32(len(line)))
+	utf16Len := uint32(len(utf16.Encode([]rune(line))))
+	span := common.SpanNew(lineNum, lineNum, 0, uint32(len(line)), 0, utf16Len)
 	return common.ErrorDiag(msg, span)
 }

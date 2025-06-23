@@ -15,21 +15,22 @@ func nextSpanID() uint64 {
 
 // Span represents a range in a source file.
 type Span struct {
-	ID                     uint64
-	LineStart, LineEnd     uint32
-	ColumnStart, ColumnEnd uint32
-	Source                 string // nil == unknown
+	ID                               uint64
+	LineStart, LineEnd               uint32
+	ColumnStart, ColumnEnd           uint32
+	ColumnStartUTF16, ColumnEndUTF16 uint32 // for LSP, which uses UTF-16 code units
+	Source                           string // nil == unknown
 }
 
 func (s Span) ToRange() protocol.Range {
 	return protocol.Range{
 		Start: protocol.Position{
 			Line:      s.LineStart,
-			Character: s.ColumnStart,
+			Character: s.ColumnStartUTF16,
 		},
 		End: protocol.Position{
 			Line:      s.LineEnd,
-			Character: s.ColumnEnd,
+			Character: s.ColumnEndUTF16,
 		},
 	}
 }
@@ -45,46 +46,43 @@ func (s Span) String() string {
 	return fmt.Sprintf("%d:%d-%d:%d (%s)", s.LineStart, s.ColumnStart, s.LineEnd, s.ColumnEnd, s.Source)
 }
 
-// NewDefault Default span (1:1).
-func SpanDefault() Span {
+func spanCreate(
+	lineStart, lineEnd, columnStart, columnEnd, columnStartUTF16, columnEndUTF16 uint32,
+	src string,
+) Span {
 	return Span{
-		ID:          nextSpanID(),
-		LineStart:   0,
-		LineEnd:     0,
-		ColumnStart: 0,
-		ColumnEnd:   0,
+		ID:               nextSpanID(),
+		LineStart:        lineStart,
+		LineEnd:          lineEnd,
+		ColumnStart:      columnStart,
+		ColumnEnd:        columnEnd,
+		ColumnStartUTF16: columnStartUTF16,
+		ColumnEndUTF16:   columnEndUTF16,
+		Source:           src,
 	}
 }
 
-func SpanNew(lineStart, lineEnd, columnStart, columnEnd uint32) Span {
-	return Span{
-		ID:          nextSpanID(),
-		LineStart:   lineStart,
-		LineEnd:     lineEnd,
-		ColumnStart: columnStart,
-		ColumnEnd:   columnEnd,
-	}
+func SpanDefault() Span {
+	return spanCreate(0, 0, 0, 0, 0, 0, "")
+}
+
+func SpanNew(lineStart, lineEnd, columnStart, columnEnd, columnStartUTF16, columnEndUTF16 uint32) Span {
+	return spanCreate(lineStart, lineEnd, columnStart, columnEnd, columnStartUTF16, columnEndUTF16, "")
 }
 
 func SpanSrc(src string) Span {
-	return Span{
-		ID:          nextSpanID(),
-		LineStart:   0,
-		LineEnd:     0,
-		ColumnStart: 0,
-		ColumnEnd:   0,
-		Source:      src,
-	}
+	return spanCreate(0, 0, 0, 0, 0, 0, src)
 }
 
 // From joins the outer bounds of two spans.
 func SpanFrom(start, end Span) Span {
-	return Span{
-		ID:          nextSpanID(),
-		LineStart:   start.LineStart,
-		LineEnd:     end.LineEnd,
-		ColumnStart: start.ColumnStart,
-		ColumnEnd:   end.ColumnEnd,
-		Source:      start.Source,
-	}
+	return spanCreate(
+		start.LineStart,
+		end.LineEnd,
+		start.ColumnStart,
+		end.ColumnEnd,
+		start.ColumnStartUTF16,
+		end.ColumnEndUTF16,
+		start.Source,
+	)
 }

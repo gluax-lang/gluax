@@ -31,7 +31,7 @@ func BuildRuneIndex(text string) RuneIndex {
 		runeIndex := len(runes)
 		runes = append(runes, RuneInfo{
 			Rune:     *c,
-			Position: lsp.Position{Line: lx.Line, Character: lx.Column},
+			Position: lsp.Position{Line: lx.Line, Character: lx.ColumnUTF16},
 		})
 
 		lineRunes[lx.Line] = append(lineRunes[lx.Line], runeIndex)

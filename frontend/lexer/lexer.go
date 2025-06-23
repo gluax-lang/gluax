@@ -10,11 +10,12 @@ type diagnostic = protocol.Diagnostic
 
 // lexer is a hand-rolled, rune-based scanner.
 type lexer struct {
-	src                    string // source is the file being scanned
-	Chars                  *peekable.Chars
-	CurChr                 *rune
-	Line, Column           uint32
-	SavedLine, SavedColumn uint32
+	src                           string // source is the file being scanned
+	Chars                         *peekable.Chars
+	CurChr                        *rune
+	Line, Column                  uint32
+	SavedLine, SavedColumn        uint32
+	ColumnUTF16, SavedColumnUTF16 uint32 // for LSP, which uses UTF-16 code units
 }
 
 func Lex(src, code string) ([]Token, *diagnostic) {
@@ -42,12 +43,13 @@ func NewLexer(src, code string) *lexer {
 		CurChr: chars.Next(),
 		Line:   0, Column: 0,
 		SavedLine: 0, SavedColumn: 0,
+		ColumnUTF16: 0, SavedColumnUTF16: 0,
 	}
 	return lx
 }
 
 func (lx *lexer) CurrentSpan() common.Span {
-	span := common.SpanNew(lx.SavedLine, lx.Line, lx.SavedColumn, lx.Column)
+	span := common.SpanNew(lx.SavedLine, lx.Line, lx.SavedColumn, lx.Column, lx.SavedColumnUTF16, lx.ColumnUTF16)
 	span.Source = lx.src
 	return span
 }
@@ -58,8 +60,14 @@ func (lx *lexer) Advance() {
 		if *c == '\n' {
 			lx.Line++
 			lx.Column = 0
+			lx.ColumnUTF16 = 0
 		} else {
 			lx.Column++
+			if *c > 0xFFFF {
+				lx.ColumnUTF16 += 2 // It's a surrogate pair in UTF-16
+			} else {
+				lx.ColumnUTF16++
+			}
 		}
 	}
 	lx.CurChr = lx.Chars.Next()
@@ -70,9 +78,7 @@ func (lx *lexer) Peek() *rune {
 }
 
 func (lx *lexer) Error(msg string) *diagnostic {
-	span := common.SpanNew(lx.SavedLine, lx.Line, lx.SavedColumn, lx.Column)
-	span.Source = lx.src
-	return common.ErrorDiag(msg, span)
+	return common.ErrorDiag(msg, lx.CurrentSpan())
 }
 
 // SkipWs skips whitespaces to the next non-whitespace character.
@@ -86,17 +92,19 @@ func (lx *lexer) SkipWs() {
 	}
 	lx.SavedLine = lx.Line
 	lx.SavedColumn = lx.Column
+	lx.SavedColumnUTF16 = lx.ColumnUTF16
 }
 
 func (lx *lexer) NextToken() (Token, *diagnostic) {
 	lastLine, lastColumn := lx.Line, lx.Column
+	lastColumnUTF16 := lx.ColumnUTF16
 	lx.SkipWs() // skip whitespaces
 
 	c := lx.CurChr
 
 	// EOF
 	if c == nil {
-		span := common.SpanNew(lastLine, lastLine, lastColumn, lastColumn)
+		span := common.SpanNew(lastLine, lastLine, lastColumn, lastColumn, lastColumnUTF16, lastColumnUTF16)
 		span.Source = lx.src
 		return TokEOF{span: span}, nil
 	}
