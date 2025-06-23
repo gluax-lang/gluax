@@ -350,6 +350,10 @@ func (c SemClass) GetFieldIndex(name string) int {
 	return field.Idx
 }
 
+func (c SemClass) Attributes() Attributes {
+	return c.Def.Attributes
+}
+
 /* FunctionType */
 
 type SemFunction struct {

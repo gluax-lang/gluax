@@ -63,6 +63,13 @@ func (cg *Codegen) generateClass(st *ast.SemClass) {
 	}
 }
 
+func getClassFieldIndex(clss *ast.SemClass, fieldName string) string {
+	if clss.Attributes().Has("named_fields") {
+		return fmt.Sprintf("[%q]", fieldName)
+	}
+	return fmt.Sprintf("[%d]--[[%s]]", clss.GetFieldIndex(fieldName), fieldName)
+}
+
 func (cg *Codegen) genClassInit(si *ast.ExprClassInit, st *ast.SemClass) string {
 	exprs := make([]ast.Expr, len(si.Fields))
 	for i, f := range si.Fields {
@@ -79,8 +86,8 @@ func (cg *Codegen) genClassInit(si *ast.ExprClassInit, st *ast.SemClass) string 
 		if i > 0 {
 			sb.WriteString(", ")
 		}
-		fieldIndex := st.GetFieldIndex(f.Name.Raw)
-		sb.WriteString(fmt.Sprintf("[%d]=%s--[[%s]]", fieldIndex, tempNames[i], f.Name.Raw))
+		fieldIndex := getClassFieldIndex(st, f.Name.Raw)
+		sb.WriteString(fmt.Sprintf("%s=%s", fieldIndex, tempNames[i]))
 	}
 
 	sb.WriteString(fmt.Sprintf("}, %s)", toSetTo))
@@ -90,5 +97,5 @@ func (cg *Codegen) genClassInit(si *ast.ExprClassInit, st *ast.SemClass) string 
 func (cg *Codegen) genDotAccess(expr *ast.DotAccess, toIndex string, toIndexTy ast.SemType) string {
 	st := toIndexTy.Class()
 	// Use numeric index for field access
-	return fmt.Sprintf("%s[%d--[[%s]]]", toIndex, st.GetFieldIndex(expr.Name.Raw), expr.Name.Raw)
+	return fmt.Sprintf("%s%s", toIndex, getClassFieldIndex(st, expr.Name.Raw))
 }
