@@ -96,11 +96,11 @@ func (s *Scope) GetSymbol(name string) *Symbol {
 	return result
 }
 
-func (s *Scope) AddValue(name string, val Value, span Span) error {
+func (s *Scope) AddValue(name string, val *Value, span Span) error {
 	return s.AddValueVisibility(name, val, span, true)
 }
 
-func (s *Scope) AddValueVisibility(name string, val Value, span Span, public bool) error {
+func (s *Scope) AddValueVisibility(name string, val *Value, span Span, public bool) error {
 	if old := s.GetSymbol(name); old != nil {
 		if old.Kind() == ast.SymValue {
 			if !val.CanShadow(*old.Value()) {
@@ -110,7 +110,7 @@ func (s *Scope) AddValueVisibility(name string, val Value, span Span, public boo
 			return fmt.Errorf("duplicate definition of %s", name)
 		}
 	}
-	symbol := ast.NewSymbol(name, &val, span, public)
+	symbol := ast.NewSymbol(name, val, span, public)
 	s.Symbols[name] = append(s.Symbols[name], symbol)
 	return nil
 }

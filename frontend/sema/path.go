@@ -100,7 +100,7 @@ func (a *Analysis) resolvePathType(scope *Scope, path *ast.Path) Type {
 	return *t
 }
 
-func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
+func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) *Value {
 	t := resolvePathGeneric(a, scope, path, func(sym *Symbol, leaf *ast.PathSegment) *Value {
 		raw := leaf.Ident.Raw
 		if sym.IsImport() {
@@ -157,17 +157,17 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) Value {
 			}
 
 			val := ast.NewValue(method)
-			valSym := ast.NewSymbol(raw, &val, method.Def.Name.Span(), method.Def.Public)
+			valSym := ast.NewSymbol(raw, val, method.Def.Name.Span(), method.Def.Public)
 			path.ResolvedSymbol = valSym
 			a.AddRef(valSym, leaf.Span())
-			return &val
+			return val
 		}
 		return nil
 	})
 	if t == nil {
 		a.panicf(path.Span(), "value `%s` not found", path.String())
 	}
-	return *t
+	return t
 }
 
 func (a *Analysis) resolvePathSymbol(scope *Scope, path *ast.Path) *Symbol {

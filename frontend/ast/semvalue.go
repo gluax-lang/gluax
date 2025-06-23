@@ -38,8 +38,8 @@ type Value struct {
 	data valueData
 }
 
-func NewValue[T valueData](data T) Value {
-	return Value{data: data}
+func NewValue[T valueData](data T) *Value {
+	return &Value{data: data}
 }
 
 func (v Value) Kind() ValueKind {

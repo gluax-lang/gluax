@@ -101,13 +101,13 @@ func (a *Analysis) AddTypeVisibility(scope *Scope, name string, ty Type, public 
 	}
 }
 
-func (a *Analysis) AddValue(scope *Scope, name string, val Value, span Span) {
+func (a *Analysis) AddValue(scope *Scope, name string, val *Value, span Span) {
 	if err := scope.AddValue(name, val, span); err != nil {
 		a.Errorf(span, "%s", err.Error())
 	}
 }
 
-func (a *Analysis) AddValueVisibility(scope *Scope, name string, val Value, span Span, public bool) {
+func (a *Analysis) AddValueVisibility(scope *Scope, name string, val *Value, span Span, public bool) {
 	if err := scope.AddValueVisibility(name, val, span, public); err != nil {
 		a.Errorf(span, "%s", err.Error())
 	}
@@ -234,22 +234,15 @@ func (a *Analysis) populateDeclarations() {
 	}
 
 	for _, funcDef := range astD.Funcs {
-		funcSem := a.handleFunctionSignature(a.Scope, funcDef)
-		funcDef.SetSem(&funcSem)
-		a.AddValueVisibility(a.Scope, funcDef.Name.Raw, ast.NewValue(funcSem), funcDef.Name.Span(), funcDef.Public)
-		a.AddDecl(funcSem)
+		a.AddValueVisibility(a.Scope, funcDef.Name.Raw, &ast.Value{}, funcDef.Name.Span(), funcDef.Public)
 	}
 
 	for _, letDef := range astD.Lets {
-		for i, ident := range letDef.Names {
+		for _, ident := range letDef.Names {
 			if ident.Raw == "_" {
 				a.panic(ident.Span(), "cannot use `_` in top level let binding")
 			}
-
-			ty := a.resolveType(a.Scope, *letDef.Types[i])
-			variable := ast.NewVariable(*letDef, i, ty)
-			val := ast.NewValue(variable)
-			a.AddValueVisibility(a.Scope, ident.Raw, val, ident.Span(), letDef.Public)
+			a.AddValueVisibility(a.Scope, ident.Raw, &ast.Value{}, ident.Span(), letDef.Public)
 		}
 	}
 }
@@ -257,6 +250,23 @@ func (a *Analysis) populateDeclarations() {
 func (a *Analysis) resolveImplementations() {
 	for _, use := range a.Ast.Uses {
 		a.handleUse(a.Scope, use)
+	}
+
+	for _, funcDef := range a.Ast.Funcs {
+		funcSem := a.handleFunctionSignature(a.Scope, funcDef)
+		funcDef.SetSem(&funcSem)
+		sym := a.Scope.GetSymbol(funcDef.Name.Raw)
+		sym.SetData(ast.NewValue(funcSem))
+		a.AddDecl(funcSem)
+	}
+
+	for _, letDef := range a.Ast.Lets {
+		for i, ident := range letDef.Names {
+			ty := a.resolveType(a.Scope, *letDef.Types[i])
+			variable := ast.NewVariable(*letDef, i, ty)
+			sym := a.Scope.GetSymbol(ident.Raw)
+			sym.SetData(ast.NewValue(variable))
+		}
 	}
 
 	for _, traitDef := range a.Ast.Traits {
