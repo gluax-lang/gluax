@@ -1,7 +1,9 @@
 import "entity";
 
+use entity::Entity;
+
 #[global]
-pub class Player: entity::Entity {}
+pub class Player: Entity {}
 
 #[global = "Player"]
 func get_player(i: number) -> Player {}
@@ -22,6 +24,21 @@ impl Player {
 }
 
 impl Player {
+    #[rename_method = "AccountID"]
+    pub func account_id(self) -> number {}
+
+    #[rename_method = "AddCleanup"]
+    pub func add_cleanup(self, name: string, ent: Entity) {}
+
+    #[rename_method = "AddCount"]
+    pub func add_count(self, name: string, ent: Entity) {}
+
+    #[rename_method = "AddDeaths"]
+    pub func add_deaths(self, num: number) {}
+
+    #[rename_method = "AddFrags"]
+    pub func add_frags(self, num: number) {}
+
     #[rename_method = "GetName"]
     pub func name(self) -> string {}
 
