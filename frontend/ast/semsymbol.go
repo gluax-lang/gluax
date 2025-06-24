@@ -28,28 +28,32 @@ func (i *SemImport) SymbolKind() SymbolKind      { return SymImport }
 func (f *SemaClassField) SymbolKind() SymbolKind { return SymClassField }
 func (t *SemTrait) SymbolKind() SymbolKind       { return SymTrait }
 
+type symbolDataBox struct {
+	Data symbolData
+}
+
 type Symbol struct {
 	Name   string
 	span   common.Span
 	public bool
-	data   symbolData
+	data   *symbolDataBox
 }
 
 func NewSymbol[T symbolData](name string, data T, span common.Span, public bool) *Symbol {
 	return &Symbol{
 		Name:   name,
 		span:   span,
-		data:   data,
+		data:   &symbolDataBox{Data: data},
 		public: public,
 	}
 }
 
 func (s Symbol) Data() symbolData {
-	return s.data
+	return s.data.Data
 }
 
 func (s *Symbol) SetData(data symbolData) {
-	s.data = data
+	s.data.Data = data
 }
 
 func (s Symbol) Span() common.Span {
@@ -64,7 +68,7 @@ func (s Symbol) LSPString() string {
 	if s.data == nil {
 		return "<nil>"
 	}
-	return s.data.LSPString()
+	return s.Data().LSPString()
 }
 
 func (s *Symbol) SetPublic(b bool) {
@@ -76,7 +80,7 @@ func (s *Symbol) IsPublic() bool {
 }
 
 func (s *Symbol) Kind() SymbolKind {
-	return s.data.SymbolKind()
+	return s.Data().SymbolKind()
 }
 
 func (s *Symbol) IsValue() bool {
@@ -95,21 +99,21 @@ func (s *Symbol) Value() *Value {
 	if s.Kind() != SymValue {
 		panic("not a value")
 	}
-	return s.data.(*Value)
+	return s.Data().(*Value)
 }
 
 func (s *Symbol) Type() *SemType {
 	if s.Kind() != SymType {
 		panic("not a type")
 	}
-	return s.data.(*SemType)
+	return s.Data().(*SemType)
 }
 
 func (s *Symbol) Import() *SemImport {
 	if s.Kind() != SymImport {
 		panic("not an import")
 	}
-	return s.data.(*SemImport)
+	return s.Data().(*SemImport)
 }
 
 func (s *Symbol) IsTrait() bool {
@@ -120,7 +124,7 @@ func (s *Symbol) Trait() *SemTrait {
 	if s.Kind() != SymTrait {
 		panic("not a trait")
 	}
-	return s.data.(*SemTrait)
+	return s.Data().(*SemTrait)
 }
 
 type SemImport struct {
