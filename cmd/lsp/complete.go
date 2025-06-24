@@ -41,14 +41,27 @@ func (h *Handler) Complete(p *lsp.CompletionParams) (*lsp.CompletionList, error)
 	if r := runeIndex.GetRuneBefore(p.Position); r != nil {
 		var toIndex *ast.Expr
 		isCall := false
-		for i := len(sA.Exprs) - 1; i >= 0; i-- {
-			expr := sA.Exprs[i]
-			if expr.Span().ToRange().Contains(r.Position) {
-				if expr.Kind() == ast.ExprKindPostfix {
+		{
+			var closestSpanSize int64 = -1
+
+			for i := len(sA.Exprs) - 1; i >= 0; i-- {
+				expr := sA.Exprs[i]
+				if expr.Kind() != ast.ExprKindPostfix {
+					continue
+				}
+				eRange := expr.Span().ToRange()
+				if !eRange.Contains(r.Position) {
+					continue
+				}
+				spanRange := eRange
+				spanSize := int64((spanRange.End.Line-spanRange.Start.Line)*1000 +
+					(spanRange.End.Character - spanRange.Start.Character))
+
+				if closestSpanSize == -1 || spanSize < closestSpanSize {
 					toIndex = &expr.Postfix().Left
 					_, isCall = expr.Postfix().Op.(*ast.Call)
+					closestSpanSize = spanSize
 				}
-				break
 			}
 		}
 		if toIndex == nil {
