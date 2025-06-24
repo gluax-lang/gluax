@@ -148,7 +148,39 @@ func isValidAssignmentTarget(expr ast.Expr) bool {
 
 func (p *parser) parseAssignmentOrStmtExpr() ast.Stmt {
 	spanStart := p.span()
-	firstExpr := p.parseExpr(ExprCtxNormal)
+
+	// this was done, because these expressions were conflicting with implicit returns
+	// eg.
+	/*
+		func main() -> number {
+			if true {}
+			(1)
+		}
+	*/
+	// this would error because the "(1)" would try to call the if statement
+	normalExpr := false
+	var firstExpr ast.Expr
+	switch p.Token.AsString() {
+	case "{":
+		block := p.parseBlock()
+		firstExpr = ast.NewExpr(&block)
+	case "if":
+		firstExpr = p.parseIfExpr()
+	case "while":
+		firstExpr = p.parseWhileExpr()
+	case "loop":
+		firstExpr = p.parseLoopExpr()
+	case "for":
+		firstExpr = p.parseForExpr()
+	default:
+		normalExpr = true
+		firstExpr = p.parseExpr(ExprCtxNormal)
+	}
+
+	if !normalExpr {
+		hasSemi := p.tryConsume(";")
+		return ast.NewStmtExpr(firstExpr, hasSemi, SpanFrom(spanStart, p.prevSpan()))
+	}
 
 	if tok := p.Token.AsString(); tok != "," && tok != "=" {
 		hasSemi := p.tryConsume(";") // semicolon means "statement expression", otherwise implicit return like in Rust
