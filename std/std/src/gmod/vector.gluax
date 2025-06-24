@@ -1,0 +1,113 @@
+import "color";
+
+#[global]
+#[named_fields]
+#[sealed]
+pub class Vector {
+    pub x: number,
+    pub y: number,
+    pub z: number
+}
+
+impl Vector {
+    #[global = "Vector"]
+    pub func new(x: ?number, y: ?number, z: ?number) -> Self {}
+}
+
+impl Vector {
+    #[rename_method = "Add"]
+    pub func add(self, other: Self) {}
+
+    #[rename_method = "Sub"]
+    pub func sub(self, other: Self) {}
+
+    #[rename_method = "Mul"]
+    pub func mul(self, other: Self) {}
+
+    #[rename_method = "Div"]
+    pub func div(self, other: Self) {}
+
+    #[rename_method = "Cross"]
+    pub func cross(self, other: Self) -> Self {}
+
+    #[rename_method = "Distance"]
+    pub func distance(self, other: Self) -> number {}
+
+    #[rename_method = "Distance2D"]
+    pub func distance_2d(self, other: Self) -> number {}
+
+    #[rename_method = "Distance2DSqr"]
+    pub func distance_2d_sqr(self, other: Self) -> number {}
+
+    #[rename_method = "DistToSqr"]
+    pub func dist_to_sqr(self, other: Self) -> number {}
+
+    #[rename_method = "Dot"]
+    pub func dot(self, other: Self) -> number {}
+
+    #[rename_method = "Negate"]
+    pub func negate(self) {}
+
+    #[rename_method = "GetNegated"]
+    pub func negated(self) -> Self {}
+
+    #[rename_method = "GetNormalized"]
+    pub func normalized(self) -> Self {}
+
+    #[rename_method = "IsEqualTol"]
+    pub func is_equal_tol(self, other: Self, tolerance: number) -> bool {}
+
+    #[rename_method = "IsZero"]
+    pub func is_zero(self) -> bool {}
+
+    #[rename_method = "Length"]
+    pub func length(self) -> number {}
+
+    #[rename_method = "Length2D"]
+    pub func length_2d(self) -> number {}
+
+    #[rename_method = "Length2DSqr"]
+    pub func length_2d_sqr(self) -> number {}
+
+    #[rename_method = "LengthSqr"]
+    pub func length_sqr(self) -> number {}
+
+    #[rename_method = "Normalize"]
+    pub func normalize(self) {}
+
+    #[rename_method = "Random"]
+    pub func random(self, min: ?number, max: ?number) {}
+
+    #[rename_method = "Set"]
+    pub func set(self, other: Self) {}
+
+    #[rename_method = "SetUnpacked"]
+    pub func set_unpacked(self, x: number, y: number, z: number) {}
+
+    #[rename_method = "ToColor"]
+    pub func to_color(self) -> color::Color {}
+
+    #[rename_method = "ToScreen"]
+    pub func to_screen(self) -> VectorToScreen {}
+
+    #[rename_method = "ToTable"]
+    pub func to_table(self) -> vec<number> {}
+
+    #[rename_method = "Unpack"]
+    pub func unpack(self) -> (number, number, number) {}
+
+    #[rename_method = "WithinAABox"]
+    pub func within_aabox(self, min: Self, max: Self) -> bool {}
+
+    #[rename_method = "Zero"]
+    pub func zero(self) {}
+}
+
+#[global]
+#[named_fields]
+#[sealed]
+class VectorToScreen {
+    pub x: number,
+    pub y: number,
+    pub visible: bool
+}

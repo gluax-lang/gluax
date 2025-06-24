@@ -2,11 +2,19 @@
 pub class Entity {}
 
 #[global]
-pub let NULL: Entity = Entity::get(0);
+pub let NULL: Entity = get_entity(0);
+
+#[global = "Entity"]
+func get_entity(i: number) -> Entity {}
 
 impl Entity {
-    #[global = "Entity"]
-    pub func get(i: number) -> Self {}
+    pub func get(i: number) -> ?Self {
+        let ent = get_entity(i);
+        if ent == NULL {
+            return nil;
+        }
+        return ent;
+    }
 
     #[global = "ents.GetAll"]
     pub func all() -> vec<Entity> {}
@@ -18,30 +26,30 @@ impl Entity {
 }
 
 impl Entity {
-    #[method_rename = "Activate"]
+    #[rename_method = "Activate"]
     pub func activate(self) {}
 
-    #[method_rename = "EntIndex"]
+    #[rename_method = "EntIndex"]
     pub func index(self) -> number {}
 
-    #[method_rename = "IsValid"]
+    #[rename_method = "IsValid"]
     pub func is_valid(self) -> bool {}
 
-    #[method_rename = "Health"]
+    #[rename_method = "Health"]
     pub func health(self) -> number {}
 
-    #[method_rename = "SetHealth"]
+    #[rename_method = "SetHealth"]
     pub func set_health(self, health: number) {}
 
-    #[method_rename = "GetMaxHealth"]
+    #[rename_method = "GetMaxHealth"]
     pub func max_health(self) -> number {}
 
-    #[method_rename = "GetClass"]
+    #[rename_method = "GetClass"]
     pub func get_class(self) -> string {}
 
-    #[method_rename = "IsPlayer"]
+    #[rename_method = "IsPlayer"]
     pub func is_player(self) -> bool {}
 
-    #[method_rename = "Alive"]
+    #[rename_method = "Alive"]
     pub func is_alive(self) -> bool {}
 }

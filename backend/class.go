@@ -19,7 +19,7 @@ func (cg *Codegen) decorateClassName_internal(cls *ast.SemClass) string {
 
 func (cg *Codegen) decorateClassName(st *ast.SemClass) string {
 	if st.IsGlobal() {
-		return st.GlobalName()
+		// return st.GlobalName()
 	}
 	baseName := cg.decorateClassName_internal(st)
 	return cg.getPublic(baseName) + fmt.Sprintf(" --[[class %s]]", st.String())
@@ -33,9 +33,25 @@ func (cg *Codegen) generateClass(st *ast.SemClass) {
 	if !st.IsFullyConcrete() {
 		return // we don't generate classes with generics, because they will never be used
 	}
+	if st.IsNilable() || st.IsAnyFunc() {
+		// don't generate phantom types
+		return
+	}
+	methods := cg.Analysis.FindAllClassMethods(st)
 	if st.IsGlobal() {
 		// global classes are just phantom, they exist in lua world!
-		return
+		// NEW: UNLESS WE ADDED FUNCTIONS TO THEM HAHA
+		canGenerate := false
+		for _, method := range methods {
+			if st.CanGenerateMethod(&method.Def) && !method.IsGlobal() {
+				canGenerate = true
+				break
+			}
+		}
+		if !canGenerate {
+			// no local methods, so we don't generate anything
+			return
+		}
 	}
 	name := cg.decorateClassName(st)
 	{
@@ -47,14 +63,17 @@ func (cg *Codegen) generateClass(st *ast.SemClass) {
 	cg.ln("%s = {", name)
 	cg.pushIndent()
 	cg.ln("%s = true,", frontend.CLASS_MARKER_PREFIX)
-	for name, method := range cg.Analysis.FindAllClassMethods(st) {
+	for name, method := range methods {
+		if !st.CanGenerateMethod(&method.Def) || method.IsGlobal() {
+			continue
+		}
 		// we need to handle it with body, to make sure body calls are generated correctly
 		hMethod := cg.Analysis.HandleClassMethod(st, method, true)
 		cg.ln("%s = %s,", name, cg.genFunction(&hMethod))
 	}
 	cg.popIndent()
 	cg.ln("};")
-	if !st.Def.Attributes.Has("no__index") {
+	if !st.Attributes().Has("no__index", "no_metatable") && !st.IsGlobal() {
 		cg.ln("%s.__index = %s;", name, name)
 		if st.Super != nil {
 			superName := cg.decorateClassName(st.Super)

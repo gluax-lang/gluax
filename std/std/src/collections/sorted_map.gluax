@@ -61,7 +61,7 @@ impl<K, V> SortedMap<K, V> {
     }
 
     #[inline]
-    pub func get_at(self, idx: number) -> (?K, ?V) {
+    pub func at(self, idx: number) -> (?K, ?V) {
         let key = self.keys.get(idx) else {
             return nil, nil;
         };
@@ -69,14 +69,14 @@ impl<K, V> SortedMap<K, V> {
     }
 
     #[inline]
-    pub func get_value_at(self, idx: number) -> ?V {
+    pub func value_at(self, idx: number) -> ?V {
         let key = self.keys.get(idx) else {
             return nil;
         };
         self.values.get(key)
     }
 
-    pub func get_key_at(self, idx: number) -> ?K {
+    pub func key_at(self, idx: number) -> ?K {
         self.keys.get(idx)
     }
 
@@ -142,10 +142,10 @@ impl<K, V> SortedMap<K, V> {
     }
 
     #[inline]
-    pub func __x_iter_range_bound(self) -> number { self.keys.len() }
+    func __x_iter_range_bound(self) -> number { self.keys.len() }
 
     #[inline]
-    pub func __x_iter_range(self, idx: number) -> V {
-        self.get_value_at(idx)?
+    func __x_iter_range(self, idx: number) -> V {
+        self.value_at(idx)?
     }
 }

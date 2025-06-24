@@ -354,6 +354,24 @@ func (c SemClass) Attributes() Attributes {
 	return c.Def.Attributes
 }
 
+func (c SemClass) CanGenerateMethod(f *Function) bool {
+	if !c.IsGlobal() {
+		return true
+	}
+
+	if !f.IsFirstParamSelf() {
+		// If the function is not a method (does not have 'self' as the first parameter),
+		// we can generate it.
+		return true
+	}
+
+	if f.Attributes.Has("local_method") {
+		return true
+	}
+
+	return false
+}
+
 /* FunctionType */
 
 type SemFunction struct {

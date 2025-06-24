@@ -480,18 +480,38 @@ func (a *Analysis) resolveImplementations() {
 				// this hack is needed, so something like `__x_iter_range` can check if `__x_iter_range_bound` exists or not
 				a.checkClassMethods(st, methodName)
 
-				if st.Super != nil {
-					if superMethod := a.FindClassMethod(st.Super, methodName); superMethod != nil {
-						if superMethod.IsClassMethod() && !a.matchFunction(*superMethod, funcTy) {
-							a.Errorf(
-								funcTy.Span(),
-								"method `%s` does not match superclass `%s` signature",
-								methodName,
-								superMethod.Class.Def.Name.Raw,
-							)
-						}
-					}
+				if st.Super == nil {
+					return
 				}
+
+				superMethod := a.FindClassMethod(st.Super, methodName)
+				if superMethod == nil || !superMethod.IsFirstParamSelf() {
+					return
+				}
+
+				if !funcTy.IsFirstParamSelf() {
+					a.Errorf(
+						funcTy.Span(),
+						"method `%s` does not match superclass `%s` signature",
+						methodName,
+						superMethod.Class.Def.Name.Raw,
+					)
+				}
+
+				superMethodCopy := *superMethod
+				superMethodCopy.Params = superMethodCopy.Params[1:] // remove first parameter
+				otherMethodCopy := funcTy
+				otherMethodCopy.Params = otherMethodCopy.Params[1:] // remove first parameter
+
+				if !a.matchFunction(superMethodCopy, otherMethodCopy) {
+					a.Errorf(
+						funcTy.Span(),
+						"method `%s` does not match superclass `%s` signature",
+						methodName,
+						superMethod.Class.Def.Name.Raw,
+					)
+				}
+
 			})
 		}
 		impl.ClassSema = st
@@ -521,10 +541,11 @@ func (a *Analysis) analyzeImplementations() {
 		if impl.ClassSema == nil {
 			continue
 		}
-		if !impl.ClassSema.IsGlobal() {
-			for _, method := range impl.Methods {
-				_ = a.handleFunction(impl.GenericsScope.(*Scope), &method)
+		for _, method := range impl.Methods {
+			if !impl.ClassSema.CanGenerateMethod(&method) {
+				continue
 			}
+			_ = a.handleFunction(impl.GenericsScope.(*Scope), &method)
 		}
 	}
 

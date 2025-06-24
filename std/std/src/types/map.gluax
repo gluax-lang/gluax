@@ -7,7 +7,6 @@ impl<K, V> map<K, V> {
     }
 }
 
-
 impl<K, V> map<K, V> {
     #[inline]
     pub func get(self, key: K) -> ?V {

@@ -159,6 +159,45 @@ func (cg *Codegen) genInlineCall(call *ast.Call, fun ast.SemFunction, toCall str
 	return strings.Join(returnLocals, ", ")
 }
 
+func (cg *Codegen) buildMethodCall(call *ast.Call, fun *ast.SemFunction, toCall string, toCallTy ast.SemType) string {
+	switch {
+	case toCallTy.IsClass():
+		return cg.buildClassMethodCall(call, fun, toCall, toCallTy)
+	case toCallTy.IsDynTrait():
+		args := cg.getCallArgs(call, toCall)
+		return fmt.Sprintf("%s(%s)", cg.decorateFuncName(fun), args)
+	default:
+		args := cg.genExprsLeftToRight(call.Args)
+		return fmt.Sprintf("%s(%s)", toCall, args)
+	}
+}
+
+func (cg *Codegen) buildClassMethodCall(call *ast.Call, fun *ast.SemFunction, toCall string, toCallTy ast.SemType) string {
+	// Check if we need to use function-style call instead of method-style
+	needsFunctionCall := fun.Trait != nil ||
+		toCallTy.Class().Attributes().Has("no_metatable", "no__index") ||
+		// If the class is global and method is not, then we call the method as a function
+		// as we can't use method-style call on global classes
+		// because the method won't actually exist inside it
+		(toCallTy.Class().IsGlobal() && fun.Attributes().Has("local_method"))
+
+	if needsFunctionCall {
+		args := cg.getCallArgs(call, toCall)
+		return fmt.Sprintf("%s(%s)", cg.decorateFuncName(fun), args)
+	}
+
+	// Use method-style call
+	args := cg.genExprsLeftToRight(call.Args)
+
+	var methodName string
+	if rename := fun.Attributes().GetString("rename_method"); rename != nil {
+		methodName = *rename
+	} else {
+		methodName = fun.Def.Name.Raw
+	}
+	return fmt.Sprintf("%s:%s(%s)", toCall, methodName, args)
+}
+
 func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) string {
 	fun := call.SemaFunc
 
@@ -184,35 +223,14 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 	}
 
 	buildCallExpr := func() string {
-		if call.Method != nil {
-			switch {
-			case toCallTy.IsClass():
-				if fun.Trait != nil {
-					args := cg.getCallArgs(call, toCall)
-					return fmt.Sprintf("%s(%s)", cg.decorateFuncName(fun), args)
-				} else if toCallTy.IsClass() && toCallTy.Class().Def.Attributes.Has("no_metatable", "no__index") {
-					args := cg.getCallArgs(call, toCall)
-					return fmt.Sprintf("%s(%s)", cg.decorateFuncName(fun), args)
-				} else {
-					args := cg.genExprsLeftToRight(call.Args)
-					var name string
-					if rename := fun.Attributes().GetString("method_rename"); rename != nil {
-						name = *rename
-					} else {
-						name = fun.Def.Name.Raw
-					}
-					return fmt.Sprintf("%s:%s(%s)", toCall, name, args)
-				}
-			case toCallTy.IsDynTrait():
-				args := cg.getCallArgs(call, toCall)
-				return fmt.Sprintf("%s(%s)", cg.decorateFuncName(fun), args)
-			default:
-				args := cg.genExprsLeftToRight(call.Args)
-				return fmt.Sprintf("%s(%s)", toCall, args)
-			}
+		// Handle non-method calls
+		if call.Method == nil {
+			args := cg.genExprsLeftToRight(call.Args)
+			return fmt.Sprintf("%s(%s)", toCall, args)
 		}
-		args := cg.genExprsLeftToRight(call.Args)
-		return fmt.Sprintf("%s(%s)", toCall, args)
+
+		// Handle method calls
+		return cg.buildMethodCall(call, fun, toCall, toCallTy)
 	}
 
 	handleErrorable := func(callExpr string) string {

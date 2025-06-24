@@ -15,10 +15,10 @@ func find(s: string, pattern: string, init: ?number, plain: ?bool) -> (?number, 
 
 impl string {
     #[inline]
-    pub func __x_iter_range_bound(self) -> number { #self }
+    func __x_iter_range_bound(self) -> number { #self }
 
     #[inline]
-    pub func __x_iter_range(self, idx: number) -> string {
+    func __x_iter_range(self, idx: number) -> string {
         sub(self, idx, idx)
     }
 }
