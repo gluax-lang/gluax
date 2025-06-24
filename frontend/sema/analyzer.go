@@ -12,19 +12,19 @@ import (
 
 // don't expose actual paths to the code generation :]
 func (pa *ProjectAnalysis) PathRelativeToWorkspace(path string) string {
-	ws := pa.workspace
+	ws := pa.Workspace
 	ws, path = common.FilePathClean(ws), common.FilePathClean(path)
 	return common.FilePathClean(filepath.Join(pa.CurrentPackage(), strings.TrimPrefix(path, ws)))
 }
 
 func (pa *ProjectAnalysis) StartsWithWorkspace(path string) bool {
-	ws := common.FilePathClean(pa.workspace)
+	ws := common.FilePathClean(pa.Workspace)
 	path = common.FilePathClean(path)
 	return strings.HasPrefix(path, ws)
 }
 
 func (pa *ProjectAnalysis) StripWorkspace(path string) string {
-	ws := common.FilePathClean(pa.workspace) + "/"
+	ws := common.FilePathClean(pa.Workspace) + "/"
 	path = common.FilePathClean(path)
 	rel := strings.TrimPrefix(path, ws)
 	return rel

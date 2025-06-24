@@ -33,7 +33,7 @@ func createImport(name string, analysis *Analysis) ast.SemImport {
 type ProjectAnalysis struct {
 	Main      string // path to main.gluax
 	Config    frontend.GluaxToml
-	workspace string
+	Workspace string
 	overrides map[string]string
 
 	OsRoot *os.Root
@@ -50,7 +50,7 @@ type ProjectAnalysis struct {
 // NewProjectAnalysis builds a project-level container.
 func NewProjectAnalysis(workspace string, overrides map[string]string) *ProjectAnalysis {
 	pa := &ProjectAnalysis{
-		workspace: workspace,
+		Workspace: workspace,
 		overrides: make(map[string]string),
 
 		// Final merged map
@@ -76,7 +76,7 @@ func (pa *ProjectAnalysis) newAnalysis(path string) *Analysis {
 		scope = pa.currentState.RootScope.Child(false)
 	}
 	return &Analysis{
-		Workspace: pa.workspace,
+		Workspace: pa.Workspace,
 		Src:       path,
 		Scope:     scope,
 		Project:   pa,
@@ -267,12 +267,12 @@ func (pa *ProjectAnalysis) SetRoot(workspace string) (func(), error) {
 }
 
 func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
-	oldWs, oldConfig, oldRootScope := pa.workspace, pa.Config, pa.currentState.RootScope
-	pa.workspace = pkgPath
+	oldWs, oldConfig, oldRootScope := pa.Workspace, pa.Config, pa.currentState.RootScope
+	pa.Workspace = pkgPath
 
 	mainPath := filepath.Join(pkgPath, "src", "main.gluax")
 
-	isMain := pa.workspace == oldWs
+	isMain := pa.Workspace == oldWs
 
 	if !isMain {
 		if realPath {
@@ -298,7 +298,7 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
 	pa.Main = mainPath
 
 	if pa.Config.Std {
-		builtinTypesFile := common.FilePathClean(filepath.Join(pa.workspace, typesFile))
+		builtinTypesFile := common.FilePathClean(filepath.Join(pa.Workspace, typesFile))
 		pa.overrides[builtinTypesFile] = ast.BuiltinTypes
 		if err := pa.AnalyzeFromEntryPoint(builtinTypesFile); err != nil {
 			return fmt.Errorf("failed to analyze built-in types: %w", err)
@@ -322,7 +322,7 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
 
 	packageName := pa.CurrentPackage()
 
-	pa.workspace, pa.Config, pa.currentState.RootScope = oldWs, oldConfig, oldRootScope
+	pa.Workspace, pa.Config, pa.currentState.RootScope = oldWs, oldConfig, oldRootScope
 
 	if !isMain {
 		analysis := state.Files[mainPath]
