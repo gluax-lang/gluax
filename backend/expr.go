@@ -153,6 +153,22 @@ func (cg *Codegen) genExprX(e ast.Expr) string {
 	}
 }
 
+func isConstPrimitive(let *ast.Let, n int) bool {
+	if let == nil || !let.IsConst {
+		return false
+	}
+	if len(let.Names) != len(let.Values) {
+		return false
+	}
+	expr := let.Values[n]
+	switch expr.Kind() {
+	case ast.ExprKindNil, ast.ExprKindBool, ast.ExprKindNumber, ast.ExprKindString:
+		return true
+	default:
+		return false
+	}
+}
+
 func (cg *Codegen) genPathExpr(path *ast.Path) string {
 	sym := path.ResolvedSymbol
 	val := sym.Value()
@@ -164,15 +180,9 @@ func (cg *Codegen) genPathExpr(path *ast.Path) string {
 			suffix = fmt.Sprintf(" --[[%s]]", path.String())
 		}
 		// this is a quick optimization for constant variables
-		if v.Def.IsConst {
-			def := v.Def
-			if len(def.Names) == len(def.Values) {
-				expr := def.Values[v.N]
-				switch expr.Kind() {
-				case ast.ExprKindNil, ast.ExprKindBool, ast.ExprKindNumber, ast.ExprKindString:
-					return cg.genExpr(expr) + suffix
-				}
-			}
+		if isConstPrimitive(&v.Def, v.N) {
+			expr := v.Def.Values[v.N]
+			return cg.genExpr(expr) + suffix
 		}
 		return cg.decorateLetName(&v.Def, v.N) + suffix
 	case ast.ValParameter:
