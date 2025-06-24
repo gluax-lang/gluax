@@ -163,6 +163,17 @@ func (cg *Codegen) genPathExpr(path *ast.Path) string {
 		if len(path.Segments) > 1 {
 			suffix = fmt.Sprintf(" --[[%s]]", path.String())
 		}
+		// this is a quick optimization for constant variables
+		if v.Def.IsConst {
+			def := v.Def
+			if len(def.Names) == len(def.Values) {
+				expr := def.Values[v.N]
+				switch expr.Kind() {
+				case ast.ExprKindNil, ast.ExprKindBool, ast.ExprKindNumber, ast.ExprKindString:
+					return cg.genExpr(expr) + suffix
+				}
+			}
+		}
 		return cg.decorateLetName(&v.Def, v.N) + suffix
 	case ast.ValParameter:
 		p := val.Parameter()
