@@ -1,34 +1,34 @@
 // TODO: THIS IS STOLEN FROM GO, MAKE SURE TO CREDIT THEM IN THIRD-PARTY LICENSES
 import "base";
 
-#define ERR_INV_BYTE "invalid UTF-8 byte"
+const ERR_INV_BYTE: string = "invalid UTF-8 byte";
 
 // The FIRST byte of a valid UTF-8 character is always in the range 0x00 to 0xF4.
-#define RUNE_SELF 0x80
-#define RUNE_ERROR 0xFFFD
+const RUNE_SELF: number = 0x80;
+const RUNE_ERROR: number = 0xFFFD;
 
 // Lowest and highest continuation bytes
-#define LOCB 0x80
-#define HICB 0xBF
+const LOCB: number = 0x80;
+const HICB: number = 0xBF;
 
 // Masks
-#define MASK_X 0x3F
-#define MASK_2 0x1F
-#define MASK_3 0x0F
-#define MASK_4 0x07
+const MASK_X: number = 0x3F;
+const MASK_2: number = 0x1F;
+const MASK_3: number = 0x0F;
+const MASK_4: number = 0x07;
 
 // Go weird constants
-#define XX 0xF1
-#define AS 0xF0
-#define S1 0x02
-#define S2 0x13
-#define S3 0x03
-#define S4 0x23
-#define S5 0x34
-#define S6 0x04
-#define S7 0x44
+const XX: number = 0xF1;
+const AS: number = 0xF0;
+const S1: number = 0x02;
+const S2: number = 0x13;
+const S3: number = 0x03;
+const S4: number = 0x23;
+const S5: number = 0x34;
+const S6: number = 0x04;
+const S7: number = 0x44;
 
-let FIRST: vec<number> = vec{
+const FIRST: vec<number> = vec{
 	// 0x00-0x0F
 	AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS, AS,
 	// 0x10-0x1F
@@ -63,7 +63,7 @@ let FIRST: vec<number> = vec{
 	S5, S6, S6, S6, S7, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX, XX,
 };
 
-let ACCEPTED_RANGES: vec<vec<number>> = vec{
+const ACCEPTED_RANGES: vec<vec<number>> = vec{
 	vec{LOCB, HICB},
 	vec{0xA0, HICB},
 	vec{LOCB, 0x9F},
