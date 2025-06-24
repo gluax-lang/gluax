@@ -20,8 +20,9 @@ type Let struct {
 	Types      []*Type
 	Values     []Expr
 
-	IsItem bool
-	span   common.Span
+	IsItem  bool
+	IsConst bool // true if this is a `const` declaration, false if `let`
+	span    common.Span
 }
 
 func NewLet(

@@ -8,9 +8,16 @@ import (
 	"github.com/gluax-lang/gluax/frontend/lexer"
 )
 
-func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
+type ExprResult struct {
+	Flow      FlowStatus
+	PathValue *Value
+}
+
+func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) ExprResult {
 	var retTy Type
-	flow := FlowNormal
+	res := ExprResult{
+		Flow: FlowNormal,
+	}
 	switch expr.Kind() {
 	case ast.ExprKindNil:
 		retTy = a.nilType()
@@ -34,10 +41,10 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 	case ast.ExprKindUnary:
 		retTy = a.handleUnaryExpr(scope, expr.Unary())
 	case ast.ExprKindBlock:
-		flow = a.handleBlock(scope, expr.Block())
+		res.Flow = a.handleBlock(scope, expr.Block())
 		retTy = expr.Block().Type()
 	case ast.ExprKindIf:
-		retTy, flow = a.handleIfExpr(scope, expr.If())
+		retTy, res.Flow = a.handleIfExpr(scope, expr.If())
 	case ast.ExprKindWhile:
 		a.handleWhileExpr(scope, expr.While())
 		retTy = a.nilType()
@@ -51,13 +58,11 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 		a.handleForInExpr(scope, expr.ForIn())
 		retTy = a.nilType()
 	case ast.ExprKindPath:
-		valueTy := a.resolvePathValue(scope, expr.Path())
-		retTy = valueTy.Type()
+		value := a.resolvePathValue(scope, expr.Path())
+		res.PathValue = value
+		retTy = value.Type()
 	case ast.ExprKindQPath:
 		retTy = a.handleQPathExpr(scope, expr.QPath())
-	case ast.ExprKindParenthesized:
-		flow = a.handleExprWithFlow(scope, &expr.Parenthesized().Value)
-		retTy = expr.Parenthesized().Value.Type()
 	case ast.ExprKindTuple:
 		values := expr.Tuple().Values
 		elems := make([]Type, len(values))
@@ -98,7 +103,7 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) FlowStatus {
 	}
 	expr.SetType(retTy)
 	a.Exprs = append(a.Exprs, expr)
-	return flow
+	return res
 }
 
 func (a *Analysis) handleExpr(scope *Scope, expr *ast.Expr) {

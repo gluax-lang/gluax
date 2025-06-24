@@ -10,6 +10,10 @@ func (p *parser) parseStmt() ast.Stmt {
 	switch p.Token.AsString() {
 	case "let":
 		return p.parseLet(false)
+	case "const":
+		let := p.parseLet(false)
+		let.IsConst = true // mark as const
+		return let
 	case "return":
 		return p.parseReturn()
 	case "throw":
@@ -41,7 +45,7 @@ func (p *parser) parseLet(isItem bool) *ast.Let {
 			t := p.parseType()
 			tyPtr = &t
 		} else if isItem {
-			common.PanicDiag("type annotation is required for `let` in top-level context", p.prevSpan())
+			common.PanicDiag("type annotation is required in top-level context", p.prevSpan())
 		}
 		types = append(types, tyPtr)
 

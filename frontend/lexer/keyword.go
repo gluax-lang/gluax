@@ -34,6 +34,7 @@ const (
 	KwUnreachable
 	KwUnderscore
 	KwDyn
+	KwConst
 	KwAnd // Lua-reserved below
 	KwLocal
 	KwDo
@@ -76,6 +77,7 @@ var keywordTable = map[string]Keyword{
 	"unreachable":    KwUnreachable,
 	"_":              KwUnderscore,
 	"dyn":            KwDyn,
+	"const":          KwConst,
 	// Lua reserved
 	"and":      KwAnd,
 	"local":    KwLocal,

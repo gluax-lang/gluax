@@ -37,8 +37,8 @@ func (a *Analysis) handleStmt(scope *Scope, raw ast.Stmt) (Type, FlowStatus) {
 		return unreachable, FlowJump
 
 	case *ast.StmtExpr:
-		flow := a.handleExprWithFlow(scope, &stmt.Expr)
-		return stmt.Expr.Type(), flow
+		res := a.handleExprWithFlow(scope, &stmt.Expr)
+		return stmt.Expr.Type(), res.Flow
 
 	case *ast.StmtAssignment:
 		a.handleAssignment(scope, stmt)
@@ -113,7 +113,17 @@ func (a *Analysis) handleAssignment(scope *Scope, stmt *ast.StmtAssignment) {
 	rhsTypes, rhsSpans := a.resolveRHS(scope, stmt.RhsExpr, lhsCount, stmt.Span())
 	for i := range stmt.LhsExprs {
 		expr := &stmt.LhsExprs[i]
-		a.handleExpr(scope, expr)
+		res := a.handleExprWithFlow(scope, expr)
+		// check is left side is a const or not
+		if res.PathValue != nil {
+			val := res.PathValue
+			if val.IsVariable() {
+				variable := val.Variable()
+				if variable.Def.IsConst {
+					a.Errorf(expr.Span(), "cannot assign to constant variable `%s`", variable.Def.Names[variable.N])
+				}
+			}
+		}
 		exprTy := expr.Type()
 		a.Matches(exprTy, rhsTypes[i], rhsSpans[i])
 	}

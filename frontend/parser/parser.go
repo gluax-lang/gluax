@@ -227,7 +227,7 @@ func (p *parser) parseCommaSeparatedDelimited(
 
 func (p *parser) canRecover() bool {
 	switch p.Token.AsString() {
-	case "let", "return", "throw", "break", "continue", "{", "}",
+	case "let", "const", "return", "throw", "break", "continue", "{", "}",
 		"if", "for", "while", "loop":
 		return true
 	default:

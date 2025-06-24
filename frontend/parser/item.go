@@ -15,6 +15,10 @@ func (p *parser) parseItem() ast.Item {
 	switch p.Token.AsString() {
 	case "let":
 		item = p.parseLet(true)
+	case "const":
+		let := p.parseLet(true)
+		let.IsConst = true // mark as const
+		item = let
 	case "class":
 		item = p.parseClass()
 	case "use":

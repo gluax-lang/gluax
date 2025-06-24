@@ -76,8 +76,6 @@ func isSimpleExpr(e ast.Expr) bool {
 	case ast.ExprKindNil, ast.ExprKindBool, ast.ExprKindNumber, ast.ExprKindString,
 		ast.ExprKindVararg, ast.ExprKindFunction:
 		return true
-	case ast.ExprKindParenthesized:
-		return isSimpleExpr(e.Parenthesized().Value)
 	case ast.ExprKindPath:
 		path := e.Path()
 		if len(path.Segments) == 1 {
@@ -114,8 +112,6 @@ func (cg *Codegen) genExprX(e ast.Expr) string {
 	case ast.ExprKindFunction:
 		f := e.Type().Function()
 		return "(" + cg.genFunction(&f) + ")"
-	case ast.ExprKindParenthesized:
-		return cg.genExprX(e.Parenthesized().Value)
 	case ast.ExprKindPostfix:
 		return cg.genPostfixExpr(e.Postfix())
 	case ast.ExprKindTuple:

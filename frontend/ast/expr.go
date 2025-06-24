@@ -216,13 +216,6 @@ func (e *Expr) If() *ExprIf {
 	return e.data.(*ExprIf)
 }
 
-func (e *Expr) Parenthesized() *ExprParenthesized {
-	if e.Kind() != ExprKindParenthesized {
-		panic("not a parenthesized")
-	}
-	return e.data.(*ExprParenthesized)
-}
-
 func (e *Expr) Function() *Function {
 	if e.Kind() != ExprKindFunction {
 		panic("not a function")
@@ -539,23 +532,6 @@ func NewPostfixExpr(left Expr, op PostfixOp, span common.Span) Expr {
 func (p *ExprPostfix) ExprKind() ExprKind { return ExprKindPostfix }
 
 func (p *ExprPostfix) Span() common.Span {
-	return p.span
-}
-
-/* Parenthesized */
-
-type ExprParenthesized struct {
-	Value Expr
-	span  common.Span
-}
-
-func NewParenthesizedExpr(value Expr, span common.Span) Expr {
-	return NewExpr(&ExprParenthesized{Value: value, span: span})
-}
-
-func (p *ExprParenthesized) ExprKind() ExprKind { return ExprKindParenthesized }
-
-func (p *ExprParenthesized) Span() common.Span {
 	return p.span
 }
 
