@@ -127,9 +127,11 @@ func (a *Analysis) checkClassMethods(st *ast.SemClass, methodName string) {
 func (a *Analysis) handleUse(scope *Scope, it *ast.Use) {
 	sym := a.resolvePathSymbol(scope, &it.Path)
 
-	sym.SetPublic(it.Public)
+	// to not change the original symbol visibility
+	symCopy := *sym
+	symCopy.SetPublic(it.Public)
 
-	if err := scope.AddSymbol(it.NameIdent().Raw, sym); err != nil {
+	if err := scope.AddSymbol(it.NameIdent().Raw, &symCopy); err != nil {
 		a.Error(it.Span(), err.Error())
 	}
 }

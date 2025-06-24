@@ -188,6 +188,7 @@ func (pa *ProjectAnalysis) AnalyzeFromEntryPoint(entryPointPath string) error {
 		}
 	})
 	runPhase(func(a *Analysis) { a.populateDeclarations() })
+	runPhase(func(a *Analysis) { a.resolveUses() })
 	runPhase(func(a *Analysis) { a.resolveImplementations() })
 	runPhase(func(a *Analysis) { a.analyzeImplementations() })
 

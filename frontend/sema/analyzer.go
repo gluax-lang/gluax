@@ -247,11 +247,13 @@ func (a *Analysis) populateDeclarations() {
 	}
 }
 
-func (a *Analysis) resolveImplementations() {
+func (a *Analysis) resolveUses() {
 	for _, use := range a.Ast.Uses {
 		a.handleUse(a.Scope, use)
 	}
+}
 
+func (a *Analysis) resolveImplementations() {
 	for _, funcDef := range a.Ast.Funcs {
 		funcSem := a.handleFunctionSignature(a.Scope, funcDef)
 		funcDef.SetSem(&funcSem)
