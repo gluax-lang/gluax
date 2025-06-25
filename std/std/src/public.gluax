@@ -17,3 +17,4 @@ pub use gmod::Player;
 pub use gmod::NULL;
 pub use gmod::Color;
 pub use gmod::Vector;
+pub use gmod::MsgC;

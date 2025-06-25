@@ -1,0 +1,29 @@
+#[global = "file.Read"]
+pub func read(fname: string, path: ?string) -> ?string;
+
+#[global = "file.Write"]
+pub func write(fname: string, data: string) -> bool;
+
+#[global = "file.Append"]
+pub func append(fname: string, data: string) -> bool;
+
+#[global = "file.Delete"]
+pub func delete(fname: string, path: ?string) -> bool;
+
+#[global = "file.Exists"]
+pub func exists(fname: string, path: string) -> bool;
+
+#[global = "file.Find"]
+pub func find(pattern: string, path: string, sorting: ?string) -> (?vec<string>, ?vec<string>);
+
+#[global = "file.IsDir"]
+pub func is_dir(path: string, path: string) -> bool;
+
+#[global = "file.Rename"]
+pub func rename(oldname: string, newname: string) -> bool;
+
+#[global = "file.CreateDir"]
+pub func create_dir(path: string);
+
+#[global = "file.Time"]
+pub func time(fname: string, path: string) -> number;

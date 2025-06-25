@@ -2,9 +2,13 @@ import "entity";
 import "player";
 import "color";
 import "vector";
+pub import "fs";
 
 pub use entity::Entity;
 pub use entity::NULL;
 pub use player::Player;
 pub use color::Color;
 pub use vector::Vector;
+
+#[global]
+pub func MsgC(...any);

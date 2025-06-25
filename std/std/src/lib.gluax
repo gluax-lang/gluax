@@ -6,6 +6,8 @@ pub import "debug";
 pub import "bit";
 pub import "utf8";
 pub import "collections/index" as collections;
-import "gmod/index";
+import "gmod/index" as gmod;
 
 import "public";
+
+pub use gmod::fs;
