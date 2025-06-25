@@ -6,7 +6,7 @@ import (
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
-func checkPairsIterFunc(a *Analysis, fun SemFunction) {
+func checkPairsIterFunc(a *Analysis, fun *SemFunction) {
 	if fun.HasVarargReturn() {
 		a.Error(fun.Span(), "iterator function cannot have vararg return")
 		return
@@ -136,8 +136,8 @@ func (a *Analysis) handleUse(scope *Scope, it *ast.Use) {
 	}
 }
 
-func (a *Analysis) GetTraitMethods(trait *ast.SemTrait, name string) []ast.SemFunction {
-	var found []ast.SemFunction
+func (a *Analysis) GetTraitMethods(trait *ast.SemTrait, name string) []*ast.SemFunction {
+	var found []*ast.SemFunction
 	for _, method := range trait.Methods {
 		if name == "" || method.Def.Name.Raw == name {
 			found = append(found, method)

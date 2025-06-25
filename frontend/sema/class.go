@@ -50,7 +50,7 @@ func (a *Analysis) setupClass(def *ast.Class, concrete []Type, buildGenerics boo
 	return st
 }
 
-func (a *Analysis) HandleClassMethod(st *ast.SemClass, method ast.SemFunction, withBody bool) ast.SemFunction {
+func (a *Analysis) HandleClassMethod(st *ast.SemClass, method *ast.SemFunction, withBody bool) *ast.SemFunction {
 	genericsScope := a.setupTypeGenerics(method.Scope.(*Scope), method.Generics, st.Generics.Params)
 	{
 		stTy := ast.NewSemType(st, st.Def.Name.Span())
@@ -58,7 +58,7 @@ func (a *Analysis) HandleClassMethod(st *ast.SemClass, method ast.SemFunction, w
 			a.Error(st.Def.Name.Span(), err.Error())
 		}
 	}
-	var funcTy ast.SemFunction
+	var funcTy *ast.SemFunction
 	if withBody {
 		funcTy = a.handleFunction(genericsScope, &method.Def)
 	} else {

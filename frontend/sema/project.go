@@ -31,10 +31,9 @@ func createImport(name string, analysis *Analysis) ast.SemImport {
 }
 
 type ProjectAnalysis struct {
-	Main      string // path to main.gluax
-	Config    frontend.GluaxToml
-	Workspace string
-	overrides map[string]string
+	Main    string // path to main.gluax
+	Config  frontend.GluaxToml
+	Options CompileOptions
 
 	OsRoot *os.Root
 
@@ -48,22 +47,36 @@ type ProjectAnalysis struct {
 }
 
 // NewProjectAnalysis builds a project-level container.
-func NewProjectAnalysis(workspace string, overrides map[string]string) *ProjectAnalysis {
+func NewProjectAnalysis(options CompileOptions) *ProjectAnalysis {
 	pa := &ProjectAnalysis{
-		Workspace: workspace,
-		overrides: make(map[string]string),
-
+		Options: options,
 		// Final merged map
 		files: make(map[string]*Analysis),
 	}
 
-	for p, c := range overrides {
+	for p, c := range options.VirtualFiles {
 		if p != "" {
-			pa.overrides[common.FilePathClean(p)] = c
+			pa.VirtualFiles()[common.FilePathClean(p)] = c
 		}
 	}
 
 	return pa
+}
+
+func (pa *ProjectAnalysis) Workspace() string {
+	return pa.Options.Workspace
+}
+
+func (pa *ProjectAnalysis) SetWorkspace(workspace string) {
+	pa.Options.Workspace = workspace
+}
+
+func (pa *ProjectAnalysis) SetVirtualFiles(virtualFiles map[string]string) {
+	pa.Options.VirtualFiles = virtualFiles
+}
+
+func (pa *ProjectAnalysis) VirtualFiles() map[string]string {
+	return pa.Options.VirtualFiles
 }
 
 func (pa *ProjectAnalysis) getStateFiles() map[string]*Analysis {
@@ -76,7 +89,7 @@ func (pa *ProjectAnalysis) newAnalysis(path string) *Analysis {
 		scope = pa.currentState.RootScope.Child(false)
 	}
 	return &Analysis{
-		Workspace: pa.Workspace,
+		Workspace: pa.Workspace(),
 		Src:       path,
 		Scope:     scope,
 		Project:   pa,
@@ -197,7 +210,7 @@ func (pa *ProjectAnalysis) AnalyzeFromEntryPoint(entryPointPath string) error {
 
 func (pa *ProjectAnalysis) ReadFile(path string) (string, error) {
 	path = common.FilePathClean(path)
-	if content, ok := pa.overrides[path]; ok {
+	if content, ok := pa.VirtualFiles()[path]; ok {
 		return content, nil
 	}
 
@@ -267,12 +280,12 @@ func (pa *ProjectAnalysis) SetRoot(workspace string) (func(), error) {
 }
 
 func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
-	oldWs, oldConfig, oldRootScope := pa.Workspace, pa.Config, pa.currentState.RootScope
-	pa.Workspace = pkgPath
+	oldWs, oldConfig, oldRootScope := pa.Workspace(), pa.Config, pa.currentState.RootScope
+	pa.SetWorkspace(pkgPath)
 
 	mainPath := filepath.Join(pkgPath, "src", "main.gluax")
 
-	isMain := pa.Workspace == oldWs
+	isMain := pa.Workspace() == oldWs
 
 	if !isMain {
 		if realPath {
@@ -298,12 +311,12 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
 	pa.Main = mainPath
 
 	if pa.Config.Std {
-		builtinTypesFile := common.FilePathClean(filepath.Join(pa.Workspace, typesFile))
-		pa.overrides[builtinTypesFile] = ast.BuiltinTypes
+		builtinTypesFile := common.FilePathClean(filepath.Join(pa.Workspace(), typesFile))
+		pa.VirtualFiles()[builtinTypesFile] = ast.BuiltinTypes
 		if err := pa.AnalyzeFromEntryPoint(builtinTypesFile); err != nil {
 			return fmt.Errorf("failed to analyze built-in types: %w", err)
 		}
-		delete(pa.overrides, builtinTypesFile)
+		delete(pa.VirtualFiles(), builtinTypesFile)
 	}
 
 	if err := pa.AnalyzeFromEntryPoint(mainPath); err != nil {
@@ -322,7 +335,8 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
 
 	packageName := pa.CurrentPackage()
 
-	pa.Workspace, pa.Config, pa.currentState.RootScope = oldWs, oldConfig, oldRootScope
+	pa.SetWorkspace(oldWs)
+	pa.Config, pa.currentState.RootScope = oldConfig, oldRootScope
 
 	if !isMain {
 		analysis := state.Files[mainPath]
@@ -343,12 +357,12 @@ func (pa *ProjectAnalysis) processState(state *State, workspace string) error {
 		// keeping these comments for future reference
 		// stdPath := "full std path"
 		// stdPath = common.FilePathClean(stdPath)
-		oldOverrides := pa.overrides
-		pa.overrides = std.Files
+		oldVirtualFiles := pa.VirtualFiles()
+		pa.SetVirtualFiles(std.Files)
 		if err := pa.processPackage(std.Workspace, false); err != nil {
 			return err
 		}
-		pa.overrides = oldOverrides
+		pa.SetVirtualFiles(oldVirtualFiles)
 		publicPath := common.FilePathClean(filepath.Join("std", "src", "public.gluax"))
 		publicAnalysis := pa.currentState.Files[publicPath]
 		for name, symA := range publicAnalysis.Scope.Symbols {
@@ -367,16 +381,22 @@ func (pa *ProjectAnalysis) processState(state *State, workspace string) error {
 	return nil
 }
 
-func AnalyzeProject(workspace string, overrides map[string]string) (*ProjectAnalysis, error) {
-	pa := NewProjectAnalysis(workspace, overrides)
+type CompileOptions struct {
+	Workspace    string
+	VirtualFiles map[string]string
+	Release      bool
+}
 
-	restoreRoot, err := pa.SetRoot(workspace)
+func AnalyzeProject(options CompileOptions) (*ProjectAnalysis, error) {
+	pa := NewProjectAnalysis(options)
+
+	restoreRoot, err := pa.SetRoot(pa.Workspace())
 	if err != nil {
 		return nil, fmt.Errorf("failed to set root: %w", err)
 	}
 	defer restoreRoot()
 
-	pa.Config, err = pa.getProjectConfig(workspace)
+	pa.Config, err = pa.getProjectConfig(pa.Workspace())
 	if err != nil {
 		return nil, fmt.Errorf("failed to load project config: %w", err)
 	}
@@ -384,10 +404,10 @@ func AnalyzeProject(workspace string, overrides map[string]string) (*ProjectAnal
 	pa.serverState = NewState("SERVER")
 	pa.clientState = NewState("CLIENT")
 
-	if err := pa.processState(pa.serverState, workspace); err != nil {
+	if err := pa.processState(pa.serverState, pa.Workspace()); err != nil {
 		return nil, err
 	}
-	if err := pa.processState(pa.clientState, workspace); err != nil {
+	if err := pa.processState(pa.clientState, pa.Workspace()); err != nil {
 		return nil, err
 	}
 

@@ -77,20 +77,3 @@ func (u *Unreachable) isType() {}
 func (u *Unreachable) Span() common.Span {
 	return u.span
 }
-
-/* Dyn Trait */
-
-type DynTrait struct {
-	Trait Path
-	span  common.Span
-}
-
-func NewDynTrait(trait Path, span common.Span) *DynTrait {
-	return &DynTrait{Trait: trait, span: span}
-}
-
-func (it *DynTrait) isType() {}
-
-func (it *DynTrait) Span() common.Span {
-	return it.span
-}

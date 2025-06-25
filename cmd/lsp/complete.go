@@ -97,7 +97,7 @@ func (h *Handler) Complete(p *lsp.CompletionParams) (*lsp.CompletionList, error)
 			if !method.IsFirstParamSelf() {
 				continue
 			}
-			if !sA.CanAccessClassMethod(&method) {
+			if !sA.CanAccessClassMethod(method) {
 				continue
 			}
 			added[name] = struct{}{}

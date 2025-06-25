@@ -125,7 +125,7 @@ func (a *Analysis) handleQPathExpr(scope *Scope, qPath *ast.QPath) Type {
 			a.panicf(qPath.Type.Span(), "no method found for `%s` in trait `%s`", methodName, as.Def.Name.Raw)
 		}
 		qPath.ResolvedMethod = methodP
-		return ast.NewSemType(*methodP, qPath.Span())
+		return ast.NewSemType(methodP, qPath.Span())
 	} else {
 		a.panicf(qPath.Type.Span(), "expected class type, got: %s", toCastTy.String())
 	}
@@ -439,7 +439,7 @@ func (a *Analysis) handleForInExpr(scope *Scope, forIn *ast.ExprForIn) {
 		checkPairsIterFunc(a, fun)
 
 		iterReturnCount = fun.ReturnCount()
-		forIn.PairsMethod = &fun
+		forIn.PairsMethod = fun
 		forIn.State = ast.ForInFuncPairs
 
 		nonNilableTypes := make([]Type, iterReturnCount)
@@ -615,7 +615,7 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 	}
 
 	if call.SemaFunc == nil {
-		call.SemaFunc = &funcTy
+		call.SemaFunc = funcTy
 	}
 
 	if call.IsTryCall {
@@ -644,7 +644,8 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 func (a *Analysis) handleDotAccess(expr *ast.DotAccess, toIndex *ast.Expr) Type {
 	toIndexTy := toIndex.Type()
 	if !toIndexTy.IsClass() {
-		a.panicf(expr.Span(), "cannot index into non-class type `%s`", toIndexTy.String())
+		a.Errorf(expr.Span(), "cannot index into non-class type `%s`", toIndexTy.String())
+		return a.nilType()
 	}
 
 	st := toIndexTy.Class()
@@ -693,19 +694,19 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 		return a.nilType()
 	}
 
-	if !a.CanAccessClassMethod(&method) {
+	if !a.CanAccessClassMethod(method) {
 		a.Errorf(call.Method.Span(), "method `%s` of class `%s` is private", method.Def.Name.Raw, method.Class.Def.Name.Raw)
 	}
 
-	call.SemaFunc = &method
+	call.SemaFunc = method
 
 	a.AddRef(method, call.Method.Span())
 
-	methodCopy := method
+	methodCopy := *method
 	methodCopy.Params = method.Params[1:]
 	methodCopy.Def.Params = method.Def.Params[1:]
 
-	methodTy := ast.NewSemType(methodCopy, call.Span())
+	methodTy := ast.NewSemType(&methodCopy, call.Span())
 	return a.handleCall(scope, call, methodTy, call.Span())
 }
 

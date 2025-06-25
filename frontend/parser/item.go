@@ -48,9 +48,15 @@ func (p *parser) parseFunction() ast.Item {
 	p.advance() // skip `func`
 	name := p.expectIdentMsg("expected function name")
 	sig := p.parseFunctionSignature(FlagFuncParamVarArg | FlagFuncParamNamed)
-	body := p.parseBlock()
+	var body *ast.Block
+	if p.Token.Is("{") {
+		b := p.parseBlock()
+		body = &b
+	} else {
+		p.expect(";")
+	}
 	span := SpanFrom(spanStart, p.prevSpan())
-	fun := ast.NewFunction(&name, sig, &body, nil, span)
+	fun := ast.NewFunction(&name, sig, body, nil, span)
 	fun.IsItem = true
 	return fun
 }
@@ -153,7 +159,7 @@ func (p *parser) parseImpl() ast.Item {
 			attributes = append(attributes, p.parseAttribute())
 		}
 		pub := p.tryConsume("pub")
-		method := p.parseClassMethod(false)
+		method := p.parseClassMethod(true)
 		method.Public = pub
 		method.Attributes = attributes
 		methods = append(methods, method)

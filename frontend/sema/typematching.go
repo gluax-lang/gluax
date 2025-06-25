@@ -31,8 +31,6 @@ func (a *Analysis) matchTypes(t Type, other Type) bool {
 		return a.matchTupleType(t.Tuple(), other)
 	case ast.SemVarargKind:
 		return a.matchVarargType(t.Vararg(), other)
-	case ast.SemDynTraitKind:
-		return a.matchDynTraitType(t.DynTrait(), other)
 	case ast.SemGenericKind:
 		return a.matchGenericType(t.Generic(), other)
 	case ast.SemUnreachableKind:
@@ -57,8 +55,6 @@ func (a *Analysis) MatchTypesStrict(t Type, other Type) bool {
 		return a.matchTupleTypeStrict(t.Tuple(), other)
 	case ast.SemVarargKind:
 		return a.matchVarargTypeStrict(t.Vararg(), other)
-	case ast.SemDynTraitKind:
-		return a.matchDynTraitTypeStrict(t.DynTrait(), other)
 	case ast.SemGenericKind:
 		return a.matchGenericTypeStrict(t.Generic(), other)
 	case ast.SemUnreachableKind:
@@ -152,7 +148,7 @@ func (a *Analysis) matchClassTypeStrict(s *SemClass, other Type) bool {
 
 /* Function */
 
-func (a *Analysis) matchFunction(f SemFunction, other SemFunction) bool {
+func (a *Analysis) matchFunction(f *SemFunction, other *SemFunction) bool {
 	if len(f.Params) != len(other.Params) {
 		return false
 	}
@@ -164,7 +160,7 @@ func (a *Analysis) matchFunction(f SemFunction, other SemFunction) bool {
 	return a.MatchTypesStrict(f.Return, other.Return)
 }
 
-func (a *Analysis) matchFunctionType(f SemFunction, other Type) bool {
+func (a *Analysis) matchFunctionType(f *SemFunction, other Type) bool {
 	return other.IsFunction() && a.matchFunction(f, other.Function())
 }
 
@@ -214,32 +210,6 @@ func (a *Analysis) matchVarargTypeStrict(v SemVararg, other Type) bool {
 		return false
 	}
 	return a.MatchTypesStrict(v.Type, other.Vararg().Type)
-}
-
-/* DynTrait */
-
-func (a *Analysis) matchDynTraitType(dt SemDynTrait, other Type) bool {
-	trait := dt.Trait
-	// if other.IsClass() {
-	// 	st := other.Class()
-	// 	return a.ClassImplementsTrait(st, trait)
-	// }
-	if other.IsDynTrait() {
-		otherTrait := other.DynTrait().Trait
-		// Check if otherTrait implements trait (not the other way around)
-		// This allows coercion from more specific traits to more general ones
-		// e.g. dyn Player can be used as dyn Entity if Player implements Entity
-		return traitImplements(otherTrait, trait)
-	}
-	return false
-}
-
-func (a *Analysis) matchDynTraitTypeStrict(dt SemDynTrait, other Type) bool {
-	if other.IsDynTrait() {
-		otherTrait := other.DynTrait().Trait
-		return dt.Trait == otherTrait
-	}
-	return false
 }
 
 /* Generic */

@@ -31,10 +31,7 @@ var CLASS_PREFIX = defineConst("class_")
 var TRAIT_PREFIX = defineConst("trait_")
 var UNREACHABLE_PREFIX = defineConst("unreachable_")
 var LOCAL_PREFIX = defineConst("local_")
-var DYNTRAIT_PREFIX = defineConst("dyn_trait_")
 
 var PUBLIC_TBL = defineConst("public")
-
-var CLASS_MARKER_PREFIX = defineConst("marker_class")
 
 var PARSING_ERROR_PREFIX = defineConst("parsing_error")

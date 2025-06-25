@@ -2,46 +2,46 @@
 pub let _VERSION: string = "";
 
 #[global]
-pub func print(...any) {}
+pub func print(...any);
 
 #[global]
-pub func error(m: string, l: ?number) -> unreachable {}
+pub func error(m: string, l: ?number) -> unreachable;
 
 #[global]
-pub func rawequal(v1: any, v2: any) -> bool {}
+pub func rawequal(v1: any, v2: any) -> bool;
 #[global]
-pub func rawget(t: table, k: any) -> any {}
+pub func rawget(t: table, k: any) -> any;
 #[global]
-pub func rawset(t: table, k: any, v: any) {}
+pub func rawset(t: table, k: any, v: any);
 
 #[global]
-pub func getmetatable(t: any) -> any {}
+pub func getmetatable(t: any) -> any;
 #[global]
-pub func setmetatable(t: any, m: any) {}
+pub func setmetatable(t: any, m: any);
 
 #[global]
-pub func tonumber(v: any, b: ?number) -> ?number {}
+pub func tonumber(v: any, b: ?number) -> ?number;
 
 #[global]
-pub func getfenv(v: any) -> map<any, any> {}
+pub func getfenv(v: any) -> map<any, any>;
 
 #[global]
-pub func pcall(f: anyfunc, ...any) -> (bool, ...any) {}
+pub func pcall(f: anyfunc, ...any) -> (bool, ...any);
 
 #[global]
-pub func tostring(v: any) -> string {}
+pub func tostring(v: any) -> string;
 
 #[global]
-pub func next(t: table, prev_k: any) -> (any, any) {}
+pub func next(t: table, prev_k: any) -> (any, any);
 
 #[global]
-pub func select(p: any, ...any) -> ...any {}
+pub func select(p: any, ...any) -> ...any;
 
 #[global]
-pub func type(v: any) -> string {}
+pub func type(v: any) -> string;
 
 #[global]
-pub func collectgarbage(a: ?string, a: ?number) -> any {}
+pub func collectgarbage(a: ?string, a: ?number) -> any;
 
 pub func getfenv_func(f: anyfunc) -> map<any, any> {
     getfenv(f)
@@ -71,11 +71,11 @@ pub class debug {}
 
 impl debug {
     #[global = "debug.getinfo"]
-    func getinfo_func(f: anyfunc, what: ?string) -> map<string, any> {}
+    func getinfo_func(f: anyfunc, what: ?string) -> map<string, any>;
 
     #[global = "debug.getinfo"]
-    func getinfo_level(l: number, what: ?string) -> map<string, any> {}
+    func getinfo_level(l: number, what: ?string) -> map<string, any>;
 
     #[global = "debug.Trace"]
-    func trace() {}
+    func trace();
 }

@@ -159,12 +159,12 @@ func (i SemImport) Span() common.Span {
 type SemTrait struct {
 	Def         *Trait
 	SuperTraits []*SemTrait // traits that this trait extends
-	Methods     map[string]SemFunction
+	Methods     map[string]*SemFunction
 	Scope       any
 }
 
 func NewSemTrait(def *Trait) SemTrait {
-	methodMap := make(map[string]SemFunction)
+	methodMap := make(map[string]*SemFunction)
 	return SemTrait{
 		Def:     def,
 		Methods: methodMap,

@@ -1,32 +1,32 @@
 #[global = "bit.arshift"]
-pub func arshift(v: number, shift: number) -> number {}
+pub func arshift(v: number, shift: number) -> number;
 
 #[global = "bit.band"]
-pub func band(a: number, ...number) -> number {}
+pub func band(a: number, ...number) -> number;
 
 #[global = "bit.bnot"]
-pub func bnot(v: number) -> number {}
+pub func bnot(v: number) -> number;
 
 #[global = "bit.bor"]
-pub func bor(a: number, ...number) -> number {}
+pub func bor(a: number, ...number) -> number;
 
 #[global = "bit.bswap"]
-pub func bswap(v: number) -> number {}
+pub func bswap(v: number) -> number;
 
 #[global = "bit.bxor"]
-pub func bxor(a: number, ...number) -> number {}
+pub func bxor(a: number, ...number) -> number;
 
 #[global = "bit.lshift"]
-pub func lshift(v: number, shift: number) -> number {}
+pub func lshift(v: number, shift: number) -> number;
 
 #[global = "bit.ror"]
-pub func ror(v: number, shift: number) -> number {}
+pub func ror(v: number, shift: number) -> number;
 
 #[global = "bit.rshift"]
-pub func rshift(v: number, shift: number) -> number {}
+pub func rshift(v: number, shift: number) -> number;
 
 #[global = "bit.tobit"]
-pub func tobit(v: number) -> number {}
+pub func tobit(v: number) -> number;
 
 #[global = "bit.tohex"]
-pub func tohex(v: number, n: ?number) -> string {}
+pub func tohex(v: number, n: ?number) -> string;

@@ -27,8 +27,6 @@ func (k SemTypeKind) String() string {
 		return "unreachable"
 	case SemErrorKind:
 		return "error"
-	case SemDynTraitKind:
-		return "dyn_trait"
 	default:
 		panic("unreachable")
 	}
@@ -43,7 +41,6 @@ const (
 	SemGenericKind
 	SemUnreachableKind
 	SemErrorKind
-	SemDynTraitKind
 )
 
 type semTypeData interface {
@@ -102,11 +99,11 @@ func (t *SemType) Class() *SemClass {
 	return t.data.(*SemClass)
 }
 
-func (t SemType) Function() SemFunction {
+func (t SemType) Function() *SemFunction {
 	if t.Kind() != SemFunctionKind {
 		panic("not a function")
 	}
-	return t.data.(SemFunction)
+	return t.data.(*SemFunction)
 }
 
 func (t SemType) Tuple() SemTuple {
@@ -121,13 +118,6 @@ func (t SemType) Vararg() SemVararg {
 		panic("not a vararg")
 	}
 	return t.data.(SemVararg)
-}
-
-func (t SemType) DynTrait() SemDynTrait {
-	if t.Kind() != SemDynTraitKind {
-		panic("not a dyn trait")
-	}
-	return t.data.(SemDynTrait)
 }
 
 func (t SemType) Generic() SemGenericType {
@@ -151,7 +141,6 @@ func (t SemType) IsError() bool       { return t.Kind() == SemErrorKind }
 func (t SemType) IsGeneric() bool     { return t.Kind() == SemGenericKind }
 func (t SemType) IsTuple() bool       { return t.Kind() == SemTupleKind }
 func (t SemType) IsVararg() bool      { return t.Kind() == SemVarargKind }
-func (t SemType) IsDynTrait() bool    { return t.Kind() == SemDynTraitKind }
 
 func (t SemType) asClassName() *string {
 	// has to be a class
@@ -354,24 +343,6 @@ func (c SemClass) Attributes() Attributes {
 	return c.Def.Attributes
 }
 
-func (c SemClass) CanGenerateMethod(f *Function) bool {
-	if !c.IsGlobal() {
-		return true
-	}
-
-	if !f.IsFirstParamSelf() {
-		// If the function is not a method (does not have 'self' as the first parameter),
-		// we can generate it.
-		return true
-	}
-
-	if f.Attributes.Has("local_method") {
-		return true
-	}
-
-	return false
-}
-
 /* FunctionType */
 
 type SemFunction struct {
@@ -385,7 +356,7 @@ type SemFunction struct {
 	Generics Generics
 }
 
-func (t SemFunction) TypeKind() SemTypeKind { return SemFunctionKind }
+func (t *SemFunction) TypeKind() SemTypeKind { return SemFunctionKind }
 
 func (t SemFunction) String() string {
 	def := t.Def
@@ -589,29 +560,6 @@ func (t SemError) TypeKind() SemTypeKind { return SemErrorKind }
 
 func (t SemError) String() string    { return "error" }
 func (t SemError) LSPString() string { return t.String() }
-
-/* SemDynTrait */
-
-type SemDynTrait struct {
-	Trait *SemTrait
-}
-
-func NewSemDynTrait(trait *SemTrait, span common.Span) SemType {
-	return SemType{
-		data: SemDynTrait{trait},
-		span: span,
-	}
-}
-
-func (t SemDynTrait) TypeKind() SemTypeKind { return SemDynTraitKind }
-
-func (t SemDynTrait) String() string {
-	return "todo"
-}
-
-func (t SemDynTrait) LSPString() string {
-	return "todo"
-}
 
 /* Generics */
 

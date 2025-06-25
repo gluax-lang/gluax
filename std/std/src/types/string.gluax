@@ -2,16 +2,16 @@ import "../debug";
 import "../base";
 
 #[global = "string.sub"]
-func sub(s: string, s_p: number, e_p: ?number) -> string {}
+func sub(s: string, s_p: number, e_p: ?number) -> string;
 
 #[global = "string.byte"]
-func byte(s: string, p: number) -> ?number {}
+func byte(s: string, p: number) -> ?number;
 
 #[global = "string.byte"]
-func bytes(s: string, s_p: number, e_p: number) -> ...number {}
+func bytes(s: string, s_p: number, e_p: number) -> ...number;
 
 #[global = "string.find"]
-func find(s: string, pattern: string, init: ?number, plain: ?bool) -> (?number, ?number, ...string) {}
+func find(s: string, pattern: string, init: ?number, plain: ?bool) -> (?number, ?number, ...string);
 
 impl string {
     #[inline]
@@ -25,28 +25,28 @@ impl string {
 
 impl string {
     #[global = "string.char"]
-    pub func char(...number) -> string {}
+    pub func char(...number) -> string;
 
     #[global = "string.sub"]
-    pub func sub(self, s_p: number, e_p: ?number) -> string {}
+    pub func sub(self, s_p: number, e_p: ?number) -> string;
 
     #[global = "string.format"]
-    pub func format(self, ...any) -> string {}
+    pub func format(self, ...any) -> string;
 
     #[global = "string.rep"]
-    pub func rep(self, n: number, sep: ?string) -> string {}
+    pub func rep(self, n: number, sep: ?string) -> string;
 
     #[global = "string.upper"]
-    pub func upper(self) -> string {}
+    pub func upper(self) -> string;
 
     #[global = "string.lower"]
-    pub func lower(self) -> string {}
+    pub func lower(self) -> string;
 
     #[global = "string.reverse"]
-    pub func reverse(self) -> string {}
+    pub func reverse(self) -> string;
 
     #[global = "tonumber"]
-    pub func to_number(self) -> ?number {}
+    pub func to_number(self) -> ?number;
 }
 
 impl string {
@@ -69,10 +69,10 @@ impl string {
     }
 #else
     #[global = "string.byte"]
-    pub func byte(self, s_pos: number) -> ?number {}
+    pub func byte(self, s_pos: number) -> ?number;
 
     #[global = "string.byte"]
-    pub func bytes(self, s_pos: number, e_pos: number) -> ...number {}
+    pub func bytes(self, s_pos: number, e_pos: number) -> ...number;
 #endif
 
     #[inline]

@@ -11,12 +11,12 @@ type ClassMethodEntry struct {
 	// These are the types that were passed to the class when doing impl // e.g. `impl MyClass<T, U>`
 	TypeParameters []Type
 	// The method itself, which is a function
-	Method SemFunction
+	Method *SemFunction
 }
 
 type ClassTraitsMeta struct {
 	TypeParameters []Type
-	Methods        map[string]SemFunction
+	Methods        map[string]*SemFunction
 	Span           Span
 }
 
@@ -66,8 +66,6 @@ func (a *Analysis) ValidateTypeParameterConstraints(constraints, actuals []Type)
 					ok = a.ClassImplementsTrait(act.Class(), bound)
 				case act.IsGeneric():
 					ok = slices.Contains(act.Generic().Traits, bound)
-				case act.IsDynTrait():
-					ok = traitImplements(act.DynTrait().Trait, bound)
 				}
 				if !ok {
 					return false
@@ -165,7 +163,7 @@ func (a *Analysis) CheckConflictingTraitImplementations() {
 	}
 }
 
-func (a *Analysis) RegisterClassMethod(st *SemClass, method SemFunction) {
+func (a *Analysis) RegisterClassMethod(st *SemClass, method *SemFunction) {
 	if _, ok := a.State.MethodsByClass[st.Def]; !ok {
 		a.State.MethodsByClass[st.Def] = make(map[string][]*ClassMethodEntry)
 	}
@@ -177,7 +175,7 @@ func (a *Analysis) RegisterClassMethod(st *SemClass, method SemFunction) {
 	})
 }
 
-func (a *Analysis) RegisterClassTraitImplementation(st *SemClass, trait *ast.SemTrait, methods map[string]SemFunction, span Span) {
+func (a *Analysis) RegisterClassTraitImplementation(st *SemClass, trait *ast.SemTrait, methods map[string]*SemFunction, span Span) {
 	if _, ok := a.State.TraitsByClass[st.Def]; !ok {
 		a.State.TraitsByClass[st.Def] = make(map[*ast.SemTrait][]*ClassTraitsMeta)
 	}
@@ -197,7 +195,7 @@ func (a *Analysis) FindClassMethod(st *ast.SemClass, name string) *SemFunction {
 				continue
 			}
 			inst := a.HandleClassMethod(st, meta.Method, false)
-			return &inst
+			return inst
 		}
 	}
 	if st.Super != nil {
@@ -206,18 +204,18 @@ func (a *Analysis) FindClassMethod(st *ast.SemClass, name string) *SemFunction {
 	return nil
 }
 
-func (a *Analysis) FindClassOrTraitMethod(st *ast.SemClass, name string, scope *Scope) []SemFunction {
+func (a *Analysis) FindClassOrTraitMethod(st *ast.SemClass, name string, scope *Scope) []*SemFunction {
 	method := a.FindClassMethod(st, name)
 	if method != nil {
-		return []SemFunction{*method}
+		return []*SemFunction{method}
 	}
 	return a.FindClassMethodByTrait(st, name, scope)
 }
 
-func (a *Analysis) FindClassMethodByTrait(st *ast.SemClass, methodName string, scope *Scope) []SemFunction {
+func (a *Analysis) FindClassMethodByTrait(st *ast.SemClass, methodName string, scope *Scope) []*SemFunction {
 	actual := st.Generics.Params
 	foundTraits := make(map[*ast.SemTrait]struct{})
-	var results []SemFunction
+	var results []*SemFunction
 
 	for cls := st; cls != nil; cls = cls.Super {
 		bucket, exists := a.State.TraitsByClass[cls.Def]
@@ -256,9 +254,9 @@ func (a *Analysis) FindClassMethodByTrait(st *ast.SemClass, methodName string, s
 	return results
 }
 
-func (a *Analysis) FindAllClassAndTraitMethods(st *ast.SemClass, scope *Scope) []SemFunction {
+func (a *Analysis) FindAllClassAndTraitMethods(st *ast.SemClass, scope *Scope) []*SemFunction {
 	actual := st.Generics.Params
-	var result []SemFunction
+	var result []*SemFunction
 
 	for cls := st; cls != nil; cls = cls.Super {
 		methodsByName := a.State.MethodsByClass[cls.Def]
@@ -301,7 +299,7 @@ func (a *Analysis) FindClassMethodForTraitOnly(st *ast.SemClass, trait *ast.SemT
 					if a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
 						if method, exists := meta.Methods[methodName]; exists {
 							method.Class = cls
-							return &method
+							return method
 						}
 					}
 				}
@@ -311,9 +309,9 @@ func (a *Analysis) FindClassMethodForTraitOnly(st *ast.SemClass, trait *ast.SemT
 	return nil
 }
 
-func (a *Analysis) FindAllClassMethods(st *ast.SemClass) map[string]SemFunction {
+func (a *Analysis) FindAllClassMethods(st *ast.SemClass) map[string]*SemFunction {
 	actual := st.Generics.Params
-	result := make(map[string]SemFunction)
+	result := make(map[string]*SemFunction)
 
 	methodsByName := a.State.MethodsByClass[st.Def]
 	for name, list := range methodsByName {
@@ -344,8 +342,8 @@ func (a *Analysis) ClassImplementsTrait(st *ast.SemClass, asked *ast.SemTrait) b
 	return false
 }
 
-func (a *Analysis) GetClassesImplementingTrait(trait *ast.SemTrait) map[*ast.SemClass][]SemFunction {
-	result := make(map[*ast.SemClass][]SemFunction)
+func (a *Analysis) GetClassesImplementingTrait(trait *ast.SemTrait) map[*ast.SemClass][]*SemFunction {
+	result := make(map[*ast.SemClass][]*SemFunction)
 
 	// Iterate through all classes that have trait implementations
 	for classDef, traitMap := range a.State.TraitsByClass {
@@ -362,7 +360,7 @@ func (a *Analysis) GetClassesImplementingTrait(trait *ast.SemTrait) map[*ast.Sem
 				for _, meta := range metas {
 					if a.ValidateTypeParameterConstraints(meta.TypeParameters, actual) {
 						// Collect all methods from this trait implementation
-						methods := make([]SemFunction, 0, len(meta.Methods))
+						methods := make([]*SemFunction, 0, len(meta.Methods))
 						for _, method := range meta.Methods {
 							methods = append(methods, method)
 						}

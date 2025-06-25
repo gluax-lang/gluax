@@ -28,8 +28,8 @@ func (v Variable) ValueType() SemType   { return v.Type }
 func (v SingleVariable) ValueKind() ValueKind { return ValSingleVariable }
 func (v SingleVariable) ValueType() SemType   { return v.Ty }
 
-func (f SemFunction) ValueKind() ValueKind { return ValFunction }
-func (f SemFunction) ValueType() SemType   { return NewSemType(f, f.Def.Span()) }
+func (f *SemFunction) ValueKind() ValueKind { return ValFunction }
+func (f *SemFunction) ValueType() SemType   { return NewSemType(f, f.Def.Span()) }
 
 func (p SemFunctionParam) ValueKind() ValueKind { return ValParameter }
 func (p SemFunctionParam) ValueType() SemType   { return p.Type }
@@ -99,11 +99,11 @@ func (v Value) IsFunction() bool {
 	return v.Kind() == ValFunction
 }
 
-func (v Value) Function() SemFunction {
+func (v Value) Function() *SemFunction {
 	if v.Kind() != ValFunction {
 		panic("not a function")
 	}
-	return v.data.(SemFunction)
+	return v.data.(*SemFunction)
 }
 
 func (v Value) SingleVariable() SingleVariable {
@@ -121,12 +121,12 @@ func SetValueTo[T valueData](v *Value, data T) {
 }
 
 type Variable struct {
-	Def  Let
+	Def  *Let
 	N    int // number of the variable in the let statement, Def.Names[N]
 	Type SemType
 }
 
-func NewVariable(def Let, n int, ty SemType) Variable {
+func NewVariable(def *Let, n int, ty SemType) Variable {
 	return Variable{Def: def, N: n, Type: ty}
 }
 

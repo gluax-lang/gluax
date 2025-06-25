@@ -10,7 +10,8 @@ import (
 )
 
 type BuildCmd struct {
-	Path string `help:"Path to the project directory." short:"p" default:"."`
+	Path    string `help:"Path to the project directory." short:"p" default:"."`
+	Release bool   `help:"Build in release mode." short:"r"`
 }
 
 func (b *BuildCmd) Run() error {
@@ -19,7 +20,12 @@ func (b *BuildCmd) Run() error {
 		return err
 	}
 
-	pAnalysis, err := sema.AnalyzeProject(absPath, map[string]string{})
+	options := sema.CompileOptions{
+		Workspace: absPath,
+		Release:   b.Release,
+	}
+
+	pAnalysis, err := sema.AnalyzeProject(options)
 	if err != nil {
 		return err
 	}

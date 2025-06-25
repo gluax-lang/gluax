@@ -46,10 +46,6 @@ func (p *parser) parseTypeX(flags Flags) ast.Type {
 		return ast.NewVararg(p.parseType(), SpanFrom(spanStart, p.prevSpan()))
 	}
 
-	if p.Token.Is("dyn") {
-		return p.parseDynTraitType()
-	}
-
 	path := p.parsePath(nil)
 	return &path
 }
@@ -94,14 +90,4 @@ func (p *parser) parseTupleType(flags Flags) ast.Type {
 		return elems[0]
 	}
 	return ast.NewTuple(elems, span)
-}
-
-func (p *parser) parseDynTraitType() ast.Type {
-	spanStart := p.span()
-	p.advance() // consume `dyn`
-
-	trait := p.parsePath(nil)
-	span := SpanFrom(spanStart, p.prevSpan())
-
-	return ast.NewDynTrait(trait, span)
 }

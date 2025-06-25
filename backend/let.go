@@ -9,6 +9,9 @@ import (
 )
 
 func (cg *Codegen) decorateLetName(l *ast.Let, n int) string {
+	if !cg.markUsed(l) {
+		cg.genLet(l)
+	}
 	if l.IsGlobal() {
 		return l.GlobalName(n)
 	}

@@ -17,7 +17,11 @@ func (c *CheckCmd) Run() error {
 	}
 
 	{
-		pAnalysis, err := sema.AnalyzeProject(absPath, map[string]string{})
+		options := sema.CompileOptions{
+			Workspace: absPath,
+		}
+
+		pAnalysis, err := sema.AnalyzeProject(options)
 		if err != nil {
 			return err
 		}

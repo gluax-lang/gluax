@@ -84,7 +84,11 @@ func (h *Handler) Initialized() error {
 
 func (h *Handler) compileProject() *sema.ProjectAnalysis {
 	overrides := h.fileCache
-	pAnalysis, err := sema.AnalyzeProject(h.workspace, overrides)
+	options := sema.CompileOptions{
+		Workspace:    h.workspace,
+		VirtualFiles: overrides,
+	}
+	pAnalysis, err := sema.AnalyzeProject(options)
 	if err != nil {
 		log.Printf("error analyzing project: %v", err)
 		return nil

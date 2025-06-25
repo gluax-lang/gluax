@@ -9,6 +9,9 @@ import (
 )
 
 func (cg *Codegen) decorateFuncName(f *ast.SemFunction) string {
+	if !cg.markUsed(f) {
+		cg.genFunction(f)
+	}
 	if f.IsGlobal() {
 		return f.GlobalName()
 	}
@@ -19,6 +22,12 @@ func (cg *Codegen) decorateFuncName(f *ast.SemFunction) string {
 	}
 	if f.Class != nil {
 		stName := cg.decorateClassName(f.Class)
+		if !cg.markUsed(cg.classFuncUsedName(f.Class, raw)) {
+			cg.generateClass(f.Class)
+		}
+		if rename := f.Attributes().GetString("rename_to"); rename != nil {
+			raw = *rename
+		}
 		return stName + "." + raw
 	}
 	var sb strings.Builder
@@ -46,6 +55,9 @@ func (cg *Codegen) genFunctionParams(f ast.Function) []string {
 func (cg *Codegen) genFunction(f *ast.SemFunction) string {
 	if f.IsGlobal() {
 		return f.GlobalName()
+	}
+	if f.Def.Body == nil {
+		return "nil" // no body, so we don't generate anything
 	}
 	def := f.Def
 	oldBuf := cg.newBuf()
@@ -163,9 +175,6 @@ func (cg *Codegen) buildMethodCall(call *ast.Call, fun *ast.SemFunction, toCall 
 	switch {
 	case toCallTy.IsClass():
 		return cg.buildClassMethodCall(call, fun, toCall, toCallTy)
-	case toCallTy.IsDynTrait():
-		args := cg.getCallArgs(call, toCall)
-		return fmt.Sprintf("%s(%s)", cg.decorateFuncName(fun), args)
 	default:
 		args := cg.genExprsLeftToRight(call.Args)
 		return fmt.Sprintf("%s(%s)", toCall, args)
@@ -190,7 +199,7 @@ func (cg *Codegen) buildClassMethodCall(call *ast.Call, fun *ast.SemFunction, to
 	args := cg.genExprsLeftToRight(call.Args)
 
 	var methodName string
-	if rename := fun.Attributes().GetString("rename_method"); rename != nil {
+	if rename := fun.Attributes().GetString("rename_to"); rename != nil {
 		methodName = *rename
 	} else {
 		methodName = fun.Def.Name.Raw
@@ -207,6 +216,9 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 	}
 
 	canInline := func() bool {
+		if !cg.ProjectAnalysis.Options.Release {
+			return false // in debug mode, we don't inline functions
+		}
 		if fun.HasVarargParam() || fun.HasVarargReturn() {
 			return false
 		}
@@ -263,6 +275,7 @@ func (cg *Codegen) genCall(call *ast.Call, toCall string, toCallTy ast.SemType) 
 	if canInline() {
 		callExpr = cg.genInlineCall(call, *fun, toCall)
 	} else {
+		cg.decorateFuncName(fun)
 		callExpr = buildCallExpr()
 	}
 

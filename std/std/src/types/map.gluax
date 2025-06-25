@@ -2,9 +2,8 @@ import "../base";
 
 impl<K, V> map<K, V> {
     #[inline]
-    func __x_iter_pairs(self) -> (func(table, any) -> (?K, ?V), Self) {
-        (base::next unsafe_cast_as func(table, any) -> (?K, ?V), self)
-    }
+    #[global = "pairs"]
+    func __x_iter_pairs(self) -> (func(table, any) -> (?K, ?V), Self);
 }
 
 impl<K, V> map<K, V> {

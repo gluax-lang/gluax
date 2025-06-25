@@ -111,7 +111,7 @@ func (cg *Codegen) genExprX(e ast.Expr) string {
 		return cg.genQPathExpr(e.QPath())
 	case ast.ExprKindFunction:
 		f := e.Type().Function()
-		return "(" + cg.genFunction(&f) + ")"
+		return "(" + cg.genFunction(f) + ")"
 	case ast.ExprKindPostfix:
 		return cg.genPostfixExpr(e.Postfix())
 	case ast.ExprKindTuple:
@@ -180,11 +180,11 @@ func (cg *Codegen) genPathExpr(path *ast.Path) string {
 			suffix = fmt.Sprintf(" --[[%s]]", path.String())
 		}
 		// this is a quick optimization for constant variables
-		if isConstPrimitive(&v.Def, v.N) {
+		if isConstPrimitive(v.Def, v.N) {
 			expr := v.Def.Values[v.N]
 			return cg.genExpr(expr) + suffix
 		}
-		return cg.decorateLetName(&v.Def, v.N) + suffix
+		return cg.decorateLetName(v.Def, v.N) + suffix
 	case ast.ValParameter:
 		p := val.Parameter()
 		return p.Def.Name.Raw
@@ -194,7 +194,7 @@ func (cg *Codegen) genPathExpr(path *ast.Path) string {
 		if len(path.Segments) > 1 {
 			suffix = fmt.Sprintf(" --[[%s]]", path.String())
 		}
-		return cg.decorateFuncName(&v) + suffix
+		return cg.decorateFuncName(v) + suffix
 	case ast.ValSingleVariable:
 		return path.String()
 	}

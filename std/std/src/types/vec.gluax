@@ -45,7 +45,7 @@ impl<T> vec<T> {
     pub func is_empty(self) -> bool { self.len() == 0 }
 
     #[global = "table.remove"]
-    pub func remove(self, idx: number) -> ?T {}
+    pub func remove(self, idx: number) -> ?T;
 
     #[inline]
     pub func get(self, idx: number) -> ?T {
@@ -58,10 +58,10 @@ impl<T> vec<T> {
     }
 
     #[global = "table.sort"]
-    pub func sort(self, cmp: ?func(T, T) -> bool) -> Self {}
+    pub func sort(self, cmp: ?func(T, T) -> bool);
 
     #[global = "unpack"]
-    pub func unpack(self, s: ?number, e: ?number) -> ...T {}
+    pub func unpack(self, s: ?number, e: ?number) -> ...T;
 }
 
 impl vec<string> {

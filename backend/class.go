@@ -6,9 +6,13 @@ import (
 
 	"github.com/gluax-lang/gluax/frontend"
 	"github.com/gluax-lang/gluax/frontend/ast"
+	"github.com/gluax-lang/gluax/frontend/sema"
 )
 
 func (cg *Codegen) decorateClassName_internal(cls *ast.SemClass) string {
+	if !cg.markUsed(cls) {
+		cg.generateClass(cls)
+	}
 	var sb strings.Builder
 	sb.WriteString(frontend.CLASS_PREFIX)
 	sb.WriteString(cls.Def.Name.Raw)
@@ -29,6 +33,10 @@ func classHeaders(cg *Codegen) {
 
 }
 
+func (cg *Codegen) classFuncUsedName(clss *ast.SemClass, methodName string) string {
+	return fmt.Sprintf("%s.%s", cg.decorateClassName_internal(clss), methodName)
+}
+
 func (cg *Codegen) generateClass(st *ast.SemClass) {
 	if !st.IsFullyConcrete() {
 		return // we don't generate classes with generics, because they will never be used
@@ -43,7 +51,7 @@ func (cg *Codegen) generateClass(st *ast.SemClass) {
 		// NEW: UNLESS WE ADDED FUNCTIONS TO THEM HAHA
 		canGenerate := false
 		for _, method := range methods {
-			if st.CanGenerateMethod(&method.Def) && !method.IsGlobal() {
+			if method.Def.Body != nil {
 				canGenerate = true
 				break
 			}
@@ -62,15 +70,7 @@ func (cg *Codegen) generateClass(st *ast.SemClass) {
 	}
 	cg.ln("%s = {", name)
 	cg.pushIndent()
-	cg.ln("%s = true,", frontend.CLASS_MARKER_PREFIX)
-	for name, method := range methods {
-		if !st.CanGenerateMethod(&method.Def) || method.IsGlobal() {
-			continue
-		}
-		// we need to handle it with body, to make sure body calls are generated correctly
-		hMethod := cg.Analysis.HandleClassMethod(st, method, true)
-		cg.ln("%s = %s,", name, cg.genFunction(&hMethod))
-	}
+	cg.genClassFuncs(st, methods)
 	cg.popIndent()
 	cg.ln("};")
 	if !st.Attributes().Has("no__index", "no_metatable") && !st.IsGlobal() {
@@ -79,6 +79,23 @@ func (cg *Codegen) generateClass(st *ast.SemClass) {
 			superName := cg.decorateClassName(st.Super)
 			cg.ln("setmetatable(%s, %s);", name, superName)
 		}
+	}
+}
+
+func (cg *Codegen) genClassFuncs(clss *ast.SemClass, funcs map[string]*sema.SemFunction) {
+	for name, method := range funcs {
+		if method.Def.Body == nil {
+			continue
+		}
+		if !cg.isMarkedUsed(cg.classFuncUsedName(clss, name)) {
+			continue
+		}
+		// we need to handle it with body, to make sure body calls are generated correctly
+		hMethod := cg.Analysis.HandleClassMethod(clss, method, true)
+		if rename := method.Attributes().GetString("rename_to"); rename != nil {
+			name = *rename
+		}
+		cg.ln("%s = %s,", name, cg.genFunction(hMethod))
 	}
 }
 

@@ -25,7 +25,7 @@ func (a *Analysis) handleLet(scope *Scope, it *ast.Let) {
 		}
 
 		// Add the new variable to the current scope
-		variable := ast.NewVariable(*it, i, ty)
+		variable := ast.NewVariable(it, i, ty)
 		if it.IsItem {
 			value := scope.GetValue(ident.Raw)
 			ast.SetValueTo(value, variable)

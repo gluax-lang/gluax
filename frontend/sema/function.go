@@ -4,15 +4,15 @@ import (
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
-func (a *Analysis) handleFunctionSignature(scope *Scope, it *ast.Function) ast.SemFunction {
+func (a *Analysis) handleFunctionSignature(scope *Scope, it *ast.Function) *ast.SemFunction {
 	return a.handleFunctionImpl(scope, it, false)
 }
 
-func (a *Analysis) handleFunction(scope *Scope, it *ast.Function) ast.SemFunction {
+func (a *Analysis) handleFunction(scope *Scope, it *ast.Function) *ast.SemFunction {
 	return a.handleFunctionImpl(scope, it, true)
 }
 
-func (a *Analysis) handleFunctionImpl(scope *Scope, it *ast.Function, withBody bool) ast.SemFunction {
+func (a *Analysis) handleFunctionImpl(scope *Scope, it *ast.Function, withBody bool) *ast.SemFunction {
 	child := scope.Child(false)
 
 	// parameters
@@ -33,12 +33,12 @@ func (a *Analysis) handleFunctionImpl(scope *Scope, it *ast.Function, withBody b
 		returnType = a.resolveType(child, *it.ReturnType)
 	}
 
-	funcType := ast.SemFunction{
+	funcType := &ast.SemFunction{
 		Def:    *it,
 		Params: params,
 		Return: returnType,
 	}
-	child.Func = &funcType
+	child.Func = funcType
 
 	if returnType.IsTuple() {
 		for _, elem := range returnType.Tuple().Elems {

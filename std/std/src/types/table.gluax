@@ -14,17 +14,17 @@ impl table {
     }
 
     #[global = "table.concat"]
-    pub func join(self, sep: ?string, s: ?number, e: ?number) -> string {}
+    pub func join(self, sep: ?string, s: ?number, e: ?number) -> string;
 
     #[global = "table.remove"]
-    pub func remove(self, idx: number) -> ?any {}
+    pub func remove(self, idx: number) -> ?any;
 
     #[global = "table.maxn"]
-    pub func maxn(self) -> number {}
+    pub func maxn(self) -> number;
 
     #[global = "table.sort"]
-    pub func sort(self, cmp: ?func(any, any) -> bool) -> Self {}
+    pub func sort(self, cmp: ?func(any, any) -> bool);
 
     #[global = "unpack"]
-    pub func unpack(tbl: table, s: ?number, e: ?number) -> ...any {}
+    pub func unpack(tbl: table, s: ?number, e: ?number) -> ...any;
 }

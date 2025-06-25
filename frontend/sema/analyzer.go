@@ -7,24 +7,25 @@ import (
 
 	"github.com/gluax-lang/gluax/common"
 	"github.com/gluax-lang/gluax/frontend/ast"
+	"github.com/gluax-lang/gluax/frontend/lexer"
 	protocol "github.com/gluax-lang/lsp"
 )
 
 // don't expose actual paths to the code generation :]
 func (pa *ProjectAnalysis) PathRelativeToWorkspace(path string) string {
-	ws := pa.Workspace
+	ws := pa.Workspace()
 	ws, path = common.FilePathClean(ws), common.FilePathClean(path)
 	return common.FilePathClean(filepath.Join(pa.CurrentPackage(), strings.TrimPrefix(path, ws)))
 }
 
 func (pa *ProjectAnalysis) StartsWithWorkspace(path string) bool {
-	ws := common.FilePathClean(pa.Workspace)
+	ws := common.FilePathClean(pa.Workspace())
 	path = common.FilePathClean(path)
 	return strings.HasPrefix(path, ws)
 }
 
 func (pa *ProjectAnalysis) StripWorkspace(path string) string {
-	ws := common.FilePathClean(pa.Workspace) + "/"
+	ws := common.FilePathClean(pa.Workspace()) + "/"
 	path = common.FilePathClean(path)
 	rel := strings.TrimPrefix(path, ws)
 	return rel
@@ -256,7 +257,7 @@ func (a *Analysis) resolveUses() {
 func (a *Analysis) resolveImplementations() {
 	for _, funcDef := range a.Ast.Funcs {
 		funcSem := a.handleFunctionSignature(a.Scope, funcDef)
-		funcDef.SetSem(&funcSem)
+		funcDef.SetSem(funcSem)
 		sym := a.Scope.GetSymbol(funcDef.Name.Raw)
 		sym.SetData(ast.NewValue(funcSem))
 		a.AddDecl(funcSem)
@@ -265,7 +266,7 @@ func (a *Analysis) resolveImplementations() {
 	for _, letDef := range a.Ast.Lets {
 		for i, ident := range letDef.Names {
 			ty := a.resolveType(a.Scope, *letDef.Types[i])
-			variable := ast.NewVariable(*letDef, i, ty)
+			variable := ast.NewVariable(letDef, i, ty)
 			sym := a.Scope.GetSymbol(ident.Raw)
 			sym.SetData(ast.NewValue(variable))
 		}
@@ -339,7 +340,8 @@ func (a *Analysis) resolveImplementations() {
 		trait := traitDef.Sem
 		scope := trait.Scope.(*Scope)
 		SelfScope := scope.Child(false)
-		SelfScope.ForceAddType("Self", ast.NewSemDynTrait(trait, traitDef.Name.Span()))
+		SelfGeneric := ast.NewSemGenericType(lexer.NewTokIdent("Self", traitDef.Name.Span()), append([]*ast.SemTrait{trait}, trait.SuperTraits...), true)
+		SelfScope.ForceAddType("Self", SelfGeneric)
 		for _, method := range traitDef.Methods {
 			name := method.Name.Raw
 			if _, exists := trait.Methods[name]; exists {
@@ -399,7 +401,7 @@ func (a *Analysis) resolveImplementations() {
 			}
 		})
 
-		implMethods := make(map[string]ast.SemFunction, len(implTrait.Methods))
+		implMethods := make(map[string]*ast.SemFunction, len(implTrait.Methods))
 		for _, method := range implTrait.Methods {
 			if _, exists := implMethods[method.Name.Raw]; exists {
 				a.panicf(method.Name.Span(), "duplicate method `%s` in trait implementation", method.Name.Raw)
@@ -422,7 +424,7 @@ func (a *Analysis) resolveImplementations() {
 			}
 		}
 
-		var methods = make(map[string]ast.SemFunction, len(trait.Methods))
+		var methods = make(map[string]*ast.SemFunction, len(trait.Methods))
 		for name, method := range trait.Methods {
 			stMethod, exists := implMethods[name]
 			if !exists {
@@ -438,11 +440,8 @@ func (a *Analysis) resolveImplementations() {
 				a.panicf(implTrait.Span(), "class `%s` method `%s` must have a `self` parameter as the first parameter", st.Def.Name.Raw, name)
 			}
 
-			methodCopy := method
-			methodCopy = a.HandleClassMethod(st, methodCopy, false)
-
-			stMethodCopy := stMethod
-			stMethodCopy = a.HandleClassMethod(st, stMethodCopy, false)
+			methodCopy := a.HandleClassMethod(st, method, false)
+			stMethodCopy := a.HandleClassMethod(st, stMethod, false)
 
 			if !a.matchFunction(methodCopy, stMethodCopy) {
 				a.panicf(implTrait.Span(), "method `%s` doesn't match trait `%s`: expected %s, got %s", name, trait.Def.Name.Raw, methodCopy.String(), stMethodCopy.String())
@@ -502,10 +501,10 @@ func (a *Analysis) resolveImplementations() {
 
 				superMethodCopy := *superMethod
 				superMethodCopy.Params = superMethodCopy.Params[1:] // remove first parameter
-				otherMethodCopy := funcTy
+				otherMethodCopy := *funcTy
 				otherMethodCopy.Params = otherMethodCopy.Params[1:] // remove first parameter
 
-				if !a.matchFunction(superMethodCopy, otherMethodCopy) {
+				if !a.matchFunction(&superMethodCopy, &otherMethodCopy) {
 					a.Errorf(
 						funcTy.Span(),
 						"method `%s` does not match superclass `%s` signature",
@@ -532,8 +531,17 @@ func (a *Analysis) analyzeImplementations() {
 		a.handleLet(a.Scope, let)
 	}
 
-	for _, funcDef := range a.Ast.Funcs {
-		a.handleFunction(a.Scope, funcDef)
+	for _, f := range a.Ast.Funcs {
+		if f.Body == nil {
+			if !f.IsGlobal() {
+				a.Error(f.Span(), "function must have a body")
+			}
+		} else {
+			if f.IsGlobal() {
+				a.Error(f.Span(), "function cannot have a body")
+			}
+		}
+		a.handleFunction(a.Scope, f)
 	}
 
 	for _, impl := range a.Ast.ImplClasses {
@@ -541,11 +549,23 @@ func (a *Analysis) analyzeImplementations() {
 			check()
 		}
 		if impl.ClassSema == nil {
+			println("WARNING: class implementation without semantic information, this is likely a bug in the analyzer")
 			continue
 		}
 		for _, method := range impl.Methods {
-			if !impl.ClassSema.CanGenerateMethod(&method) {
-				continue
+			if method.Body == nil {
+				if !method.IsGlobal() && !impl.ClassSema.IsGlobal() {
+					a.Error(method.Span(), "must have a body")
+				}
+			} else {
+				if method.IsGlobal() {
+					a.Error(method.Span(), "cannot have a body")
+				}
+				if impl.ClassSema.IsGlobal() {
+					if method.IsFirstParamSelf() && !method.Attributes.Has("local_method") {
+						a.Error(method.Span(), "cannot have a body, because class is global (use `local_method` attribute to allow this)")
+					}
+				}
 			}
 			_ = a.handleFunction(impl.GenericsScope.(*Scope), &method)
 		}
@@ -579,6 +599,6 @@ func (a *Analysis) analyzeImplementations() {
 			a.panicf(mainFunc.Span(), "`main` function return type must be `nil`, got `%s`", returnType.String())
 		}
 
-		a.State.MainFunc = &mainFunc
+		a.State.MainFunc = mainFunc
 	}
 }

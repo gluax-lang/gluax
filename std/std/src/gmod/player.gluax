@@ -6,7 +6,7 @@ use entity::Entity;
 pub class Player: Entity {}
 
 #[global = "Player"]
-func get_player(i: number) -> Player {}
+func get_player(i: number) -> Player;
 
 impl Player {
     pub func get(i: number) -> ?Self {
@@ -20,37 +20,37 @@ impl Player {
 
 impl Player {
     #[global = "player.Iterator"]
-    pub func iter() -> (func(Player, any) -> (?number, ?Player), vec<Player>, number) {}
+    pub func iter() -> (func(Player, any) -> (?number, ?Player), vec<Player>, number);
 }
 
 impl Player {
-    #[rename_method = "AccountID"]
-    pub func account_id(self) -> number {}
+    #[rename_to = "AccountID"]
+    pub func account_id(self) -> number;
 
-    #[rename_method = "AddCleanup"]
-    pub func add_cleanup(self, name: string, ent: Entity) {}
+    #[rename_to = "AddCleanup"]
+    pub func add_cleanup(self, name: string, ent: Entity);
 
-    #[rename_method = "AddCount"]
-    pub func add_count(self, name: string, ent: Entity) {}
+    #[rename_to = "AddCount"]
+    pub func add_count(self, name: string, ent: Entity);
 
-    #[rename_method = "AddDeaths"]
-    pub func add_deaths(self, num: number) {}
+    #[rename_to = "AddDeaths"]
+    pub func add_deaths(self, num: number);
 
-    #[rename_method = "AddFrags"]
-    pub func add_frags(self, num: number) {}
+    #[rename_to = "AddFrags"]
+    pub func add_frags(self, num: number);
 
-    #[rename_method = "GetName"]
-    pub func name(self) -> string {}
+    #[rename_to = "GetName"]
+    pub func name(self) -> string;
 
-    #[rename_method = "SteamID"]
-    pub func steam_id(self) -> string {}
+    #[rename_to = "SteamID"]
+    pub func steam_id(self) -> string;
 
-    #[rename_method = "SteamID64"]
-    pub func steam_id64(self) -> string {}
+    #[rename_to = "SteamID64"]
+    pub func steam_id64(self) -> string;
 
-    #[rename_method = "UserID"]
-    pub func user_id(self) -> number {}
+    #[rename_to = "UserID"]
+    pub func user_id(self) -> number;
 
-    #[rename_method = "Team"]
-    pub func team(self) -> number {}
+    #[rename_to = "Team"]
+    pub func team(self) -> number;
 }

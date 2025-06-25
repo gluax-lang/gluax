@@ -13,34 +13,34 @@ pub class Color {
 
 impl Color {
     #[global = "Color"]
-    pub func new(r: number, g: number, b: number, a: ?number) -> Self {}
+    pub func new(r: number, g: number, b: number, a: ?number) -> Self;
 
     #[global = "HSVToColor"]
-    pub func from_hsv(h: number, s: number, v: number) -> Self {}
+    pub func from_hsv(h: number, s: number, v: number) -> Self;
 
     #[global = "HSLToColor"]
-    pub func from_hsl(h: number, s: number, l: number) -> Self {}
+    pub func from_hsl(h: number, s: number, l: number) -> Self;
 
     #[global = "HWBToColor"]
-    pub func from_hwb(h: number, w: number, b: number) -> Self {}
+    pub func from_hwb(h: number, w: number, b: number) -> Self;
 }
 
 impl Color {
-    #[rename_method = "ToHSV"]
-    pub func to_hsv(self) -> (number, number, number) {}
+    #[rename_to = "ToHSV"]
+    pub func to_hsv(self) -> (number, number, number);
 
-    #[rename_method = "ToHSL"]
-    pub func to_hsl(self) -> (number, number, number) {}
+    #[rename_to = "ToHSL"]
+    pub func to_hsl(self) -> (number, number, number);
 
-    #[rename_method = "ToHWB"]
-    pub func to_hwb(self) -> (number, number, number) {}
+    #[rename_to = "ToHWB"]
+    pub func to_hwb(self) -> (number, number, number);
 
-    #[rename_method = "ToVector"]
-    pub func to_vector(self) -> vector::Vector {}
+    #[rename_to = "ToVector"]
+    pub func to_vector(self) -> vector::Vector;
 
-    #[rename_method = "AddBlackness"]
-    pub func add_blackness(self, amount: number) {}
+    #[rename_to = "AddBlackness"]
+    pub func add_blackness(self, amount: number);
 
-    #[rename_method = "AddBrightness"]
-    pub func add_brightness(self, amount: number)  {}
+    #[rename_to = "AddBrightness"]
+    pub func add_brightness(self, amount: number);
 }

@@ -144,12 +144,12 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) *Value {
 
 			if baseTy.IsClass() {
 				clss := baseTy.Class()
-				if !clss.CanGenerateMethod(&method.Def) {
+				if method.Def.IsFirstParamSelf() && method.Def.Body == nil && !method.IsGlobal() {
 					a.Errorf(leaf.Span(), "function `%s` can only be accessed as a method call on class `%s`, not as a standalone function", method.Def.Name.Raw, clss.Def.Name.Raw)
 				}
 			}
 
-			if !a.CanAccessClassMethod(&method) {
+			if !a.CanAccessClassMethod(method) {
 				a.Errorf(leaf.Span(), "function `%s` of class `%s` is private", method.Def.Name.Raw, method.Class.Def.Name.Raw)
 			}
 

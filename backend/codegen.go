@@ -32,8 +32,9 @@ type funcScope struct {
 }
 
 type Codegen struct {
-	Analysis *Analysis
-	Ast      *ast.Ast
+	ProjectAnalysis *sema.ProjectAnalysis // Project Analysis
+	Analysis        *Analysis
+	Ast             *ast.Ast
 
 	tempIdx int
 	indent  int
@@ -51,6 +52,9 @@ type Codegen struct {
 	tempVarStack []tempScope
 
 	funcScopeStack []*funcScope
+
+	usedPublics  map[any]struct{} // set of used public symbols
+	checkingUsed bool
 }
 
 type loopLabel struct{ cont, brk string }
@@ -249,15 +253,11 @@ func (cg *Codegen) currentFuncScope() *funcScope {
 func (cg *Codegen) generateClasses() {
 	for _, st := range cg.Ast.Classes {
 		for _, inst := range st.GetClassStack() {
+			if !cg.canGenerate(inst.Type) {
+				continue
+			}
 			cg.generateClass(inst.Type)
 		}
-		cg.ln("")
-	}
-}
-
-func (cg *Codegen) generateTraits() {
-	for _, tr := range cg.Ast.Traits {
-		cg.genTrait(tr)
 		cg.ln("")
 	}
 }
@@ -281,13 +281,19 @@ func (cg *Codegen) generateFunctions() {
 		}
 		fun := funDef.Sem()
 		name := cg.decorateFuncName(fun)
-		cg.ln("%s = %s;", name, cg.genFunction(funDef.Sem()))
+		if !cg.canGenerate(fun) {
+			continue
+		}
+		cg.ln("%s = %s;", name, cg.genFunction(fun))
 		cg.ln("")
 	}
 }
 
 func (cg *Codegen) generateLets() {
 	for _, let := range cg.Ast.Lets {
+		if !cg.canGenerate(let) {
+			continue
+		}
 		cg.genLet(let)
 		cg.ln("")
 	}

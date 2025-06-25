@@ -4,76 +4,76 @@ import "../base";
 
 impl number {
     #[global = "tostring"]
-    pub func to_string(self) -> string {}
+    pub func to_string(self) -> string;
 
     #[global = "math.abs"]
-    pub func abs(self) -> number {}
+    pub func abs(self) -> number;
 
     #[global = "math.acos"]
-    pub func acos(self) -> number {}
+    pub func acos(self) -> number;
 
     #[global = "math.asin"]
-    pub func asin(self) -> number {}
+    pub func asin(self) -> number;
 
     #[global = "math.atan"]
-    pub func atan(self) -> number {}
+    pub func atan(self) -> number;
 
     #[global = "math.ceil"]
-    pub func ceil(self) -> number {}
+    pub func ceil(self) -> number;
 
     #[global = "math.cos"]
-    pub func cos(self) -> number {}
+    pub func cos(self) -> number;
 
     #[global = "math.cosh"]
-    pub func cosh(self) -> number {}
+    pub func cosh(self) -> number;
 
     #[global = "math.deg"]
-    pub func deg(self) -> number {}
+    pub func deg(self) -> number;
 
     #[global = "math.exp"]
-    pub func exp(self) -> number {}
+    pub func exp(self) -> number;
 
     #[global = "math.floor"]
-    pub func floor(self) -> number {}
+    pub func floor(self) -> number;
 
     #[global = "math.frexp"]
-    pub func frexp(self) -> (number, number) {}
+    pub func frexp(self) -> (number, number);
 
     #[global = "math.log"]
-    pub func log(self, b: ?number) -> number {}
+    pub func log(self, b: ?number) -> number;
 
     #[global = "math.log10"]
-    pub func log10(self) -> number {}
+    pub func log10(self) -> number;
 
     #[global = "math.max"]
-    pub func max(self, mi: number, ma: number, ...number) -> number {}
+    pub func max(self, mi: number, ma: number, ...number) -> number;
 
     #[global = "math.min"]
-    pub func min(self, mi: number, ma: number, ...number) -> number {}
+    pub func min(self, mi: number, ma: number, ...number) -> number;
 
     #[global = "math.modf"]
-    pub func modf(self) -> (number, number) {}
+    pub func modf(self) -> (number, number);
 
     #[global = "math.pow"]
-    pub func pow(self, e: number) -> number {}
+    pub func pow(self, e: number) -> number;
 
     #[global = "math.rad"]
-    pub func rad(self) -> number {}
+    pub func rad(self) -> number;
 
     #[global = "math.sin"]
-    pub func sin(self) -> number {}
+    pub func sin(self) -> number;
 
     #[global = "math.sinh"]
-    pub func sinh(self) -> number {}
+    pub func sinh(self) -> number;
 
     #[global = "math.sqrt"]
-    pub func sqrt(self) -> number {}
+    pub func sqrt(self) -> number;
 
     #[global = "math.tan"]
-    pub func tan(self) -> number {}
+    pub func tan(self) -> number;
 
     #[global = "math.tanh"]
-    pub func tanh(self) -> number {}
+    pub func tanh(self) -> number;
 }
 
 impl number {

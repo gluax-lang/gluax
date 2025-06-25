@@ -33,7 +33,7 @@ func (a *Analysis) resolveImportPath(currentFile, relative string) (string, erro
 
 	// if it's not inside overrides, then make sure file exists on disk
 	// even though it's not possible to escape the workspace, we just want to have nice error messages
-	if _, ok := a.Project.overrides[resolved]; !ok {
+	if _, ok := a.Project.VirtualFiles()[resolved]; !ok {
 		shortPath := a.Project.StripWorkspace(resolved)
 		if _, err := a.Project.OsRoot.Stat(shortPath); os.IsNotExist(err) {
 			return "", fmt.Errorf("file does not exist: %s", shortPath)
