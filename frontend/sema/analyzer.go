@@ -499,12 +499,20 @@ func (a *Analysis) resolveImplementations() {
 					)
 				}
 
-				superMethodCopy := *superMethod
-				superMethodCopy.Params = superMethodCopy.Params[1:] // remove first parameter
-				otherMethodCopy := *funcTy
-				otherMethodCopy.Params = otherMethodCopy.Params[1:] // remove first parameter
+				var funcsMatch = func() bool {
+					s, o := superMethod, funcTy
+					if len(s.Params) != len(o.Params) {
+						return false
+					}
+					for i, p := range s.Params {
+						if !a.matchTypes(p, o.Params[i]) {
+							return false
+						}
+					}
+					return a.matchTypes(s.Return, o.Return)
+				}
 
-				if !a.matchFunction(&superMethodCopy, &otherMethodCopy) {
+				if !funcsMatch() {
 					a.Errorf(
 						funcTy.Span(),
 						"method `%s` does not match superclass `%s` signature",
