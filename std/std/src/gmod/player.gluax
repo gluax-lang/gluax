@@ -16,11 +16,14 @@ impl Player {
         }
         return player;
     }
+
+    #[global = "player.GetAll"]
+    pub func all() -> vec<Self>;
 }
 
 impl Player {
     #[global = "player.Iterator"]
-    pub func iter() -> (func(Player, any) -> (?number, ?Player), vec<Player>, number);
+    pub func iter() -> (func(Self, any) -> (?number, ?Self), vec<Self>, number);
 }
 
 impl Player {

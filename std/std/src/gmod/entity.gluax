@@ -17,12 +17,12 @@ impl Entity {
     }
 
     #[global = "ents.GetAll"]
-    pub func all() -> vec<Entity>;
+    pub func all() -> vec<Self>;
 }
 
 impl Entity {
     #[global = "ents.Iterator"]
-    pub func iter() -> (func(Entity, any) -> (?number, ?Entity), vec<Entity>, number);
+    pub func iter() -> (func(Self, any) -> (?number, ?Self), vec<Self>, number);
 }
 
 impl Entity {
