@@ -15,6 +15,12 @@ func (cg *Codegen) decorateFuncName(f *ast.SemFunction) string {
 	if f.IsGlobal() {
 		return f.GlobalName()
 	}
+	if f.Def.Name == nil {
+		var sb strings.Builder
+		sb.WriteString(frontend.FUNC_PREFIX)
+		sb.WriteString(fmt.Sprintf("_%d", f.Def.Span().ID))
+		return sb.String()
+	}
 	raw := f.Def.Name.Raw
 	if f.Trait != nil {
 		dTName := cg.decorateTraitName(f.Trait.Def, f.Class)
