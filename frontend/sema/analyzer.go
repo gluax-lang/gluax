@@ -235,15 +235,19 @@ func (a *Analysis) populateDeclarations() {
 	}
 
 	for _, funcDef := range astD.Funcs {
-		a.AddValueVisibility(a.Scope, funcDef.Name.Raw, &ast.Value{}, funcDef.Name.Span(), funcDef.Public)
+		fun := &SemFunction{}
+		val := ast.NewValue(fun)
+		a.AddValueVisibility(a.Scope, funcDef.Name.Raw, val, funcDef.Name.Span(), funcDef.Public)
 	}
 
 	for _, letDef := range astD.Lets {
-		for _, ident := range letDef.Names {
+		for i, ident := range letDef.Names {
 			if ident.Raw == "_" {
 				a.panic(ident.Span(), "cannot use `_` in top level let binding")
 			}
-			a.AddValueVisibility(a.Scope, ident.Raw, &ast.Value{}, ident.Span(), letDef.Public)
+			variable := ast.NewVariable(letDef, i, a.anyType())
+			val := ast.NewValue(variable)
+			a.AddValueVisibility(a.Scope, ident.Raw, val, ident.Span(), letDef.Public)
 		}
 	}
 }
@@ -259,6 +263,9 @@ func (a *Analysis) resolveImplementations() {
 		funcSem := a.handleFunctionSignature(a.Scope, funcDef)
 		funcDef.SetSem(funcSem)
 		sym := a.Scope.GetSymbol(funcDef.Name.Raw)
+		if sym == nil {
+			continue
+		}
 		sym.SetData(ast.NewValue(funcSem))
 		a.AddDecl(funcSem)
 	}
