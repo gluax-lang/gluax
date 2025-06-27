@@ -501,6 +501,9 @@ func (a *Analysis) resolveImplementations() {
 
 				var funcsMatch = func() bool {
 					s, o := superMethod, funcTy
+					if s.Def.Errorable != o.Def.Errorable {
+						return false
+					}
 					if len(s.Params) != len(o.Params) {
 						return false
 					}

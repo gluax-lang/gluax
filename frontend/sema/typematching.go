@@ -149,6 +149,9 @@ func (a *Analysis) matchClassTypeStrict(s *SemClass, other Type) bool {
 /* Function */
 
 func (a *Analysis) matchFunction(f *SemFunction, other *SemFunction) bool {
+	if f.Def.Errorable != other.Def.Errorable {
+		return false
+	}
 	if len(f.Params) != len(other.Params) {
 		return false
 	}
