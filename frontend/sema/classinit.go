@@ -35,10 +35,12 @@ func (a *Analysis) handleClassInit(scope *Scope, si *ast.ExprClassInit) Type {
 	for _, f := range si.Fields {
 		providedFields[f.Name.Raw] = struct{}{}
 	}
-	for name := range baseClass.AllFields() {
+	for name, field := range baseClass.AllFields() {
 		// if _, ok := providedFields[name]; !ok && ty.Kind() != ast.SemOptionalKind {
 		if _, ok := providedFields[name]; !ok {
-			a.panic(si.Span(), fmt.Sprintf("missing required field `%s` in class `%s` initialization", name, baseClass.Def.Name.Raw))
+			if !field.Ty.IsNilable() {
+				a.panicf(si.Span(), "missing required field `%s` in class `%s` initialization", name, baseClass.Def.Name.Raw)
+			}
 		}
 	}
 
