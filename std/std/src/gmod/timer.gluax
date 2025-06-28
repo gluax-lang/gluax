@@ -1,0 +1,2 @@
+#[global = "timer.Simple"]
+pub func simple(delay: number, f: func());

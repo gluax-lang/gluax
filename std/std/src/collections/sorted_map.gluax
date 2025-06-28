@@ -14,7 +14,6 @@ impl<K, V> SortedMap<K, V> {
         Self {
             keys: vec::<K>{},
             values: map::<K, V>{},
-            cmp: nil,
         }
     }
 

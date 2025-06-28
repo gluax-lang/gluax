@@ -3,6 +3,7 @@ import "player";
 import "color";
 import "vector";
 pub import "fs";
+pub import "timer";
 
 pub use entity::Entity;
 pub use entity::NULL;

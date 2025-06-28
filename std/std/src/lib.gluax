@@ -11,3 +11,4 @@ import "gmod/index" as gmod;
 import "public";
 
 pub use gmod::fs;
+pub use gmod::timer;
