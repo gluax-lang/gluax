@@ -186,7 +186,7 @@ func (p *parser) parseForExpr() ast.Expr {
 		p.expect(";")
 	}
 
-	variable := p.expectIdent()
+	variable := p.expectIdentMsgX("expected for variable name", FlagAllowUnderscore)
 
 	if p.tryConsume("=") {
 		return p.parseForNumExpr(label, variable, spanStart)
