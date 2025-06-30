@@ -12,4 +12,7 @@ pub use color::Color;
 pub use vector::Vector;
 
 #[global]
-pub func MsgC(...any);
+pub func msg_c(...any);
+
+#[global = "ProtectedCall"]
+pub func protected_call(f: anyfunc, ...any) -> bool;

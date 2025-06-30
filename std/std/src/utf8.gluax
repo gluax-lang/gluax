@@ -238,6 +238,6 @@ pub func char(code: number) -> string {
             (0x80 | (code & 0x3F))
         )
     } else {
-        base::error(ERR_INV_BYTE, 0)
+        base::error(ERR_INV_BYTE)
     }
 }
