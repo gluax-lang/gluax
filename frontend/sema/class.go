@@ -74,7 +74,7 @@ func (a *Analysis) instantiateClass(def *ast.Class) *SemClass {
 	return st
 }
 
-func (a *Analysis) resolveClass(scope *Scope, st *ast.SemClass, span Span) *ast.SemClass {
+func (a *Analysis) resolveClass(st *ast.SemClass) *ast.SemClass {
 	st = a.instantiateClass(st.Def)
 	return st
 }
@@ -82,7 +82,7 @@ func (a *Analysis) resolveClass(scope *Scope, st *ast.SemClass, span Span) *ast.
 func (a *Analysis) GetClass(def *ast.Class) *SemClass {
 	stack := def.GetClassStack()
 	for _, inst := range stack {
-		return inst.Type.Ref() // reuse cached *ClassType
+		return inst.Ref() // reuse cached *ClassType
 	}
 	return nil
 }

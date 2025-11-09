@@ -72,7 +72,7 @@ func (a *Analysis) resolvePathType(scope *Scope, path *ast.Path) Type {
 
 		var ty *Type
 		if sym.IsType() && sym.Type().IsClass() {
-			cls := a.resolveClass(scope, sym.Type().Class(), leaf.Span())
+			cls := a.resolveClass(sym.Type().Class())
 			tyO := ast.NewSemType(cls, leaf.Span())
 			ty = &tyO
 		} else {
@@ -109,7 +109,7 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) *Value {
 			var resolvedTy Type
 
 			if baseTy.IsClass() {
-				st := a.resolveClass(scope, baseTy.Class(), leaf.Span())
+				st := a.resolveClass(baseTy.Class())
 				resolvedTy = ast.NewSemType(st, baseTy.Span())
 			} else {
 				resolvedTy = *baseTy

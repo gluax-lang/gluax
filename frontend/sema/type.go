@@ -10,7 +10,7 @@ func (a *Analysis) resolveType(scope *Scope, ty ast.Type) Type {
 		found := a.resolvePathType(scope, t)
 		if found.IsClass() {
 			st := found.Class()
-			_ = a.resolveClass(scope, st, t.Span())
+			_ = a.resolveClass(st)
 		}
 		found.SetSpan(t.Span())
 		return found

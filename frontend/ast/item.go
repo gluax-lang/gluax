@@ -53,11 +53,7 @@ type ClassField struct {
 	Public bool
 }
 
-type ClassInstance struct {
-	Type *SemClass
-}
-
-type ClassesStack []ClassInstance
+type ClassesStack []*SemClass
 
 type Class struct {
 	Public         bool
@@ -89,7 +85,7 @@ func (si Class) Span() common.Span {
 }
 
 func (s *Class) AddClass(st *SemClass) {
-	s.CreatedClasses = append(s.CreatedClasses, ClassInstance{st})
+	s.CreatedClasses = append(s.CreatedClasses, st)
 }
 
 func (s *Class) GetClassStack() ClassesStack {

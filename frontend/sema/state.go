@@ -201,7 +201,7 @@ func (a *Analysis) GetClassesImplementingTrait(trait *ast.SemTrait) map[*ast.Sem
 			classStack := classDef.GetClassStack()
 
 			for _, classInstance := range classStack {
-				semClass := classInstance.Type
+				semClass := classInstance
 
 				// Collect all methods from this trait implementation
 				methods := make([]*SemFunction, 0, len(meta.Methods))
