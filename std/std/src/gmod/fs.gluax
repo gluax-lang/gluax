@@ -14,7 +14,7 @@ pub func delete(fname: string, path: ?string) -> bool;
 pub func exists(fname: string, path: string) -> bool;
 
 #[global = "file.Find"]
-pub func find(pattern: string, path: string, sorting: ?string) -> (?vec<string>, ?vec<string>);
+pub func find(pattern: string, path: string, sorting: ?string) -> (?table, ?table);
 
 #[global = "file.IsDir"]
 pub func is_dir(path: string, path: string) -> bool;

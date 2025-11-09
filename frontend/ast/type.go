@@ -9,13 +9,13 @@ type Type interface {
 	Span() common.Span
 }
 
-func IsNilable(ty Type) bool {
-	if p, ok := ty.(*Path); ok {
-		// A path is nilable if it's `nilable<T>`
-		return len(p.Segments) == 1 && p.Segments[0].Ident.Raw == "nilable"
-	}
-	return false
-}
+// func IsNilable(ty Type) bool {
+// 	if p, ok := ty.(*Path); ok {
+// 		// A path is nilable if it's `nilable<T>`
+// 		return len(p.Segments) == 1 && p.Segments[0].Ident.Raw == "nilable"
+// 	}
+// 	return false
+// }
 
 func IsSelf(ty Type) bool {
 	if p, ok := ty.(*Path); ok {

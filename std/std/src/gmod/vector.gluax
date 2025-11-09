@@ -91,7 +91,7 @@ impl Vector {
     pub func to_screen(self) -> VectorToScreen;
 
     #[rename_to = "ToTable"]
-    pub func to_table(self) -> vec<number>;
+    pub func to_table(self) -> table;
 
     #[rename_to = "Unpack"]
     pub func unpack(self) -> (number, number, number);

@@ -5,7 +5,7 @@ pub import "math";
 pub import "debug";
 pub import "bit";
 // pub import "utf8";
-pub import "collections/index" as collections;
+// pub import "collections/index" as collections;
 pub import "gmod/index" as gmod;
 
 import "public";

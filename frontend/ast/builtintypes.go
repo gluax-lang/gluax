@@ -23,10 +23,6 @@ pub class number { _priv: nil }
 pub class string { _priv: nil }
 
 #[no_metatable]
-#[sealed]
-pub class nilable<T> { _priv: nil }
-
-#[no_metatable]
 #[no_impl]
 #[sealed]
 pub class anyfunc { _priv: nil }
@@ -53,7 +49,6 @@ var builtin = map[string]struct{}{
 	"bool":    {},
 	"number":  {},
 	"string":  {},
-	"nilable": {},
 	"anyfunc": {},
 	"table":   {},
 }

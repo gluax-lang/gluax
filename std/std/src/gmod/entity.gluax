@@ -16,13 +16,14 @@ impl Entity {
         return ent;
     }
 
+    // TODO: make it use new vec when it's back
     #[global = "ents.GetAll"]
-    pub func all() -> vec<Self>;
+    pub func all() -> table;
 }
 
 impl Entity {
     #[global = "ents.Iterator"]
-    pub func iter() -> (func(Self, any) -> (?number, ?Self), vec<Self>, number);
+    pub func iter() -> (func(Self, any) -> (?number, ?Self), table, number);
 }
 
 impl Entity {

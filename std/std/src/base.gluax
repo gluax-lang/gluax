@@ -23,7 +23,7 @@ pub func setmetatable(t: any, m: any);
 pub func tonumber(v: any, b: ?number) -> ?number;
 
 #[global]
-pub func getfenv(v: any) -> map<any, any>;
+pub func getfenv(v: any) -> table;
 
 #[global]
 pub func pcall(f: anyfunc, ...any) -> (bool, ...any);
@@ -43,16 +43,16 @@ pub func type(v: any) -> string;
 #[global]
 pub func collectgarbage(a: ?string, a: ?number) -> any;
 
-pub func getfenv_func(f: anyfunc) -> map<any, any> {
+pub func getfenv_func(f: anyfunc) -> table {
     getfenv(f)
 }
 
-pub func getfenv_level(level: number) ! -> map<any, any> {
+pub func getfenv_level(level: number) ! -> table {
     let success, res = pcall(getfenv, level);
     if !success {
         throw (res unsafe_cast_as string);
     }
-    res unsafe_cast_as map<any, any>
+    res unsafe_cast_as table
 }
 
 pub func printf(fmt: string, ...any) {
@@ -71,10 +71,10 @@ pub class debug {}
 
 impl debug {
     #[global = "debug.getinfo"]
-    func getinfo_func(f: anyfunc, what: ?string) -> map<string, any>;
+    func getinfo_func(f: anyfunc, what: ?string) -> table;
 
     #[global = "debug.getinfo"]
-    func getinfo_level(l: number, what: ?string) -> map<string, any>;
+    func getinfo_level(l: number, what: ?string) -> table;
 
     #[global = "debug.Trace"]
     func trace();

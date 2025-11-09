@@ -18,12 +18,12 @@ impl Player {
     }
 
     #[global = "player.GetAll"]
-    pub func all() -> vec<Self>;
+    pub func all() -> table;
 }
 
 impl Player {
     #[global = "player.Iterator"]
-    pub func iter() -> (func(Self, any) -> (?number, ?Self), vec<Self>, number);
+    pub func iter() -> (func(Self, any) -> (?number, ?Self), table, number);
 }
 
 impl Player {
