@@ -15,8 +15,6 @@ const (
 
 	FlagAllowUnderscore
 	FlagInjectFakeIdent
-
-	FlagTurboFishGenerics
 )
 
 // Has reports whether f includes all bits in mask.

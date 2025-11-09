@@ -22,12 +22,12 @@ func (t *Union) Span() common.Span {
 }
 
 type SemUnion struct {
-	*Union
 	Types []SemType // The types that form the union
+	Span_ common.Span
 }
 
 func NewSemUnion(union *Union, types []SemType) *SemUnion {
-	return &SemUnion{Union: union, Types: types}
+	return &SemUnion{Types: types, Span_: union.Span()}
 }
 
 func (u *SemUnion) TypeKind() SemTypeKind {
@@ -47,7 +47,7 @@ func (u *SemUnion) LSPString() string {
 }
 
 func (u *SemUnion) Span() common.Span {
-	return u.Union.Span()
+	return u.Span_
 }
 
 func (t *SemType) IsUnion() bool {

@@ -38,10 +38,7 @@ func (cg *Codegen) classFuncUsedName(clss *ast.SemClass, methodName string) stri
 }
 
 func (cg *Codegen) generateClass(st *ast.SemClass) {
-	if !st.IsFullyConcrete() {
-		return // we don't generate classes with generics, because they will never be used
-	}
-	if st.IsNilable() || st.IsAnyFunc() {
+	if st.IsAnyFunc() {
 		// don't generate phantom types
 		return
 	}

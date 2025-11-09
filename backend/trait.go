@@ -43,10 +43,6 @@ func (cg *Codegen) genTraitImpl(tr *ast.SemTrait) {
 	classesAndMethods := cg.Analysis.GetClassesImplementingTrait(tr)
 
 	for class, methods := range classesAndMethods {
-		if !class.IsFullyConcrete() {
-			continue
-		}
-
 		dTName := cg.decorateTraitName(tr.Def, class)
 
 		cg.ln("%s = {", dTName)

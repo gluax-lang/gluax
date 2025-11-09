@@ -67,7 +67,6 @@ func (p *parser) parseClass() ast.Item {
 	p.advance() // skip `class`
 
 	name := p.expectIdentMsg("expected class name")
-	generics := p.parseGenerics()
 
 	var super *ast.Type
 	if p.tryConsume(":") {
@@ -98,7 +97,7 @@ func (p *parser) parseClass() ast.Item {
 
 	span := SpanFrom(spanStart, p.prevSpan())
 
-	st := ast.NewClass(name, generics, super, fields, span)
+	st := ast.NewClass(name, super, fields, span)
 	return st
 }
 
@@ -118,7 +117,6 @@ func (p *parser) parseImpl() ast.Item {
 	spanStart := p.span()
 
 	p.expect("impl")
-	generics := p.parseGenerics()
 	ty := p.parseType()
 
 	if p.tryConsume("for") {
@@ -146,7 +144,7 @@ func (p *parser) parseImpl() ast.Item {
 		p.expect("}")
 
 		span := SpanFrom(spanStart, p.prevSpan())
-		return ast.NewImplTraitForClass(generics, *trait, st, methods, span)
+		return ast.NewImplTraitForClass(*trait, st, methods, span)
 	}
 
 	p.expect("{")
@@ -169,7 +167,7 @@ func (p *parser) parseImpl() ast.Item {
 
 	span := SpanFrom(spanStart, p.prevSpan())
 
-	return ast.NewImplClass(generics, ty, methods, span)
+	return ast.NewImplClass(ty, methods, span)
 }
 
 func (p *parser) parseClassMethod(bodyOptional bool) ast.Function {

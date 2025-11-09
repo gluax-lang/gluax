@@ -22,14 +22,6 @@ pub class number { _priv: nil }
 #[sealed]
 pub class string { _priv: nil }
 
-#[no__index]
-#[sealed]
-pub class vec<T> { _priv: nil }
-
-#[no__index]
-#[sealed]
-pub class map<K, V> { _priv: nil }
-
 #[no_metatable]
 #[sealed]
 pub class nilable<T> { _priv: nil }
@@ -61,8 +53,6 @@ var builtin = map[string]struct{}{
 	"bool":    {},
 	"number":  {},
 	"string":  {},
-	"vec":     {},
-	"map":     {},
 	"nilable": {},
 	"anyfunc": {},
 	"table":   {},

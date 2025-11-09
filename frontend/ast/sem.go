@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/gluax-lang/gluax/common"
-	"github.com/gluax-lang/gluax/frontend/lexer"
 )
 
 type SemTypeKind uint8
@@ -21,8 +20,6 @@ func (k SemTypeKind) String() string {
 		return "tuple"
 	case SemVarargKind:
 		return "vararg"
-	case SemGenericKind:
-		return "generic"
 	case SemUnreachableKind:
 		return "unreachable"
 	case SemErrorKind:
@@ -40,7 +37,6 @@ const (
 	SemFunctionKind
 	SemTupleKind
 	SemVarargKind
-	SemGenericKind
 	SemUnreachableKind
 	SemUnionKind
 	SemErrorKind
@@ -89,10 +85,29 @@ func (t SemType) Span() common.Span {
 }
 
 func (t SemType) NilableInnerType() SemType {
-	if !t.IsNilable() {
+	if !t.IsUnion() {
 		panic("not a nilable type")
 	}
-	return t.Class().InnerType()
+	// check that it at least contains nil
+	union := t.Union()
+	foundNil := false
+	for _, ty := range union.Types {
+		if ty.IsNil() {
+			foundNil = true
+			break
+		}
+	}
+	if !foundNil {
+		panic("not a nilable type")
+	}
+	innerType := []SemType{}
+	for _, ty := range union.Types {
+		if !ty.IsNil() {
+			innerType = append(innerType, ty)
+		}
+	}
+	ty := &SemUnion{Types: innerType, Span_: union.Span()}
+	return NewSemType(ty, t.Span())
 }
 
 func (t *SemType) Class() *SemClass {
@@ -123,13 +138,6 @@ func (t SemType) Vararg() SemVararg {
 	return t.data.(SemVararg)
 }
 
-func (t SemType) Generic() SemGenericType {
-	if t.Kind() != SemGenericKind {
-		panic("not a generic")
-	}
-	return t.data.(SemGenericType)
-}
-
 func (t SemType) Unreachable() SemUnreachable {
 	if t.Kind() != SemUnreachableKind {
 		panic("not an unreachable")
@@ -141,7 +149,6 @@ func (t SemType) IsClass() bool       { return t.Kind() == SemClassKind }
 func (t SemType) IsFunction() bool    { return t.Kind() == SemFunctionKind }
 func (t SemType) IsUnreachable() bool { return t.Kind() == SemUnreachableKind }
 func (t SemType) IsError() bool       { return t.Kind() == SemErrorKind }
-func (t SemType) IsGeneric() bool     { return t.Kind() == SemGenericKind }
 func (t SemType) IsTuple() bool       { return t.Kind() == SemTupleKind }
 func (t SemType) IsVararg() bool      { return t.Kind() == SemVarargKind }
 
@@ -160,16 +167,26 @@ func (t SemType) isNamed(wanted string) bool {
 }
 
 func (t SemType) IsNil() bool     { return t.isNamed("nil") }
-func (t SemType) IsNilable() bool { return t.isNamed("nilable") }
 func (t SemType) IsAny() bool     { return t.isNamed("any") }
 func (t SemType) IsAnyFunc() bool { return t.isNamed("anyfunc") }
 func (t SemType) IsTable() bool   { return t.isNamed("table") }
-func (t SemType) IsVec() bool     { return t.isNamed("vec") }
-func (t SemType) IsMap() bool     { return t.isNamed("map") }
 func (t SemType) IsBool() bool    { return t.isNamed("bool") }
 func (t SemType) IsNumber() bool  { return t.isNamed("number") }
 func (t SemType) IsString() bool  { return t.isNamed("string") }
 func (t SemType) IsLogical() bool { return t.IsBool() || t.IsNilable() }
+
+func (t SemType) IsNilable() bool {
+	if !t.IsUnion() {
+		return false
+	}
+	union := t.Union()
+	for _, ty := range union.Types {
+		if ty.IsNil() {
+			return true
+		}
+	}
+	return false
+}
 
 // FirstType returns the first type in a tuple or the type itself if it's not a tuple.
 func (t SemType) FirstType() SemType {
@@ -215,20 +232,17 @@ func (f SemaClassField) Span() common.Span {
 }
 
 type SemClass struct {
-	Def      *Class
-	Generics SemGenerics
-	Super    *SemClass
-	Fields   map[string]SemaClassField
-	Scope    any
+	Def    *Class
+	Super  *SemClass
+	Fields map[string]SemaClassField
+	Scope  any
 }
 
 func NewSemClass(def *Class) *SemClass {
-	generics := SemGenerics{}
 	fields := map[string]SemaClassField{}
 	return &SemClass{
-		Def:      def,
-		Generics: generics,
-		Fields:   fields,
+		Def:    def,
+		Fields: fields,
 	}
 }
 
@@ -238,30 +252,14 @@ func (t *SemClass) Ref() *SemClass {
 	return t
 }
 
-func (t *SemClass) IsGeneric() bool {
-	return len(t.Def.Generics.Params) > 0
-}
-
-func (t *SemClass) InnerType() SemType {
-	return t.Generics.Params[0]
-}
-
-func (t *SemClass) InnerType2() (SemType, SemType) {
-	return t.Generics.Params[0], t.Generics.Params[1]
-}
-
 func (s SemClass) String() string {
-	if s.IsNilable() {
-		return "?" + s.InnerType().String()
-	}
-	return s.Def.Name.Raw + s.Generics.String()
+	return s.Def.Name.Raw
 }
 
 func (s SemClass) LSPString() string {
 	var sb strings.Builder
 	sb.WriteString("class ")
 	sb.WriteString(s.Def.Name.Raw)
-	sb.WriteString(s.Generics.String())
 	fieldsLen := len(s.Fields)
 	if fieldsLen == 0 {
 		sb.WriteString(" {}")
@@ -280,10 +278,6 @@ func (s SemClass) LSPString() string {
 		sb.WriteString("}")
 	}
 	return sb.String()
-}
-
-func (s SemClass) IsNilable() bool {
-	return s.Def.Name.Raw == "nilable"
 }
 
 func (s SemClass) IsAnyFunc() bool {
@@ -317,15 +311,6 @@ func (s SemClass) IsSubClassOf(other *SemClass) bool {
 	return s.Super.IsSubClassOf(other)
 }
 
-func (c SemClass) IsFullyConcrete() bool {
-	for _, g := range c.Generics.Params {
-		if g.IsGeneric() {
-			return false
-		}
-	}
-	return true
-}
-
 func (c SemClass) IsGlobal() bool {
 	return c.Def.IsGlobal()
 }
@@ -353,10 +338,9 @@ type SemFunction struct {
 	Params []SemType
 	Return SemType
 
-	Class    *SemClass
-	Trait    *SemTrait // Trait this function is defined in, if any
-	Scope    any       // Scope for this function, used for generics resolution and other shit
-	Generics Generics
+	Class *SemClass
+	Trait *SemTrait // Trait this function is defined in, if any
+	Scope any       // Scope for this function, used for generics resolution and other shit
 }
 
 func (t *SemFunction) TypeKind() SemTypeKind { return SemFunctionKind }
@@ -563,79 +547,3 @@ func (t SemError) TypeKind() SemTypeKind { return SemErrorKind }
 
 func (t SemError) String() string    { return "error" }
 func (t SemError) LSPString() string { return t.String() }
-
-/* Generics */
-
-type SemGenericType struct {
-	Ident  lexer.TokIdent // "T", "E"
-	Traits []*SemTrait    // Traits that this generic type implements, e.g. "T: Eq + Ord"
-	Bound  bool
-}
-
-func NewSemGenericType(ident lexer.TokIdent, traits []*SemTrait, bound bool) SemType {
-	return NewSemType(SemGenericType{Ident: ident, Traits: traits, Bound: bound}, ident.Span())
-}
-
-func (t SemGenericType) TypeKind() SemTypeKind { return SemGenericKind }
-
-func (gt SemGenericType) String() string {
-	var sb strings.Builder
-	sb.WriteString(gt.Ident.Raw)
-	if len(gt.Traits) > 0 {
-		sb.WriteString(": ")
-		for i, trait := range gt.Traits {
-			if i > 0 {
-				sb.WriteString(" + ")
-			}
-			sb.WriteString(trait.Def.Name.Raw)
-		}
-	}
-	return sb.String()
-}
-func (gt SemGenericType) LSPString() string { return gt.String() }
-
-type SemGenerics struct {
-	Params []SemType
-}
-
-func NewSemGenerics(params []SemType) *SemGenerics {
-	return &SemGenerics{Params: params}
-}
-
-func (gs SemGenerics) String() string {
-	if len(gs.Params) == 0 {
-		return ""
-	}
-	var sb strings.Builder
-	sb.WriteByte('<')
-	for i, param := range gs.Params {
-		if i > 0 {
-			sb.WriteString(", ")
-		}
-		sb.WriteString(param.String())
-	}
-	sb.WriteByte('>')
-	return sb.String()
-}
-
-func (gs SemGenerics) Len() int {
-	return len(gs.Params)
-}
-
-func (gs SemGenerics) IsEmpty() bool {
-	return len(gs.Params) == 0
-}
-
-func (gs SemGenerics) BoundCount() int {
-	n := 0
-	for _, g := range gs.Params {
-		if !g.IsGeneric() || g.Generic().Bound {
-			n++
-		}
-	}
-	return n
-}
-
-func (gs SemGenerics) UnboundCount() int {
-	return len(gs.Params) - gs.BoundCount()
-}

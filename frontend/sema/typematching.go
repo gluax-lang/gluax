@@ -31,8 +31,6 @@ func (a *Analysis) matchTypes(t Type, other Type) bool {
 		return a.matchTupleType(t.Tuple(), other)
 	case ast.SemVarargKind:
 		return a.matchVarargType(t.Vararg(), other)
-	case ast.SemGenericKind:
-		return a.matchGenericType(t.Generic(), other)
 	case ast.SemUnionKind:
 		return a.matchUnionType(t.Union(), other)
 	case ast.SemUnreachableKind:
@@ -57,8 +55,6 @@ func (a *Analysis) MatchTypesStrict(t Type, other Type) bool {
 		return a.matchTupleTypeStrict(t.Tuple(), other)
 	case ast.SemVarargKind:
 		return a.matchVarargTypeStrict(t.Vararg(), other)
-	case ast.SemGenericKind:
-		return a.matchGenericTypeStrict(t.Generic(), other)
 	case ast.SemUnionKind:
 		return a.matchUnionTypeStrict(t.Union(), other)
 	case ast.SemUnreachableKind:
@@ -77,20 +73,8 @@ func (a *Analysis) matchClassType(s *SemClass, other Type) bool {
 		return true
 	}
 
-	if s.IsTable() && (other.IsTable() || other.IsVec() || other.IsMap()) {
+	if s.IsTable() && (other.IsTable()) {
 		return true
-	}
-
-	if s.IsNilable() {
-		inner := s.InnerType()
-		if other.IsNil() {
-			return true
-		}
-		if other.IsNilable() {
-			otherInner := other.Class().InnerType()
-			return a.matchTypes(inner, otherInner)
-		}
-		return a.matchTypes(inner, other)
 	}
 
 	if other.Kind() != ast.SemClassKind {
@@ -111,17 +95,6 @@ func (a *Analysis) matchClassType(s *SemClass, other Type) bool {
 		return false
 	}
 
-	if len(s.Generics.Params) != len(oS.Generics.Params) {
-		return false
-	}
-
-	for i, sg := range s.Generics.Params {
-		og := oS.Generics.Params[i]
-		if !sg.IsAny() && !a.matchTypes(sg, og) {
-			return false
-		}
-	}
-
 	return true
 }
 
@@ -134,17 +107,6 @@ func (a *Analysis) matchClassTypeStrict(s *SemClass, other Type) bool {
 
 	if s.Def.Span() != oS.Def.Span() {
 		return false
-	}
-
-	if len(s.Generics.Params) != len(oS.Generics.Params) {
-		return false
-	}
-
-	for i, sg := range s.Generics.Params {
-		og := oS.Generics.Params[i]
-		if !a.MatchTypesStrict(sg, og) {
-			return false
-		}
 	}
 
 	return true
@@ -217,33 +179,6 @@ func (a *Analysis) matchVarargTypeStrict(v SemVararg, other Type) bool {
 		return false
 	}
 	return a.MatchTypesStrict(v.Type, other.Vararg().Type)
-}
-
-/* Generic */
-
-func (a *Analysis) matchGenericType(g SemGenericType, other Type) bool {
-	if other.IsGeneric() {
-		return a.matchGenericTypeStrict(g, other)
-	}
-	return false
-}
-
-func (a *Analysis) matchGenericTypeStrict(g SemGenericType, other Type) bool {
-	// other is guaranteed to be a generic
-	otherG := other.Generic()
-	if g.Ident.Raw != otherG.Ident.Raw {
-		return false
-	}
-	gTraits, otherGTraits := g.Traits, otherG.Traits
-	if len(gTraits) != len(otherGTraits) {
-		return false
-	}
-	for i, trait := range gTraits {
-		if trait != otherGTraits[i] {
-			return false
-		}
-	}
-	return true
 }
 
 /* Union */

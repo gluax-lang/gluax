@@ -7,7 +7,6 @@ import (
 
 	"github.com/gluax-lang/gluax/common"
 	"github.com/gluax-lang/gluax/frontend/ast"
-	"github.com/gluax-lang/gluax/frontend/lexer"
 	protocol "github.com/gluax-lang/lsp"
 )
 
@@ -166,26 +165,16 @@ func (a *Analysis) anyType() Type {
 	return a.getBuiltinType("any")
 }
 
-func (a *Analysis) instantiateBuiltinClass(name string, span Span, params ...Type) Type {
-	if a.SetClassSetupSpan(span) {
-		defer a.ClearClassSetupSpan()
+func (a *Analysis) unionType(span Span, types ...Type) Type {
+	if len(types) == 0 {
+		panic("unionType called with no types")
 	}
-	builtin := a.getBuiltinType(name)
-	st := builtin.Class()
-	newSt := a.instantiateClass(st.Def, params)
-	return ast.NewSemType(newSt, span)
+	unionT := &SemUnion{Types: types, Span_: span}
+	return ast.NewSemType(unionT, span)
 }
 
-func (a *Analysis) vecType(t Type, span Span) Type {
-	return a.instantiateBuiltinClass("vec", span, t)
-}
-
-func (a *Analysis) mapType(key, value Type, span Span) Type {
-	return a.instantiateBuiltinClass("map", span, key, value)
-}
-
-func (a *Analysis) nilableType(t Type, span Span) Type {
-	return a.instantiateBuiltinClass("nilable", span, t)
+func (a *Analysis) nilableType(base Type, span Span) Type {
+	return a.unionType(span, a.nilType(), base)
 }
 
 func (a *Analysis) tupleType(span Span, other ...Type) Type {
@@ -228,7 +217,7 @@ func (a *Analysis) populateDeclarations() {
 
 	for _, stDef := range astD.Classes {
 		stDef.Scope = a.Scope
-		st := a.setupClass(stDef, nil, false)
+		st := a.setupClass(stDef)
 		stSem := ast.NewSemType(st, stDef.Name.Span())
 		a.AddTypeVisibility(a.Scope, stDef.Name.Raw, stSem, stDef.Public)
 		a.AddDecl(stSem)
@@ -295,14 +284,9 @@ func (a *Analysis) resolveImplementations() {
 	}
 
 	for _, stDef := range a.Ast.Classes {
-		st := a.GetClass(stDef, nil)
-		a.buildGenericsTable(st.Scope.(*Scope), st, nil)
+		st := a.GetClass(stDef)
 
-		SelfSt := a.setupClass(stDef, nil, true)
-		for i, g := range SelfSt.Def.Generics.Params {
-			traits := getGenericParamTraits(g)
-			SelfSt.Generics.Params[i] = ast.NewSemGenericType(g.Name, traits, true)
-		}
+		SelfSt := a.setupClass(stDef)
 		SelfStTy := ast.NewSemType(SelfSt, stDef.Span())
 		SelfStScope := SelfSt.Scope.(*Scope)
 		SelfStScope.ForceAddType("Self", SelfStTy)
@@ -315,7 +299,7 @@ func (a *Analysis) resolveImplementations() {
 		if superDef == nil {
 			continue
 		}
-		st := a.GetClass(stDef, nil)
+		st := a.GetClass(stDef)
 		stScope := st.Scope.(*Scope)
 
 		superT := a.resolveType(stScope, *superDef)
@@ -332,7 +316,7 @@ func (a *Analysis) resolveImplementations() {
 	}
 
 	for _, stDef := range a.Ast.Classes {
-		st := a.GetClass(stDef, nil)
+		st := a.GetClass(stDef)
 		stScope := st.Scope.(*Scope)
 		SelfSt := stScope.GetType("Self").Class()
 		a.collectClassFields(SelfSt)
@@ -347,8 +331,6 @@ func (a *Analysis) resolveImplementations() {
 		trait := traitDef.Sem
 		scope := trait.Scope.(*Scope)
 		SelfScope := scope.Child(false)
-		SelfGeneric := ast.NewSemGenericType(lexer.NewTokIdent("Self", traitDef.Name.Span()), append([]*ast.SemTrait{trait}, trait.SuperTraits...), true)
-		SelfScope.ForceAddType("Self", SelfGeneric)
 		for _, method := range traitDef.Methods {
 			name := method.Name.Raw
 			if _, exists := trait.Methods[name]; exists {
@@ -378,7 +360,7 @@ func (a *Analysis) resolveImplementations() {
 		trait := traitPath.Trait()
 		implTrait.ResolvedTrait = trait
 
-		genericsScope := a.setupTypeGenerics(a.Scope, implTrait.Generics, nil)
+		genericsScope := a.Scope.Child((false))
 
 		stTy := a.resolveType(genericsScope, implTrait.Class)
 		if !stTy.IsClass() {
@@ -415,12 +397,10 @@ func (a *Analysis) resolveImplementations() {
 			}
 			funcTy := a.handleFunctionSignature(genericsScope, &method)
 			funcTy.Scope = a.Scope
-			funcTy.Generics = implTrait.Generics
 			implMethods[method.Name.Raw] = funcTy
 			implTrait.Checks = append(implTrait.Checks, func() {
 				funcTy := a.handleFunction(genericsScope, &method)
 				funcTy.Scope = a.Scope
-				funcTy.Generics = implTrait.Generics
 				implMethods[method.Name.Raw] = funcTy
 			})
 		}
@@ -463,7 +443,7 @@ func (a *Analysis) resolveImplementations() {
 
 	for _, impl := range a.Ast.ImplClasses {
 		impl.Scope = a.Scope
-		genericsScope := a.setupTypeGenerics(a.Scope, impl.Generics, nil)
+		genericsScope := a.Scope.Child(false)
 		stTy := a.resolveType(genericsScope, impl.Class)
 		if !stTy.IsClass() {
 			a.panicf(impl.Class.Span(), "expected class type, got: %s", stTy.String())
@@ -481,7 +461,6 @@ func (a *Analysis) resolveImplementations() {
 		for _, method := range impl.Methods {
 			funcTy := a.handleFunctionSignature(genericsScope, &method)
 			funcTy.Scope = a.Scope
-			funcTy.Generics = impl.Generics
 			methodName := method.Name.Raw
 			a.RegisterClassMethod(st, funcTy)
 			impl.Checks = append(impl.Checks, func() {
@@ -594,9 +573,6 @@ func (a *Analysis) analyzeImplementations() {
 			check()
 		}
 	}
-
-	a.CheckConflictingMethodImplementations()
-	a.CheckConflictingTraitImplementations()
 
 	if a.Project.Main == a.Src && !a.Project.Config.Lib {
 		// check that `main` function exists in the main file

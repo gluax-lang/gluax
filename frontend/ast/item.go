@@ -54,7 +54,6 @@ type ClassField struct {
 }
 
 type ClassInstance struct {
-	Args []SemType
 	Type *SemClass
 }
 
@@ -63,7 +62,6 @@ type ClassesStack []ClassInstance
 type Class struct {
 	Public         bool
 	Name           lexer.TokIdent
-	Generics       Generics
 	Super          *Type // the type this class extends, if any
 	Fields         []ClassField
 	Attributes     Attributes
@@ -72,10 +70,9 @@ type Class struct {
 	span           common.Span
 }
 
-func NewClass(name lexer.TokIdent, generics Generics, super *Type, fields []ClassField, span common.Span) *Class {
+func NewClass(name lexer.TokIdent, super *Type, fields []ClassField, span common.Span) *Class {
 	return &Class{
 		Name:           name,
-		Generics:       generics,
 		Super:          super,
 		Fields:         fields,
 		CreatedClasses: make(ClassesStack, 0, 4),
@@ -91,8 +88,8 @@ func (si Class) Span() common.Span {
 	return si.span
 }
 
-func (s *Class) AddClass(st *SemClass, concrete []SemType) {
-	s.CreatedClasses = append(s.CreatedClasses, ClassInstance{concrete, st})
+func (s *Class) AddClass(st *SemClass) {
+	s.CreatedClasses = append(s.CreatedClasses, ClassInstance{st})
 }
 
 func (s *Class) GetClassStack() ClassesStack {
@@ -116,7 +113,6 @@ func (c *Class) GlobalName() string {
 /* Impl Class */
 
 type ImplClass struct {
-	Generics      Generics
 	Class         Type
 	Methods       []Function
 	Scope         any
@@ -127,8 +123,8 @@ type ImplClass struct {
 	Checks    []func()  // these checks are ran in analyzeImplementations
 }
 
-func NewImplClass(generics Generics, st Type, methods []Function, span common.Span) *ImplClass {
-	return &ImplClass{Generics: generics, Class: st, Methods: methods, span: span}
+func NewImplClass(st Type, methods []Function, span common.Span) *ImplClass {
+	return &ImplClass{Class: st, Methods: methods, span: span}
 }
 
 func (is *ImplClass) isItem() {}
@@ -166,7 +162,6 @@ func (t Trait) Span() common.Span {
 
 /* Impl Trait for Class */
 type ImplTraitForClass struct {
-	Generics      Generics
 	Trait         Path
 	Class         Type // the type this trait is implemented for
 	Methods       []Function
@@ -176,8 +171,8 @@ type ImplTraitForClass struct {
 	Checks []func() // these checks are ran in analyzeImplementations
 }
 
-func NewImplTraitForClass(g Generics, trait Path, st Type, Methods []Function, span common.Span) *ImplTraitForClass {
-	return &ImplTraitForClass{Generics: g, Trait: trait, Class: st, Methods: Methods, span: span}
+func NewImplTraitForClass(trait Path, st Type, Methods []Function, span common.Span) *ImplTraitForClass {
+	return &ImplTraitForClass{Trait: trait, Class: st, Methods: Methods, span: span}
 }
 
 func (it *ImplTraitForClass) isItem() {}
