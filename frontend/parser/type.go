@@ -9,11 +9,11 @@ import (
 func (p *parser) parseTypeX(flags Flags) ast.Type {
 	spanStart := p.span()
 
-	if flags.Has(FlagFuncReturnUnreachable) && p.tryConsume("unreachable") {
-		return ast.NewUnreachable(spanStart)
-	}
+	var ty ast.Type
 
-	if p.tryConsume("?") {
+	if flags.Has(FlagFuncReturnUnreachable) && p.tryConsume("unreachable") {
+		ty = ast.NewUnreachable(spanStart)
+	} else if p.tryConsume("?") {
 		if p.Token.Is("?") {
 			common.PanicDiag("cannot have nested nilable types", p.span())
 		}
@@ -24,30 +24,28 @@ func (p *parser) parseTypeX(flags Flags) ast.Type {
 			lexer.NewTokIdent("nilable", qSpan),
 			[]ast.Type{innerType},
 		)
-		return &nilable
-	}
-
-	if p.Token.Is("Self") {
+		ty = &nilable
+	} else if p.Token.Is("Self") {
 		p.advance()
 		selfPath := ast.NewSimplePath(lexer.NewTokIdent("Self", p.prevSpan()))
-		return &selfPath
-	}
-
-	if p.Token.Is("func") {
-		return p.parseFunctionType()
-	}
-
-	if flags.Has(FlagTypeTuple) && p.Token.Is("(") {
-		return p.parseTupleType(flags)
-	}
-
-	if flags.Has(FlagTypeVarArg) && p.Token.Is("...") {
+		ty = &selfPath
+	} else if p.Token.Is("func") {
+		ty = p.parseFunctionType()
+	} else if flags.Has(FlagTypeTuple) && p.Token.Is("(") {
+		ty = p.parseTupleType(flags)
+	} else if flags.Has(FlagTypeVarArg) && p.Token.Is("...") {
 		p.advance()
-		return ast.NewVararg(p.parseType(), SpanFrom(spanStart, p.prevSpan()))
+		ty = ast.NewVararg(p.parseType(), SpanFrom(spanStart, p.prevSpan()))
+	} else {
+		path := p.parsePath(nil)
+		ty = &path
 	}
 
-	path := p.parsePath(nil)
-	return &path
+	if p.Token.Is("|") {
+		ty = p.parseUnionType(ty, flags, spanStart)
+	}
+
+	return ty
 }
 
 func (p *parser) parseType() ast.Type {
@@ -90,4 +88,17 @@ func (p *parser) parseTupleType(flags Flags) ast.Type {
 		return elems[0]
 	}
 	return ast.NewTuple(elems, span)
+}
+
+func (p *parser) parseUnionType(first ast.Type, flags Flags, spanStart Span) ast.Type {
+	types := []ast.Type{first}
+
+	for p.Token.Is("|") {
+		p.advance()
+		next := p.parseTypeX(flags)
+		types = append(types, next)
+	}
+
+	unionSpan := SpanFrom(spanStart, p.prevSpan())
+	return ast.NewUnion(types, unionSpan)
 }

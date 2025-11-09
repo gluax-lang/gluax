@@ -33,12 +33,14 @@ func (a *Analysis) matchTypes(t Type, other Type) bool {
 		return a.matchVarargType(t.Vararg(), other)
 	case ast.SemGenericKind:
 		return a.matchGenericType(t.Generic(), other)
+	case ast.SemUnionKind:
+		return a.matchUnionType(t.Union(), other)
 	case ast.SemUnreachableKind:
 		return other.IsUnreachable()
 	case ast.SemErrorKind:
 		return false
 	default:
-		panic("todo")
+		return false
 	}
 }
 
@@ -57,12 +59,14 @@ func (a *Analysis) MatchTypesStrict(t Type, other Type) bool {
 		return a.matchVarargTypeStrict(t.Vararg(), other)
 	case ast.SemGenericKind:
 		return a.matchGenericTypeStrict(t.Generic(), other)
+	case ast.SemUnionKind:
+		return a.matchUnionTypeStrict(t.Union(), other)
 	case ast.SemUnreachableKind:
 		return other.IsUnreachable()
 	case ast.SemErrorKind:
 		return false
 	default:
-		panic("todo")
+		return false
 	}
 }
 
@@ -240,4 +244,58 @@ func (a *Analysis) matchGenericTypeStrict(g SemGenericType, other Type) bool {
 		}
 	}
 	return true
+}
+
+/* Union */
+
+func (a *Analysis) matchUnionType(u *SemUnion, other Type) bool {
+	if other.IsUnion() {
+		otherU := other.Union()
+		for _, oT := range otherU.Types {
+			found := false
+			for _, t := range u.Types {
+				if a.matchTypes(t, oT) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return false
+			}
+		}
+		return true
+	}
+	// If other is not a union, match if any member matches
+	for _, t := range u.Types {
+		if a.matchTypes(t, other) {
+			return true
+		}
+	}
+	return false
+}
+
+func (a *Analysis) matchUnionTypeStrict(u *SemUnion, other Type) bool {
+	if other.IsUnion() {
+		otherU := other.Union()
+		for _, oT := range otherU.Types {
+			found := false
+			for _, t := range u.Types {
+				if a.MatchTypesStrict(t, oT) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return false
+			}
+		}
+		return true
+	}
+	// If other is not a union, match if any member matches
+	for _, t := range u.Types {
+		if a.MatchTypesStrict(t, other) {
+			return true
+		}
+	}
+	return false
 }

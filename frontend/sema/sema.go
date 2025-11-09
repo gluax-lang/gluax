@@ -26,6 +26,7 @@ type SemFunction = ast.SemFunction
 type SemTuple = ast.SemTuple
 type SemVararg = ast.SemVararg
 type SemGenericType = ast.SemGenericType
+type SemUnion = ast.SemUnion
 
 type ClassInstance = ast.ClassInstance
 

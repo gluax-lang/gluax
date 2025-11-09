@@ -32,6 +32,17 @@ func (a *Analysis) resolveType(scope *Scope, ty ast.Type) Type {
 		return ast.NewSemType(fun, t.Span())
 	case *ast.Unreachable:
 		return ast.NewSemType(ast.SemUnreachable{}, t.Span())
+	case *ast.Union:
+		types := make([]Type, 0, len(t.Types))
+		for _, ty := range t.Types {
+			ty := a.resolveType(scope, ty)
+			if ty.IsTuple() || ty.IsVararg() || ty.IsUnreachable() {
+				a.Errorf(ty.Span(), "cannot use %s in a union type", ty.String())
+				return a.nilType()
+			}
+			types = append(types, ty)
+		}
+		return ast.NewSemType(ast.NewSemUnion(t, types), t.Span())
 	default:
 		panic("TODO TYPE")
 	}
