@@ -96,6 +96,21 @@ func (s *Scope) GetSymbol(name string) *Symbol {
 	return result
 }
 
+func (s *Scope) GetSymbolExceptRoot(name string) *Symbol {
+	var result *Symbol
+	s.walkScopes(func(scope *Scope) bool {
+		if scope.Parent == nil {
+			return false
+		}
+		if symbols, ok := scope.Symbols[name]; ok && len(symbols) > 0 {
+			result = symbols[len(symbols)-1]
+			return true
+		}
+		return false
+	})
+	return result
+}
+
 func (s *Scope) AddValue(name string, val *Value, span Span) error {
 	return s.AddValueVisibility(name, val, span, true)
 }

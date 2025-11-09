@@ -16,7 +16,7 @@ func getImportScope(imp *ast.SemImport) *Scope {
 	return getImportAnalysis(imp).Scope
 }
 
-func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafResolver func(*Symbol, *ast.PathSegment) *T) *T {
+func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafResolver func(*Symbol, *ast.PathSegment, *ast.SemImport) *T) *T {
 	segs := path.Segments
 
 	var fakeImport ast.Import
@@ -28,7 +28,12 @@ func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafRe
 	for i, seg := range segs[:len(segs)-1] {
 		if currentSym.IsImport() {
 			imp := currentSym.Import()
-			currentSym = getImportScope(imp).GetSymbol(seg.Ident.Raw)
+			// Use GetSymbolExceptRoot for actual imports, GetSymbol for fake import
+			if imp == &fakeSemImport {
+				currentSym = getImportScope(imp).GetSymbol(seg.Ident.Raw)
+			} else {
+				currentSym = getImportScope(imp).GetSymbolExceptRoot(seg.Ident.Raw)
+			}
 			if currentSym == nil {
 				return nil
 			}
@@ -54,15 +59,21 @@ func resolvePathGeneric[T any](a *Analysis, scope *Scope, path *ast.Path, leafRe
 
 	leaf := segs[len(segs)-1]
 
-	return leafResolver(currentSym, leaf)
+	return leafResolver(currentSym, leaf, &fakeSemImport)
 }
 
 func (a *Analysis) resolvePathType(scope *Scope, path *ast.Path) Type {
-	t := resolvePathGeneric(a, scope, path, func(sym *Symbol, leaf *ast.PathSegment) *Type {
+	t := resolvePathGeneric(a, scope, path, func(sym *Symbol, leaf *ast.PathSegment, fakeSemImport *ast.SemImport) *Type {
 		if !sym.IsImport() {
 			return nil
 		}
-		sym = getImportScope(sym.Import()).GetSymbol(leaf.Ident.Raw)
+		imp := sym.Import()
+		// Use GetSymbolExceptRoot for actual imports, GetSymbol for fake import
+		if imp == fakeSemImport {
+			sym = getImportScope(imp).GetSymbol(leaf.Ident.Raw)
+		} else {
+			sym = getImportScope(imp).GetSymbolExceptRoot(leaf.Ident.Raw)
+		}
 		if sym == nil || !sym.IsType() {
 			return nil
 		}
@@ -91,10 +102,16 @@ func (a *Analysis) resolvePathType(scope *Scope, path *ast.Path) Type {
 }
 
 func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) *Value {
-	t := resolvePathGeneric(a, scope, path, func(sym *Symbol, leaf *ast.PathSegment) *Value {
+	t := resolvePathGeneric(a, scope, path, func(sym *Symbol, leaf *ast.PathSegment, fakeSemImport *ast.SemImport) *Value {
 		raw := leaf.Ident.Raw
 		if sym.IsImport() {
-			sym = getImportScope(sym.Import()).GetSymbol(raw)
+			imp := sym.Import()
+			// Use GetSymbolExceptRoot for actual imports, GetSymbol for fake import
+			if imp == fakeSemImport {
+				sym = getImportScope(imp).GetSymbol(raw)
+			} else {
+				sym = getImportScope(imp).GetSymbolExceptRoot(raw)
+			}
 			if sym == nil || !sym.IsValue() {
 				return nil
 			}
@@ -151,12 +168,18 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) *Value {
 }
 
 func (a *Analysis) resolvePathSymbol(scope *Scope, path *ast.Path) *Symbol {
-	t := resolvePathGeneric(a, scope, path, func(sym *Symbol, leaf *ast.PathSegment) *Symbol {
+	t := resolvePathGeneric(a, scope, path, func(sym *Symbol, leaf *ast.PathSegment, fakeSemImport *ast.SemImport) *Symbol {
 		raw := leaf.Ident.Raw
 		if !sym.IsImport() {
 			return nil
 		}
-		sym = getImportScope(sym.Import()).GetSymbol(raw)
+		imp := sym.Import()
+		// Use GetSymbolExceptRoot for actual imports, GetSymbol for fake import
+		if imp == fakeSemImport {
+			sym = getImportScope(imp).GetSymbol(raw)
+		} else {
+			sym = getImportScope(imp).GetSymbolExceptRoot(raw)
+		}
 		if sym == nil {
 			return nil
 		}
