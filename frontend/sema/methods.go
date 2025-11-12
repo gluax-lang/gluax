@@ -6,9 +6,13 @@ func (a *Analysis) FindMethodsOnType(scope *Scope, ty Type, methodName string) [
 	switch {
 	case ty.IsClass():
 		if methodName == "" {
-			return a.FindAllClassAndTraitMethods(ty.Class(), scope)
+			return a.GetClassMethodsRecursively(ty.Class())
 		}
-		return a.FindClassOrTraitMethod(ty.Class(), methodName, scope)
+		method := a.FindClassMethod(ty.Class(), methodName)
+		if method != nil {
+			return []*ast.SemFunction{method}
+		}
+		return nil
 	default:
 		return nil
 	}

@@ -5,11 +5,6 @@ import (
 	"github.com/gluax-lang/lsp"
 )
 
-type ClassTraitsMeta struct {
-	Methods map[string]*SemFunction
-	Span    Span
-}
-
 type DeclWithRef struct {
 	Decl LSPSymbol   // The declaration symbol
 	Refs []LSPSymbol // All references to this declaration
@@ -22,7 +17,6 @@ type State struct {
 	Files     map[string]*Analysis // where we store the resulting analyses
 
 	MethodsByClass map[*ast.Class]map[string]*SemFunction
-	TraitsByClass  map[*ast.Class]map[*ast.SemTrait]*ClassTraitsMeta
 
 	DeclRefs []DeclWithRef
 
@@ -36,7 +30,6 @@ func NewState(label string) *State {
 		RootScope:      NewScope(nil),
 		Files:          make(map[string]*Analysis),
 		MethodsByClass: make(map[*ast.Class]map[string]*SemFunction),
-		TraitsByClass:  make(map[*ast.Class]map[*ast.SemTrait]*ClassTraitsMeta),
 	}
 }
 
@@ -56,23 +49,6 @@ func (a *Analysis) RegisterClassMethod(st *SemClass, method *SemFunction) {
 	byName[name] = method
 }
 
-func (a *Analysis) RegisterClassTraitImplementation(st *SemClass, trait *ast.SemTrait, methods map[string]*SemFunction, span Span) {
-	if _, ok := a.State.TraitsByClass[st.Def]; !ok {
-		a.State.TraitsByClass[st.Def] = make(map[*ast.SemTrait]*ClassTraitsMeta)
-	}
-	byTrait := a.State.TraitsByClass[st.Def]
-	if _, exists := byTrait[trait]; exists {
-		a.Errorf(span,
-			"duplicate trait impl for `%s` in class `%s`",
-			trait.Def.Name.Raw, st.Def.Name.Raw)
-		return
-	}
-	byTrait[trait] = &ClassTraitsMeta{
-		Methods: methods,
-		Span:    span,
-	}
-}
-
 func (a *Analysis) FindClassMethod(st *ast.SemClass, name string) *SemFunction {
 	if bucket, exists := a.State.MethodsByClass[st.Def]; exists {
 		if method, exists := bucket[name]; exists {
@@ -86,49 +62,7 @@ func (a *Analysis) FindClassMethod(st *ast.SemClass, name string) *SemFunction {
 	return nil
 }
 
-func (a *Analysis) FindClassOrTraitMethod(st *ast.SemClass, name string, scope *Scope) []*SemFunction {
-	method := a.FindClassMethod(st, name)
-	if method != nil {
-		return []*SemFunction{method}
-	}
-	return a.FindClassMethodByTrait(st, name, scope)
-}
-
-func (a *Analysis) FindClassMethodByTrait(st *ast.SemClass, methodName string, scope *Scope) []*SemFunction {
-	foundTraits := make(map[*ast.SemTrait]struct{})
-	var results []*SemFunction
-
-	for cls := st; cls != nil; cls = cls.Super {
-		bucket, exists := a.State.TraitsByClass[cls.Def]
-		if !exists {
-			continue
-		}
-		for trait, meta := range bucket {
-			if _, already := foundTraits[trait]; already {
-				continue // already found in subclass
-			}
-
-			if scope != nil && !scope.IsTraitInScope(trait) {
-				continue
-			}
-
-			if methodName == "" {
-				for _, method := range meta.Methods {
-					results = append(results, method)
-				}
-				foundTraits[trait] = struct{}{}
-			} else if method, exists := meta.Methods[methodName]; exists {
-				method.Class = cls
-				results = append(results, method)
-				foundTraits[trait] = struct{}{}
-			}
-		}
-	}
-
-	return results
-}
-
-func (a *Analysis) FindAllClassAndTraitMethods(st *ast.SemClass, scope *Scope) []*SemFunction {
+func (a *Analysis) GetClassMethodsRecursively(st *ast.SemClass) []*SemFunction {
 	var result []*SemFunction
 
 	for cls := st; cls != nil; cls = cls.Super {
@@ -138,86 +72,15 @@ func (a *Analysis) FindAllClassAndTraitMethods(st *ast.SemClass, scope *Scope) [
 		}
 	}
 
-	for cls := st; cls != nil; cls = cls.Super {
-		bucket, exists := a.State.TraitsByClass[cls.Def]
-		if !exists {
-			continue
-		}
-		for _, meta := range bucket {
-			for _, method := range meta.Methods {
-				result = append(result, method)
-			}
-		}
-	}
-
 	return result
 }
 
-func (a *Analysis) FindClassMethodForTraitOnly(st *ast.SemClass, trait *ast.SemTrait, methodName string) *SemFunction {
-	for cls := st; cls != nil; cls = cls.Super {
-		if bucket, exists := a.State.TraitsByClass[cls.Def]; exists {
-			if meta, ok := bucket[trait]; ok {
-				if method, exists := meta.Methods[methodName]; exists {
-					method.Class = cls
-					return method
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func (a *Analysis) FindAllClassMethods(st *ast.SemClass) map[string]*SemFunction {
+func (a *Analysis) GetClassMethods(cls *ast.SemClass) map[string]*SemFunction {
 	result := make(map[string]*SemFunction)
 
-	methodsByName := a.State.MethodsByClass[st.Def]
+	methodsByName := a.State.MethodsByClass[cls.Def]
 	for name, method := range methodsByName {
-		result[name] = a.HandleClassMethod(st, method, false)
-	}
-
-	return result
-}
-
-func (a *Analysis) ClassImplementsTrait(st *ast.SemClass, asked *ast.SemTrait) bool {
-	if bucket, exists := a.State.TraitsByClass[st.Def]; exists {
-		if _, ok := bucket[asked]; ok {
-			return true
-		}
-	}
-	if st.Super != nil {
-		return a.ClassImplementsTrait(st.Super, asked)
-	}
-	return false
-}
-
-func (a *Analysis) GetClassesImplementingTrait(trait *ast.SemTrait) map[*ast.SemClass][]*SemFunction {
-	result := make(map[*ast.SemClass][]*SemFunction)
-
-	// Iterate through all classes that have trait implementations
-	for classDef, traitMap := range a.State.TraitsByClass {
-		// Check if this class implements the requested trait
-		if meta, exists := traitMap[trait]; exists {
-			// Get the class stack to find all instantiated classes
-			classStack := classDef.GetClassStack()
-
-			for _, classInstance := range classStack {
-				semClass := classInstance
-
-				// Collect all methods from this trait implementation
-				methods := make([]*SemFunction, 0, len(meta.Methods))
-				for _, method := range meta.Methods {
-					methods = append(methods, method)
-				}
-
-				// Add to result, merging if class already exists
-				if _, exists := result[semClass]; exists {
-					// result[semClass] = append(existing, methods...)
-					panic("shouldnt happen?")
-				} else {
-					result[semClass] = methods
-				}
-			}
-		}
+		result[name] = a.HandleClassMethod(cls, method, false)
 	}
 
 	return result

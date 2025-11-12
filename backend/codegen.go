@@ -262,18 +262,6 @@ func (cg *Codegen) generateClasses() {
 	}
 }
 
-func (cg *Codegen) generateTraitImpls() {
-	generated := make(map[*ast.SemTrait]struct{}, len(cg.Ast.ImplTraits))
-	for _, tImpl := range cg.Ast.ImplTraits {
-		trait := tImpl.ResolvedTrait
-		if _, exists := generated[trait]; exists {
-			continue // already generated this trait implementation
-		}
-		generated[trait] = struct{}{}
-		cg.genTraitImpl(tImpl.ResolvedTrait)
-	}
-}
-
 func (cg *Codegen) generateFunctions() {
 	for _, funDef := range cg.Ast.Funcs {
 		if funDef.IsGlobal() {

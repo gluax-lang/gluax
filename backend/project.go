@@ -96,9 +96,6 @@ func (cg *Codegen) handleFiles(files map[string]*sema.Analysis) {
 		cg.generateClasses()
 	})
 	cg.runGenerationPhase(files, paths, func(cg *Codegen) {
-		cg.generateTraitImpls()
-	})
-	cg.runGenerationPhase(files, paths, func(cg *Codegen) {
 		cg.generateFunctions()
 	})
 	cg.runGenerationPhase(files, paths, func(cg *Codegen) {

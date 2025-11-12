@@ -29,8 +29,6 @@ func (p *parser) parseItem() ast.Item {
 		item = p.parseFunction()
 	case "impl":
 		item = p.parseImpl()
-	case "trait":
-		item = p.parseTrait()
 	default:
 		common.PanicDiag("expected item", p.span())
 	}
@@ -117,35 +115,8 @@ func (p *parser) parseImpl() ast.Item {
 	spanStart := p.span()
 
 	p.expect("impl")
+
 	ty := p.parseType()
-
-	if p.tryConsume("for") {
-		trait, ok := ty.(*ast.Path)
-		if !ok {
-			common.PanicDiag("invalid trait", ty.Span())
-		}
-
-		st := p.parseType()
-
-		p.expect("{")
-
-		var methods []ast.Function
-
-		for !p.Token.Is("}") {
-			var attributes []ast.Attribute
-			for p.Token.Is("#") {
-				attributes = append(attributes, p.parseAttribute())
-			}
-			method := p.parseClassMethod(false)
-			method.Attributes = attributes
-			methods = append(methods, method)
-		}
-
-		p.expect("}")
-
-		span := SpanFrom(spanStart, p.prevSpan())
-		return ast.NewImplTraitForClass(*trait, st, methods, span)
-	}
 
 	p.expect("{")
 
@@ -202,41 +173,6 @@ func (p *parser) parseClassMethod(bodyOptional bool) ast.Function {
 	}
 
 	return *f
-}
-
-func (p *parser) parseTrait() ast.Item {
-	spanStart := p.span()
-
-	p.expect("trait")
-
-	name := p.expectIdentMsg("expected trait name")
-
-	var superTraits []ast.Path
-	if p.tryConsume(":") {
-		for {
-			superTrait := p.parsePath(nil)
-			superTraits = append(superTraits, superTrait)
-			if !p.tryConsume("+") {
-				break
-			}
-		}
-	}
-
-	p.expect("{")
-
-	var methods []ast.Function
-
-	for !p.Token.Is("}") {
-		method := p.parseClassMethod(true)
-		method.Public = true
-		methods = append(methods, method)
-	}
-
-	p.expect("}")
-
-	span := SpanFrom(spanStart, p.prevSpan())
-
-	return ast.NewTrait(name, superTraits, methods, span)
 }
 
 func (p *parser) parseImport() ast.Item {

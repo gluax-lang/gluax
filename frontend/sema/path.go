@@ -195,11 +195,3 @@ func (a *Analysis) resolvePathSymbol(scope *Scope, path *ast.Path) *Symbol {
 	}
 	return t
 }
-
-func (a *Analysis) resolvePathTrait(scope *Scope, path *ast.Path) *ast.SemTrait {
-	sym := a.resolvePathSymbol(scope, path)
-	if !sym.IsTrait() {
-		a.panicf(path.Span(), "expected trait type")
-	}
-	return sym.Trait()
-}

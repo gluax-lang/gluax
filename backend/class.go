@@ -42,7 +42,7 @@ func (cg *Codegen) generateClass(st *ast.SemClass) {
 		// don't generate phantom types
 		return
 	}
-	methods := cg.Analysis.FindAllClassMethods(st)
+	methods := cg.Analysis.GetClassMethods(st)
 	if st.IsGlobal() {
 		// global classes are just phantom, they exist in lua world!
 		// NEW: UNLESS WE ADDED FUNCTIONS TO THEM HAHA

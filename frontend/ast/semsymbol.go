@@ -12,7 +12,6 @@ const (
 	SymValue SymbolKind = iota // vars, params, functions  (see Value.Kind below)
 	SymType                    // class / alias / type-def
 	SymImport
-	SymTrait
 
 	SymClassField
 )
@@ -26,7 +25,6 @@ func (v *Value) SymbolKind() SymbolKind          { return SymValue }
 func (t *SemType) SymbolKind() SymbolKind        { return SymType }
 func (i *SemImport) SymbolKind() SymbolKind      { return SymImport }
 func (f *SemaClassField) SymbolKind() SymbolKind { return SymClassField }
-func (t *SemTrait) SymbolKind() SymbolKind       { return SymTrait }
 
 type symbolDataBox struct {
 	Data symbolData
@@ -116,17 +114,6 @@ func (s *Symbol) Import() *SemImport {
 	return s.Data().(*SemImport)
 }
 
-func (s *Symbol) IsTrait() bool {
-	return s.Kind() == SymTrait
-}
-
-func (s *Symbol) Trait() *SemTrait {
-	if s.Kind() != SymTrait {
-		panic("not a trait")
-	}
-	return s.Data().(*SemTrait)
-}
-
 type SemImport struct {
 	Path     string
 	Def      Import
@@ -154,41 +141,4 @@ func (i SemImport) LSPString() string {
 
 func (i SemImport) Span() common.Span {
 	return i.Def.span
-}
-
-type SemTrait struct {
-	Def         *Trait
-	SuperTraits []*SemTrait // traits that this trait extends
-	Methods     map[string]*SemFunction
-	Scope       any
-}
-
-func NewSemTrait(def *Trait) SemTrait {
-	methodMap := make(map[string]*SemFunction)
-	return SemTrait{
-		Def:     def,
-		Methods: methodMap,
-	}
-}
-
-func (t SemTrait) String() string {
-	return t.Def.Name.Raw
-}
-
-func (t SemTrait) LSPString() string {
-	var sb strings.Builder
-	sb.WriteString("trait ")
-	sb.WriteString(t.Def.Name.Raw)
-	// if len(t.Methods) > 0 {
-	// 	sb.WriteString(" {")
-	// 	for name, method := range t.Methods {
-	// 		sb.WriteString(method.AstString())
-	// 	}
-	// 	sb.WriteString("}")
-	// }
-	return sb.String()
-}
-
-func (t SemTrait) Span() common.Span {
-	return t.Def.Name.Span()
 }

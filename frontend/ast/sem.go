@@ -339,8 +339,7 @@ type SemFunction struct {
 	Return SemType
 
 	Class *SemClass
-	Trait *SemTrait // Trait this function is defined in, if any
-	Scope any       // Scope for this function, used for generics resolution and other shit
+	Scope any // Scope for this function, used for generics resolution and other shit
 }
 
 func (t *SemFunction) TypeKind() SemTypeKind { return SemFunctionKind }
@@ -475,10 +474,6 @@ func (f SemFunction) Attributes() Attributes {
 }
 
 func (f SemFunction) IsClassMethod() bool {
-	if f.Trait != nil {
-		return false
-	}
-
 	if f.Class == nil {
 		return false
 	}

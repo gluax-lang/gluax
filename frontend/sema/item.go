@@ -1,8 +1,6 @@
 package sema
 
 import (
-	"slices"
-
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
@@ -134,48 +132,4 @@ func (a *Analysis) handleUse(scope *Scope, it *ast.Use) {
 	if err := scope.AddSymbol(it.NameIdent().Raw, &symCopy); err != nil {
 		a.Error(it.Span(), err.Error())
 	}
-}
-
-func (a *Analysis) GetTraitMethods(trait *ast.SemTrait, name string) []*ast.SemFunction {
-	var found []*ast.SemFunction
-	for _, method := range trait.Methods {
-		if name == "" || method.Def.Name.Raw == name {
-			found = append(found, method)
-		}
-	}
-	for _, super := range trait.SuperTraits {
-		found = append(found, a.GetTraitMethods(super, name)...)
-	}
-	return found
-}
-
-func causesTraitCycle(trait *ast.SemTrait, super *ast.SemTrait) bool {
-	if trait == super {
-		return true
-	}
-	visited := map[*ast.SemTrait]struct{}{}
-	var dfs func(t *ast.SemTrait) bool
-	dfs = func(t *ast.SemTrait) bool {
-		if t == trait {
-			return true
-		}
-		if _, ok := visited[t]; ok {
-			return false
-		}
-		visited[t] = struct{}{}
-		return slices.ContainsFunc(t.SuperTraits, dfs)
-	}
-	return dfs(super)
-}
-
-func traitImplements(trait *ast.SemTrait, target *ast.SemTrait) bool {
-	if trait == target {
-		return true
-	}
-	for _, super := range trait.SuperTraits {
-		if traitImplements(super, target) {
-			return true
-		}
-	}
-	return false
 }

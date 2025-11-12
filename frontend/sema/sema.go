@@ -17,7 +17,6 @@ type Type = ast.SemType
 const SymValue = ast.SymValue
 const SymType = ast.SymType
 const SymImport = ast.SymImport
-const SymTrait = ast.SymTrait
 
 type ImportInfo = ast.SemImport
 

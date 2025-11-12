@@ -18,7 +18,6 @@ const (
 	ExprKindVararg
 	ExprKindFunction
 	ExprKindPath
-	ExprKindQPath
 	ExprKindBinary
 	ExprKindUnary
 	ExprKindPostfix
@@ -79,8 +78,6 @@ func (k ExprKind) String() string {
 		return "unsafe cast"
 	case ExprKindRunRaw:
 		return "run lua"
-	case ExprKindQPath:
-		return "qualified path"
 	default:
 		panic("unreachable")
 	}

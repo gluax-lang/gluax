@@ -123,7 +123,7 @@ outDotCompletion:
 	for s := scope; s != nil; s = s.Parent {
 		for _, symSlice := range s.Symbols {
 			for _, sym := range symSlice {
-				if sym.IsImport() || sym.IsTrait() || sym.IsType() {
+				if sym.IsImport() || sym.IsType() {
 					continue
 				}
 				if _, ok := visited[sym.Name]; ok {

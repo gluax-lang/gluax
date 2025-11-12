@@ -9,10 +9,8 @@ type Ast struct {
 	Uses        []*Use
 	Funcs       []*Function
 	ImplClasses []*ImplClass
-	ImplTraits  []*ImplTraitForClass
 	Lets        []*Let
 	Classes     []*Class
-	Traits      []*Trait
 
 	TokenStream []lexer.Token
 	Code        string

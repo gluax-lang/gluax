@@ -61,8 +61,6 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) ExprResult {
 		value := a.resolvePathValue(scope, expr.Path())
 		res.PathValue = value
 		retTy = value.Type()
-	case ast.ExprKindQPath:
-		retTy = a.handleQPathExpr(scope, expr.QPath())
 	case ast.ExprKindTuple:
 		values := expr.Tuple().Values
 		elems := make([]Type, len(values))
@@ -104,28 +102,6 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) ExprResult {
 
 func (a *Analysis) handleExpr(scope *Scope, expr *ast.Expr) {
 	_ = a.handleExprWithFlow(scope, expr)
-}
-
-func (a *Analysis) handleQPathExpr(scope *Scope, qPath *ast.QPath) Type {
-	methodName := qPath.MethodName.Raw
-
-	toCastTy := a.resolveType(scope, qPath.Type)
-	if toCastTy.IsClass() {
-		class := toCastTy.Class()
-		as := a.resolvePathTrait(scope, &qPath.As)
-		if !a.ClassImplementsTrait(class, as) {
-			a.panicf(qPath.Type.Span(), "class `%s` does not implement trait `%s`", class.Def.Name.Raw, as.Def.Name.Raw)
-		}
-		methodP := a.FindClassMethodForTraitOnly(class, as, methodName)
-		if methodP == nil {
-			a.panicf(qPath.Type.Span(), "no method found for `%s` in trait `%s`", methodName, as.Def.Name.Raw)
-		}
-		qPath.ResolvedMethod = methodP
-		return ast.NewSemType(methodP, qPath.Span())
-	} else {
-		a.panicf(qPath.Type.Span(), "expected class type, got: %s", toCastTy.String())
-	}
-	return a.anyType()
 }
 
 func isComparisonOp(op ast.BinaryOp) bool {

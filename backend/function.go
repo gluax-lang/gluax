@@ -22,10 +22,6 @@ func (cg *Codegen) decorateFuncName(f *ast.SemFunction) string {
 		return sb.String()
 	}
 	raw := f.Def.Name.Raw
-	if f.Trait != nil {
-		dTName := cg.decorateTraitName(f.Trait.Def, f.Class)
-		return dTName + "." + raw
-	}
 	if f.Class != nil {
 		stName := cg.decorateClassName(f.Class)
 		if !cg.markUsed(cg.classFuncUsedName(f.Class, raw)) {
@@ -189,12 +185,12 @@ func (cg *Codegen) buildMethodCall(call *ast.Call, fun *ast.SemFunction, toCall 
 
 func (cg *Codegen) buildClassMethodCall(call *ast.Call, fun *ast.SemFunction, toCall string, toCallTy ast.SemType) string {
 	// Check if we need to use function-style call instead of method-style
-	needsFunctionCall := fun.Trait != nil ||
+	needsFunctionCall :=
 		toCallTy.Class().Attributes().Has("no_metatable", "no__index") ||
-		// If the class is global and method is not, then we call the method as a function
-		// as we can't use method-style call on global classes
-		// because the method won't actually exist inside it
-		(toCallTy.Class().IsGlobal() && fun.Attributes().Has("local_method"))
+			// If the class is global and method is not, then we call the method as a function
+			// as we can't use method-style call on global classes
+			// because the method won't actually exist inside it
+			(toCallTy.Class().IsGlobal() && fun.Attributes().Has("local_method"))
 
 	if needsFunctionCall {
 		args := cg.getCallArgs(call, toCall)

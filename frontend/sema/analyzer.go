@@ -218,16 +218,6 @@ func (a *Analysis) MatchesPanic(ty, other Type, span Span) {
 
 func (a *Analysis) populateDeclarations() {
 	astD := a.Ast
-	for _, traitDef := range astD.Traits {
-		traitDef.Scope = a.Scope
-		trait := ast.NewSemTrait(traitDef)
-		trait.Scope = a.Scope.Child(false)
-		if err := a.Scope.AddTrait(traitDef.Name.Raw, &trait, traitDef.Span(), traitDef.Public); err != nil {
-			a.Error(traitDef.Span(), err.Error())
-		}
-		traitDef.Sem = &trait
-		a.AddDecl(trait)
-	}
 
 	for _, stDef := range astD.Classes {
 		stDef.Scope = a.Scope
@@ -282,21 +272,6 @@ func (a *Analysis) resolveImplementations() {
 		}
 	}
 
-	for _, traitDef := range a.Ast.Traits {
-		for _, super := range traitDef.SuperTraits {
-			superDef := a.resolvePathSymbol(a.Scope, &super)
-			if !superDef.IsTrait() {
-				a.panic(super.Span(), "expected trait")
-			}
-			trait := traitDef.Sem
-			superTrait := superDef.Trait()
-			if causesTraitCycle(trait, superTrait) {
-				a.panicf(super.Span(), "cyclic supertrait: trait `%s` is (directly or indirectly) a supertrait of itself", trait.Def.Name.Raw)
-			}
-			trait.SuperTraits = append(trait.SuperTraits, superTrait)
-		}
-	}
-
 	for _, stDef := range a.Ast.Classes {
 		superDef := stDef.Super
 		if superDef == nil {
@@ -325,134 +300,6 @@ func (a *Analysis) resolveImplementations() {
 		for _, field := range st.Fields {
 			a.AddDecl(field)
 		}
-	}
-
-	for _, traitDef := range a.Ast.Traits {
-		trait := traitDef.Sem
-		scope := trait.Scope.(*Scope)
-		selfScope := scope.Child(false)
-		for _, method := range traitDef.Methods {
-			name := method.Name.Raw
-			if _, exists := trait.Methods[name]; exists {
-				a.panicf(method.Name.Span(), "duplicate method `%s` in trait `%s`", name, traitDef.Name.Raw)
-			}
-			if method.IsStatic() {
-				a.panicf(method.Name.Span(), "trait `%s` method `%s` cannot be static", traitDef.Name.Raw, name)
-			}
-			if method.Body != nil {
-				a.panicf(method.Name.Span(), "trait methods cannot have default implementations yet")
-			}
-			methodCopy := method
-			methodCopy.Params = methodCopy.Params[1:] // remove `self` param
-			funcTy := a.handleFunctionSignature(selfScope, &methodCopy)
-			funcTy.Scope = scope
-			funcTy.Trait = trait
-			trait.Methods[name] = funcTy
-			traitDef.Checks = append(traitDef.Checks, func() {
-				funcTy := a.handleFunction(selfScope, &methodCopy)
-				funcTy.Scope = scope
-				funcTy.Trait = trait
-				trait.Methods[name] = funcTy
-			})
-		}
-	}
-
-	for _, implTrait := range a.Ast.ImplTraits {
-		traitPath := a.resolvePathSymbol(a.Scope, &implTrait.Trait)
-		if !traitPath.IsTrait() {
-			a.panic(implTrait.Trait.Span(), "expected trait")
-		}
-		trait := traitPath.Trait()
-		implTrait.ResolvedTrait = trait
-
-		stTy := a.resolveType(a.Scope, implTrait.Class)
-		if !stTy.IsClass() {
-			a.panic(implTrait.Class.Span(), "expected class")
-		}
-
-		selfScope := a.Scope.Child(false)
-		{
-			selfVar := ast.NewSingleVariable(lexer.NewTokIdent("self", stTy.Span()), stTy)
-			err := selfScope.AddValue("self", ast.NewValue(selfVar), stTy.Span())
-			if err != nil {
-				a.panicf(implTrait.Class.Span(), "cannot add `self` to scope: %s", err.Error())
-			}
-		}
-		st := stTy.Class()
-
-		if st.Def.Attributes.Has("no_impl") {
-			a.panicf(implTrait.Span(), "class `%s` cannot implement methods", st.Def.Name.Raw)
-		}
-
-		if !a.Project.StartsWithWorkspace(trait.Def.Span().Source) &&
-			!a.Project.StartsWithWorkspace(st.Def.Span().Source) {
-			a.panicf(implTrait.Span(),
-				"cannot implement trait `%s` for type `%s` because neither is defined in this package",
-				trait.Def.Name.Raw, st.Def.Name.Raw)
-		}
-
-		if trait.Def.Attributes.Has("requires_metatable") && st.Def.Attributes.Has("no_metatable") {
-			a.panicf(implTrait.Span(), "class `%s` cannot implement trait `%s` because it has no metatable", st.Def.Name.Raw, trait.Def.Name.Raw)
-		}
-
-		implTrait.Checks = append(implTrait.Checks, func() {
-			for _, superTrait := range trait.SuperTraits {
-				if !a.ClassImplementsTrait(st, superTrait) {
-					a.panicf(implTrait.Span(), "class `%s` must implement supertrait `%s`", st.Def.Name.Raw, superTrait.Def.Name.Raw)
-				}
-			}
-		})
-
-		implMethods := make(map[string]*ast.SemFunction, len(implTrait.Methods))
-		for _, method := range implTrait.Methods {
-			if _, exists := implMethods[method.Name.Raw]; exists {
-				a.panicf(method.Name.Span(), "duplicate method `%s` in trait implementation", method.Name.Raw)
-			}
-			method.Params[0].Type = implTrait.Class
-			funcTy := a.handleFunctionSignature(selfScope, &method)
-			funcTy.Scope = selfScope
-			implMethods[method.Name.Raw] = funcTy
-			implTrait.Checks = append(implTrait.Checks, func() {
-				funcTy := a.handleFunction(selfScope, &method)
-				funcTy.Scope = selfScope
-				implMethods[method.Name.Raw] = funcTy
-			})
-		}
-
-		for name, method := range implMethods {
-			if _, exists := trait.Methods[name]; !exists {
-				a.panicf(method.Def.Name.Span(), "method `%s` is not a member of trait `%s`", name, trait.Def.Name.Raw)
-			}
-		}
-
-		var methods = make(map[string]*ast.SemFunction, len(trait.Methods))
-		for name, method := range trait.Methods {
-			stMethod, exists := implMethods[name]
-			if !exists {
-				if method.Def.Body != nil {
-					// a.RegisterStructMethod(st, method)
-					methods[name] = method
-					continue
-				} else {
-					a.panicf(implTrait.Span(), "class `%s` does not implement trait `%s` method `%s`", st.Def.Name.Raw, trait.Def.Name.Raw, name)
-				}
-			}
-			if stMethod.IsStatic() {
-				a.panicf(implTrait.Span(), "class `%s` method `%s` must not be static to implement trait `%s` method", st.Def.Name.Raw, name, trait.Def.Name.Raw)
-			}
-
-			stMethodCopy := *stMethod
-			stMethodCopy.Params = stMethodCopy.Params[1:] // remove `self` param
-
-			if !a.matchFunction(method, &stMethodCopy) {
-				a.panicf(implTrait.Span(), "method `%s` doesn't match trait `%s`: expected %s, got %s", name, trait.Def.Name.Raw, method.String(), stMethodCopy.String())
-			}
-
-			stMethod.Trait = trait
-			methods[name] = stMethod
-		}
-
-		a.RegisterClassTraitImplementation(st, trait, methods, implTrait.Span())
 	}
 
 	for _, impl := range a.Ast.ImplClasses {
@@ -533,12 +380,6 @@ func (a *Analysis) resolveImplementations() {
 }
 
 func (a *Analysis) analyzeImplementations() {
-	for _, implTrait := range a.Ast.ImplTraits {
-		for _, check := range implTrait.Checks {
-			check()
-		}
-	}
-
 	for _, let := range a.Ast.Lets {
 		a.handleLet(a.Scope, let)
 	}
@@ -585,12 +426,6 @@ func (a *Analysis) analyzeImplementations() {
 				method.Params[0].Type = impl.Class
 				_ = a.handleFunction(impl.SelfScope.(*Scope), &method)
 			}
-		}
-	}
-
-	for _, traitDef := range a.Ast.Traits {
-		for _, check := range traitDef.Checks {
-			check()
 		}
 	}
 

@@ -24,7 +24,6 @@ func (a *Analysis) HandleClassMethod(st *ast.SemClass, method *ast.SemFunction, 
 	}
 	funcTy.Scope = method.Scope
 	funcTy.Class = st
-	funcTy.Trait = method.Trait
 	return funcTy
 }
 
@@ -88,9 +87,6 @@ func (a *Analysis) CanAccessClassField(clss *SemClass, memberPublic bool) bool {
 }
 
 func (a *Analysis) CanAccessClassMethod(method *SemFunction) bool {
-	if method.Trait != nil {
-		return true
-	}
 	if method.Def.Public {
 		return true
 	}

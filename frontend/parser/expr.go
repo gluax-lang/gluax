@@ -86,8 +86,6 @@ func (p *parser) parsePrimaryExpr(ctx ExprCtx) ast.Expr {
 		return blockExpr
 	case "(":
 		return p.parseParenthesizedExpr()
-	case "<":
-		return p.parseQPathExpr()
 	case "...":
 		p.advance()
 		return ast.NewVarargExpr(p.prevSpan())
