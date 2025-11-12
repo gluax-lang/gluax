@@ -54,6 +54,10 @@ func NewProjectAnalysis(options CompileOptions) *ProjectAnalysis {
 		files: make(map[string]*Analysis),
 	}
 
+	if pa.Options.VirtualFiles == nil {
+		pa.Options.VirtualFiles = make(map[string]string)
+	}
+
 	for p, c := range options.VirtualFiles {
 		if p != "" {
 			pa.VirtualFiles()[common.FilePathClean(p)] = c

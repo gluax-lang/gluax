@@ -7,6 +7,7 @@ import (
 
 	"github.com/gluax-lang/gluax/common"
 	"github.com/gluax-lang/gluax/frontend/ast"
+	"github.com/gluax-lang/gluax/frontend/lexer"
 	protocol "github.com/gluax-lang/lsp"
 )
 
@@ -36,12 +37,25 @@ type Analysis struct {
 	Scope                 *Scope // root scope
 	Diags                 []Diagnostic
 	InlayHints            []InlayHint
-	TempIdx               *int
 	Project               *ProjectAnalysis
 	Ast                   *ast.Ast
 	State                 *State // current state of the analysis
 	currentClassSetupSpan *Span  // used to track the span of the current class setup
 	Exprs                 []*ast.Expr
+}
+
+func (a *Analysis) Copy() *Analysis {
+	return &Analysis{
+		Src:        a.Src,
+		Workspace:  a.Workspace,
+		Scope:      &Scope{},
+		Diags:      []Diagnostic{},
+		InlayHints: []InlayHint{},
+		Project:    &ProjectAnalysis{},
+		Ast:        &ast.Ast{},
+		State:      &State{},
+		Exprs:      []*ast.Expr{},
+	}
 }
 
 func (a *Analysis) SetClassSetupSpan(span Span) bool {
@@ -284,17 +298,6 @@ func (a *Analysis) resolveImplementations() {
 	}
 
 	for _, stDef := range a.Ast.Classes {
-		st := a.GetClass(stDef)
-
-		SelfSt := a.setupClass(stDef)
-		SelfStTy := ast.NewSemType(SelfSt, stDef.Span())
-		SelfStScope := SelfSt.Scope.(*Scope)
-		SelfStScope.ForceAddType("Self", SelfStTy)
-		stScope := st.Scope.(*Scope)
-		stScope.ForceAddType("Self", SelfStTy)
-	}
-
-	for _, stDef := range a.Ast.Classes {
 		superDef := stDef.Super
 		if superDef == nil {
 			continue
@@ -317,9 +320,6 @@ func (a *Analysis) resolveImplementations() {
 
 	for _, stDef := range a.Ast.Classes {
 		st := a.GetClass(stDef)
-		stScope := st.Scope.(*Scope)
-		SelfSt := stScope.GetType("Self").Class()
-		a.collectClassFields(SelfSt)
 		a.collectClassFields(st)
 
 		for _, field := range st.Fields {
@@ -330,21 +330,26 @@ func (a *Analysis) resolveImplementations() {
 	for _, traitDef := range a.Ast.Traits {
 		trait := traitDef.Sem
 		scope := trait.Scope.(*Scope)
-		SelfScope := scope.Child(false)
+		selfScope := scope.Child(false)
 		for _, method := range traitDef.Methods {
 			name := method.Name.Raw
 			if _, exists := trait.Methods[name]; exists {
 				a.panicf(method.Name.Span(), "duplicate method `%s` in trait `%s`", name, traitDef.Name.Raw)
 			}
-			if !method.IsFirstParamSelf() {
-				a.panicf(method.Name.Span(), "trait `%s` method `%s` must have a `self` parameter as the first parameter", traitDef.Name.Raw, method.Name.Raw)
+			if method.IsStatic() {
+				a.panicf(method.Name.Span(), "trait `%s` method `%s` cannot be static", traitDef.Name.Raw, name)
 			}
-			funcTy := a.handleFunctionSignature(SelfScope, &method)
+			if method.Body != nil {
+				a.panicf(method.Name.Span(), "trait methods cannot have default implementations yet")
+			}
+			methodCopy := method
+			methodCopy.Params = methodCopy.Params[1:] // remove `self` param
+			funcTy := a.handleFunctionSignature(selfScope, &methodCopy)
 			funcTy.Scope = scope
 			funcTy.Trait = trait
 			trait.Methods[name] = funcTy
 			traitDef.Checks = append(traitDef.Checks, func() {
-				funcTy := a.handleFunction(SelfScope, &method)
+				funcTy := a.handleFunction(selfScope, &methodCopy)
 				funcTy.Scope = scope
 				funcTy.Trait = trait
 				trait.Methods[name] = funcTy
@@ -360,16 +365,24 @@ func (a *Analysis) resolveImplementations() {
 		trait := traitPath.Trait()
 		implTrait.ResolvedTrait = trait
 
-		genericsScope := a.Scope.Child((false))
-
-		stTy := a.resolveType(genericsScope, implTrait.Class)
+		stTy := a.resolveType(a.Scope, implTrait.Class)
 		if !stTy.IsClass() {
 			a.panic(implTrait.Class.Span(), "expected class")
 		}
-		if err := genericsScope.AddType("Self", stTy); err != nil {
-			a.Error(stTy.Span(), err.Error())
+
+		selfScope := a.Scope.Child(false)
+		{
+			selfVar := ast.NewSingleVariable(lexer.NewTokIdent("self", stTy.Span()), stTy)
+			err := selfScope.AddValue("self", ast.NewValue(selfVar), stTy.Span())
+			if err != nil {
+				a.panicf(implTrait.Class.Span(), "cannot add `self` to scope: %s", err.Error())
+			}
 		}
 		st := stTy.Class()
+
+		if st.Def.Attributes.Has("no_impl") {
+			a.panicf(implTrait.Span(), "class `%s` cannot implement methods", st.Def.Name.Raw)
+		}
 
 		if !a.Project.StartsWithWorkspace(trait.Def.Span().Source) &&
 			!a.Project.StartsWithWorkspace(st.Def.Span().Source) {
@@ -395,12 +408,13 @@ func (a *Analysis) resolveImplementations() {
 			if _, exists := implMethods[method.Name.Raw]; exists {
 				a.panicf(method.Name.Span(), "duplicate method `%s` in trait implementation", method.Name.Raw)
 			}
-			funcTy := a.handleFunctionSignature(genericsScope, &method)
-			funcTy.Scope = a.Scope
+			method.Params[0].Type = implTrait.Class
+			funcTy := a.handleFunctionSignature(selfScope, &method)
+			funcTy.Scope = selfScope
 			implMethods[method.Name.Raw] = funcTy
 			implTrait.Checks = append(implTrait.Checks, func() {
-				funcTy := a.handleFunction(genericsScope, &method)
-				funcTy.Scope = a.Scope
+				funcTy := a.handleFunction(selfScope, &method)
+				funcTy.Scope = selfScope
 				implMethods[method.Name.Raw] = funcTy
 			})
 		}
@@ -423,15 +437,15 @@ func (a *Analysis) resolveImplementations() {
 					a.panicf(implTrait.Span(), "class `%s` does not implement trait `%s` method `%s`", st.Def.Name.Raw, trait.Def.Name.Raw, name)
 				}
 			}
-			if !stMethod.IsFirstParamSelf() {
-				a.panicf(implTrait.Span(), "class `%s` method `%s` must have a `self` parameter as the first parameter", st.Def.Name.Raw, name)
+			if stMethod.IsStatic() {
+				a.panicf(implTrait.Span(), "class `%s` method `%s` must not be static to implement trait `%s` method", st.Def.Name.Raw, name, trait.Def.Name.Raw)
 			}
 
-			methodCopy := a.HandleClassMethod(st, method, false)
-			stMethodCopy := a.HandleClassMethod(st, stMethod, false)
+			stMethodCopy := *stMethod
+			stMethodCopy.Params = stMethodCopy.Params[1:] // remove `self` param
 
-			if !a.matchFunction(methodCopy, stMethodCopy) {
-				a.panicf(implTrait.Span(), "method `%s` doesn't match trait `%s`: expected %s, got %s", name, trait.Def.Name.Raw, methodCopy.String(), stMethodCopy.String())
+			if !a.matchFunction(method, &stMethodCopy) {
+				a.panicf(implTrait.Span(), "method `%s` doesn't match trait `%s`: expected %s, got %s", name, trait.Def.Name.Raw, method.String(), stMethodCopy.String())
 			}
 
 			stMethod.Trait = trait
@@ -443,15 +457,19 @@ func (a *Analysis) resolveImplementations() {
 
 	for _, impl := range a.Ast.ImplClasses {
 		impl.Scope = a.Scope
-		genericsScope := a.Scope.Child(false)
-		stTy := a.resolveType(genericsScope, impl.Class)
+		stTy := a.resolveType(a.Scope, impl.Class)
+		selfScope := a.Scope.Child(false)
 		if !stTy.IsClass() {
 			a.panicf(impl.Class.Span(), "expected class type, got: %s", stTy.String())
 		}
-		if err := genericsScope.AddType("Self", stTy); err != nil {
-			a.Error(impl.Class.Span(), err.Error())
-		}
 		st := stTy.Class()
+		{
+			selfVar := ast.NewSingleVariable(lexer.NewTokIdent("self", impl.Class.Span()), stTy)
+			err := selfScope.AddValue("self", ast.NewValue(selfVar), impl.Class.Span())
+			if err != nil {
+				a.panicf(impl.Class.Span(), "cannot add `self` to scope: %s", err.Error())
+			}
+		}
 		if !a.Project.StartsWithWorkspace(st.Def.Span().Source) {
 			a.panicf(impl.Span(), "cannot add methods to types defined outside this package")
 		}
@@ -459,8 +477,15 @@ func (a *Analysis) resolveImplementations() {
 			a.panicf(impl.Span(), "class `%s` cannot implement methods", st.Def.Name.Raw)
 		}
 		for _, method := range impl.Methods {
-			funcTy := a.handleFunctionSignature(genericsScope, &method)
-			funcTy.Scope = a.Scope
+			var funcTy *ast.SemFunction
+			if method.IsStatic() {
+				funcTy = a.handleFunctionSignature(a.Scope, &method)
+				funcTy.Scope = a.Scope
+			} else {
+				method.Params[0].Type = impl.Class
+				funcTy = a.handleFunctionSignature(selfScope, &method)
+				funcTy.Scope = selfScope
+			}
 			methodName := method.Name.Raw
 			a.RegisterClassMethod(st, funcTy)
 			impl.Checks = append(impl.Checks, func() {
@@ -472,11 +497,26 @@ func (a *Analysis) resolveImplementations() {
 				}
 
 				superMethod := a.FindClassMethod(st.Super, methodName)
-				if superMethod == nil || !superMethod.IsFirstParamSelf() {
+				if superMethod == nil || superMethod.IsStatic() {
 					return
 				}
 
-				if !funcTy.IsFirstParamSelf() {
+				if funcTy.IsStatic() {
+					a.Errorf(
+						funcTy.Span(),
+						"method `%s` does not match superclass `%s` signature",
+						methodName,
+						superMethod.Class.Def.Name.Raw,
+					)
+					return
+				}
+
+				superMethodCopy := *superMethod
+				superMethodCopy.Params = superMethodCopy.Params[1:] // remove `self` param
+				funcTyCopy := *funcTy
+				funcTyCopy.Params = funcTyCopy.Params[1:] // remove `self` param
+
+				if !a.matchFunction(&superMethodCopy, &funcTyCopy) {
 					a.Errorf(
 						funcTy.Span(),
 						"method `%s` does not match superclass `%s` signature",
@@ -484,36 +524,11 @@ func (a *Analysis) resolveImplementations() {
 						superMethod.Class.Def.Name.Raw,
 					)
 				}
-
-				var funcsMatch = func() bool {
-					s, o := superMethod, funcTy
-					if s.Def.Errorable != o.Def.Errorable {
-						return false
-					}
-					if len(s.Params) != len(o.Params) {
-						return false
-					}
-					for i, p := range s.Params {
-						if !a.matchTypes(p, o.Params[i]) {
-							return false
-						}
-					}
-					return a.matchTypes(s.Return, o.Return)
-				}
-
-				if !funcsMatch() {
-					a.Errorf(
-						funcTy.Span(),
-						"method `%s` does not match superclass `%s` signature",
-						methodName,
-						superMethod.Class.Def.Name.Raw,
-					)
-				}
-
 			})
 		}
 		impl.ClassSema = st
-		impl.GenericsScope = genericsScope
+		impl.SelfScope = selfScope
+		impl.StaticScope = a.Scope
 	}
 }
 
@@ -559,12 +574,17 @@ func (a *Analysis) analyzeImplementations() {
 					a.Error(method.Span(), "cannot have a body")
 				}
 				if impl.ClassSema.IsGlobal() {
-					if method.IsFirstParamSelf() && !method.Attributes.Has("local_method") {
+					if !method.IsStatic() && !method.Attributes.Has("local_method") {
 						a.Error(method.Span(), "cannot have a body, because class is global (use `local_method` attribute to allow this)")
 					}
 				}
 			}
-			_ = a.handleFunction(impl.GenericsScope.(*Scope), &method)
+			if method.IsStatic() {
+				_ = a.handleFunction(impl.StaticScope.(*Scope), &method)
+			} else {
+				method.Params[0].Type = impl.Class
+				_ = a.handleFunction(impl.SelfScope.(*Scope), &method)
+			}
 		}
 	}
 

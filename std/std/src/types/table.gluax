@@ -1,23 +1,23 @@
 impl table {
-    pub func new() -> Self {
-        @raw("{@RETURN {} @}") -> Self
+    pub func new() -> table {
+        @raw("{@RETURN {} @}") -> table@
     }
 
     #[inline]
     pub func set(self, key: any, value: any) {
-        @raw("{@1@}[{@2@}] = {@3@}", self, key, value);
+        @raw("{@1@}[{@2@}] = {@3@}", self, key, value)@;
     }
 
     #[inline]
-    pub func get(self, key: any) -> ?any {
-        @raw("{@RETURN {@1@}[{@2@}] @}", self, key) -> ?any
+    pub func get(self, key: any) -> any {
+        @raw("{@RETURN {@1@}[{@2@}] @}", self, key) -> any@
     }
 
     #[global = "table.concat"]
     pub func join(self, sep: ?string, s: ?number, e: ?number) -> string;
 
     #[global = "table.remove"]
-    pub func remove(self, idx: number) -> ?any;
+    pub func remove(self, idx: number) -> any;
 
     #[global = "table.maxn"]
     pub func maxn(self) -> number;

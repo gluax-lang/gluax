@@ -109,11 +109,12 @@ func (c *Class) GlobalName() string {
 /* Impl Class */
 
 type ImplClass struct {
-	Class         Type
-	Methods       []Function
-	Scope         any
-	GenericsScope any
-	span          common.Span
+	Class       Type
+	Methods     []Function
+	Scope       any
+	SelfScope   any // "self" scope for methods
+	StaticScope any // "static" scope for static methods
+	span        common.Span
 
 	ClassSema *SemClass // semantic information, if available
 	Checks    []func()  // these checks are ran in analyzeImplementations

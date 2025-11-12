@@ -24,10 +24,6 @@ func (p *parser) parseTypeX(flags Flags) ast.Type {
 		nilType := &nilPath
 
 		ty = ast.NewUnion([]ast.Type{nilType, innerType}, SpanFrom(spanStart, p.prevSpan()))
-	} else if p.Token.Is("Self") {
-		p.advance()
-		selfPath := ast.NewSimplePath(lexer.NewTokIdent("Self", p.prevSpan()))
-		ty = &selfPath
 	} else if p.Token.Is("func") {
 		ty = p.parseFunctionType()
 	} else if flags.Has(FlagTypeTuple) && p.Token.Is("(") {

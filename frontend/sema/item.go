@@ -28,8 +28,8 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemClass, string){
 			return
 		}
 
-		if !fun.IsFirstParamSelf() {
-			a.Error(fun.Def.Params[0].Type.Span(), "first parameter must be `self`")
+		if fun.IsStatic() {
+			a.Errorf(fun.Span(), "method `%s` cannot be static", methodName)
 			return
 		}
 
@@ -63,8 +63,8 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemClass, string){
 			return
 		}
 
-		if !fun.IsFirstParamSelf() {
-			a.Errorf(fun.Def.Params[0].Type.Span(), "first parameter must be `self`")
+		if fun.IsStatic() {
+			a.Errorf(fun.Span(), "method `%s` cannot be static", methodName)
 			return
 		}
 
@@ -95,8 +95,8 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemClass, string){
 			return
 		}
 
-		if !fun.IsFirstParamSelf() {
-			a.Errorf(fun.Def.Params[0].Type.Span(), "first parameter must be `self`")
+		if fun.IsStatic() {
+			a.Errorf(fun.Span(), "method `%s` cannot be static", methodName)
 			return
 		}
 

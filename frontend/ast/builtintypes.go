@@ -31,16 +31,16 @@ pub class anyfunc { _priv: nil }
 #[sealed]
 pub class table { _priv: nil }
 
-pub trait Eq {
-    func eq(self, other: Self) -> bool {
-		@raw("{@RETURN {@1@} == {@2@} @}", self, other) -> bool
-	}
-}
-
-pub trait Ord {
-	func lt(self, other: Self) -> bool;
-	func le(self, other: Self) -> bool;
-}
+// pub trait Eq {
+//     func eq(self, other: Self) -> bool {
+// 		@raw("{@RETURN {@1@} == {@2@} @}", self, other) -> bool
+// 	}
+// }
+//
+// pub trait Ord {
+// 	func lt(self, other: Self) -> bool;
+// 	func le(self, other: Self) -> bool;
+// }
 `
 
 var builtin = map[string]struct{}{

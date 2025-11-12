@@ -9,7 +9,7 @@ pub class Player: Entity {}
 func get_player(i: number) -> Player;
 
 impl Player {
-    pub func get(i: number) -> ?Self {
+    pub func get(i: number) -> ?Player {
         let player = get_player(i);
         if player == entity::NULL {
             return nil;
@@ -23,7 +23,7 @@ impl Player {
 
 impl Player {
     #[global = "player.Iterator"]
-    pub func iter() -> (func(Self, any) -> (?number, ?Self), table, number);
+    pub func iter() -> (func(Player, any) -> (?number, ?Player), table, number);
 }
 
 impl Player {

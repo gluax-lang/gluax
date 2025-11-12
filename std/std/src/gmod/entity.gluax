@@ -8,7 +8,7 @@ pub let NULL: Entity = get_entity(0);
 func get_entity(i: number) -> Entity;
 
 impl Entity {
-    pub func get(i: number) -> ?Self {
+    pub func get(i: number) -> ?Entity {
         let ent = get_entity(i);
         if ent == NULL {
             return nil;
@@ -23,7 +23,7 @@ impl Entity {
 
 impl Entity {
     #[global = "ents.Iterator"]
-    pub func iter() -> (func(Self, any) -> (?number, ?Self), table, number);
+    pub func iter() -> (func(Entity, any) -> (?number, ?Entity), table, number);
 }
 
 impl Entity {

@@ -94,7 +94,7 @@ func (h *Handler) Complete(p *lsp.CompletionParams) (*lsp.CompletionList, error)
 			if _, exists := added[name]; exists {
 				continue
 			}
-			if !method.IsFirstParamSelf() {
+			if method.IsStatic() {
 				continue
 			}
 			if !sA.CanAccessClassMethod(method) {

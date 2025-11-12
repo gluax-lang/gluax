@@ -1,6 +1,8 @@
 package sema
 
 import (
+	"fmt"
+
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
@@ -44,6 +46,6 @@ func (a *Analysis) resolveType(scope *Scope, ty ast.Type) Type {
 		}
 		return ast.NewSemType(ast.NewSemUnion(t, types), t.Span())
 	default:
-		panic("TODO TYPE")
+		panic(fmt.Sprintf("TODO TYPE: %T", t))
 	}
 }

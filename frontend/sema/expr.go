@@ -685,7 +685,7 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 
 	method := methods[0]
 
-	if !method.IsFirstParamSelf() {
+	if method.IsStatic() {
 		a.Errorf(call.Method.Span(), "no method named `%s` in `%s`", name, toCallName)
 		return a.nilType()
 	}

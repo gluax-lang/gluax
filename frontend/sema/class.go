@@ -16,12 +16,6 @@ func (a *Analysis) setupClass(def *ast.Class) *SemClass {
 
 func (a *Analysis) HandleClassMethod(st *ast.SemClass, method *ast.SemFunction, withBody bool) *ast.SemFunction {
 	classScope := (method.Scope.(*Scope)).Child(false)
-	{
-		stTy := ast.NewSemType(st, st.Def.Name.Span())
-		if err := classScope.AddType("Self", stTy); err != nil {
-			a.Error(st.Def.Name.Span(), err.Error())
-		}
-	}
 	var funcTy *ast.SemFunction
 	if withBody {
 		funcTy = a.handleFunction(classScope, &method.Def)
@@ -61,14 +55,11 @@ func (a *Analysis) instantiateClass(def *ast.Class) *SemClass {
 
 	st := a.setupClass(def)
 
-	stScope := st.Scope.(*Scope)
-
 	if def.Super != nil {
 		superT := a.resolveType(st.Scope.(*Scope), *def.Super)
 		st.Super = superT.Class()
 	}
 
-	stScope.ForceAddType("Self", ast.NewSemType(st, def.Span()))
 	a.collectClassFields(st)
 
 	return st

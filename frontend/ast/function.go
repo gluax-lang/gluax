@@ -22,6 +22,7 @@ type Function struct {
 	sem        *SemFunction
 	span       common.Span
 	IsItem     bool
+	isStatic   bool
 }
 
 func NewFunction(name *lexer.TokIdent, sig FunctionSignature, body *Block, attributes Attributes, span common.Span) *Function {
@@ -67,16 +68,12 @@ func (f *Function) GlobalName() string {
 	panic("function is not global, cannot get global name")
 }
 
-func (f *Function) IsFirstParamSelf() bool {
-	params := f.Params
-	if len(params) < 1 {
-		return false
-	}
-	firstParam := params[0]
-	if firstParam.Name == nil {
-		return false
-	}
-	return firstParam.Name.Raw == "self"
+func (f *Function) SetStatic(isStatic bool) {
+	f.isStatic = isStatic
+}
+
+func (f *Function) IsStatic() bool {
+	return f.isStatic
 }
 
 type FunctionParam struct {

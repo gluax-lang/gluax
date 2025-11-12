@@ -21,7 +21,6 @@ const (
 	KwContinue
 	KwLoop
 	KwImport
-	KwSelf
 	KwPub
 	KwAs
 	KwUnsafeCast
@@ -63,7 +62,6 @@ var keywordTable = map[string]Keyword{
 	"continue":       KwContinue,
 	"loop":           KwLoop,
 	"import":         KwImport,
-	"Self":           KwSelf,
 	"pub":            KwPub,
 	"as":             KwAs,
 	"unsafe_cast_as": KwUnsafeCast,

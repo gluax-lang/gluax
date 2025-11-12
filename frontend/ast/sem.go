@@ -483,11 +483,11 @@ func (f SemFunction) IsClassMethod() bool {
 		return false
 	}
 
-	return f.IsFirstParamSelf()
+	return !f.IsStatic() // if not static, then it's a class method
 }
 
-func (f SemFunction) IsFirstParamSelf() bool {
-	return f.Def.IsFirstParamSelf()
+func (f SemFunction) IsStatic() bool {
+	return f.Def.IsStatic()
 }
 
 /* Tuple */

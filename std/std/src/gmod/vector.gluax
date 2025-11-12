@@ -11,51 +11,51 @@ pub class Vector {
 
 impl Vector {
     #[global = "Vector"]
-    pub func new(x: ?number, y: ?number, z: ?number) -> Self;
+    pub func new(x: ?number, y: ?number, z: ?number) -> Vector;
 }
 
 impl Vector {
     #[rename_to = "Add"]
-    pub func add(self, other: Self);
+    pub func add(self, other: Vector);
 
     #[rename_to = "Sub"]
-    pub func sub(self, other: Self);
+    pub func sub(self, other: Vector);
 
     #[rename_to = "Mul"]
-    pub func mul(self, other: Self);
+    pub func mul(self, other: Vector);
 
     #[rename_to = "Div"]
-    pub func div(self, other: Self);
+    pub func div(self, other: Vector);
 
     #[rename_to = "Cross"]
-    pub func cross(self, other: Self) -> Self;
+    pub func cross(self, other: Vector) -> Vector;
 
     #[rename_to = "Distance"]
-    pub func distance(self, other: Self) -> number;
+    pub func distance(self, other: Vector) -> number;
 
     #[rename_to = "Distance2D"]
-    pub func distance_2d(self, other: Self) -> number;
+    pub func distance_2d(self, other: Vector) -> number;
 
     #[rename_to = "Distance2DSqr"]
-    pub func distance_2d_sqr(self, other: Self) -> number;
+    pub func distance_2d_sqr(self, other: Vector) -> number;
 
     #[rename_to = "DistToSqr"]
-    pub func dist_to_sqr(self, other: Self) -> number;
+    pub func dist_to_sqr(self, other: Vector) -> number;
 
     #[rename_to = "Dot"]
-    pub func dot(self, other: Self) -> number;
+    pub func dot(self, other: Vector) -> number;
 
     #[rename_to = "Negate"]
     pub func negate(self);
 
     #[rename_to = "GetNegated"]
-    pub func negated(self) -> Self;
+    pub func negated(self) -> Vector;
 
     #[rename_to = "GetNormalized"]
-    pub func normalized(self) -> Self;
+    pub func normalized(self) -> Vector;
 
     #[rename_to = "IsEqualTol"]
-    pub func is_equal_tol(self, other: Self, tolerance: number) -> bool;
+    pub func is_equal_tol(self, other: Vector, tolerance: number) -> bool;
 
     #[rename_to = "IsZero"]
     pub func is_zero(self) -> bool;
@@ -79,7 +79,7 @@ impl Vector {
     pub func random(self, min: ?number, max: ?number);
 
     #[rename_to = "Set"]
-    pub func set(self, other: Self);
+    pub func set(self, other: Vector);
 
     #[rename_to = "SetUnpacked"]
     pub func set_unpacked(self, x: number, y: number, z: number);
@@ -97,7 +97,7 @@ impl Vector {
     pub func unpack(self) -> (number, number, number);
 
     #[rename_to = "WithinAABox"]
-    pub func within_aabox(self, min: Self, max: Self) -> bool;
+    pub func within_aabox(self, min: Vector, max: Vector) -> bool;
 
     #[rename_to = "Zero"]
     pub func zero(self);

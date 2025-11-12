@@ -17,13 +17,6 @@ type Type interface {
 // 	return false
 // }
 
-func IsSelf(ty Type) bool {
-	if p, ok := ty.(*Path); ok {
-		return p.IsSelf()
-	}
-	return false
-}
-
 func IsVararg(ty Type) bool {
 	_, ok := ty.(*Vararg)
 	return ok

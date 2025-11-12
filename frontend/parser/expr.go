@@ -67,10 +67,6 @@ func (p *parser) parsePrimaryExpr(ctx ExprCtx) ast.Expr {
 	case "_":
 		common.PanicDiag("`_` can only be used to denote a variable/parameter name", tok.Span())
 		panic("unreachable")
-	case "Self":
-		p.advance() // consume Self
-		Self := lexer.NewTokIdent("Self", tok.Span())
-		return p.parsePathExpr(ctx, &Self)
 	case "true", "false":
 		p.advance() // consume bool
 		return ast.NewBoolExpr(tok)
@@ -273,6 +269,8 @@ func (p *parser) parseRunRawExpr() ast.Expr {
 	p.expect(")")
 
 	returnType := p.parseFunctionReturnType(FlagTypeTuple | FlagTypeVarArg | FlagFuncReturnUnreachable)
+
+	p.expect("@")
 
 	return ast.NewRunRawExpr(code, args, returnType, SpanFrom(spanStart, p.prevSpan()))
 }

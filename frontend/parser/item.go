@@ -176,11 +176,7 @@ func (p *parser) parseClassMethod(bodyOptional bool) ast.Function {
 	p.expect("func")
 	name := p.expectIdent()
 
-	sig := p.parseFunctionSignature(
-		FlagFuncParamVarArg |
-			FlagFuncParamSelf |
-			FlagFuncParamNamed,
-	)
+	sig := p.parseFunctionSignature(FlagFuncParamVarArg | FlagFuncParamNamed | FlagFuncParamSelf)
 
 	var body *ast.Block
 	if !bodyOptional {
@@ -197,7 +193,15 @@ func (p *parser) parseClassMethod(bodyOptional bool) ast.Function {
 
 	span := SpanFrom(spanStart, p.prevSpan())
 
-	return *ast.NewFunction(&name, sig, body, nil, span)
+	f := ast.NewFunction(&name, sig, body, nil, span)
+	// check if its static or not, by checking if the first parameter is `self`
+	if len(sig.Params) > 0 && sig.Params[0].Name != nil && sig.Params[0].Name.Raw == "self" {
+		f.SetStatic(false)
+	} else {
+		f.SetStatic(true)
+	}
+
+	return *f
 }
 
 func (p *parser) parseTrait() ast.Item {

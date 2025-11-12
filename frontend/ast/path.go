@@ -35,10 +35,6 @@ func (p *Path) Span() common.Span {
 	return common.SpanFrom(p.Segments[0].Span(), p.Segments[len(p.Segments)-1].Span())
 }
 
-func (p *Path) IsSelf() bool {
-	return len(p.Segments) == 1 && p.Segments[0].Ident.Raw == "Self"
-}
-
 func (p *Path) String() string {
 	var sb strings.Builder
 	sb.WriteString(p.Segments[0].Ident.Raw)
