@@ -49,3 +49,57 @@ const (
 	// BinaryOpExponent is `**`
 	BinaryOpExponent
 )
+
+func (op BinaryOp) String() string {
+	switch op {
+	case BinaryOpInvalid:
+		return "invalid"
+
+	case BinaryOpLogicalOr:
+		return "||"
+	case BinaryOpLogicalAnd:
+		return "&&"
+
+	case BinaryOpLess:
+		return "<"
+	case BinaryOpGreater:
+		return ">"
+	case BinaryOpLessEqual:
+		return "<="
+	case BinaryOpGreaterEqual:
+		return ">="
+	case BinaryOpEqual:
+		return "=="
+	case BinaryOpNotEqual:
+		return "!="
+
+	case BinaryOpBitwiseOr:
+		return "|"
+	case BinaryOpBitwiseAnd:
+		return "&"
+	case BinaryOpBitwiseXor:
+		return "^"
+	case BinaryOpBitwiseLeftShift:
+		return "<<"
+	case BinaryOpBitwiseRightShift:
+		return ">>"
+
+	case BinaryOpConcat:
+		return ".."
+
+	case BinaryOpAdd:
+		return "+"
+	case BinaryOpSub:
+		return "-"
+	case BinaryOpMul:
+		return "*"
+	case BinaryOpDiv:
+		return "/"
+	case BinaryOpMod:
+		return "%"
+	case BinaryOpExponent:
+		return "**"
+	}
+
+	return "invalid"
+}

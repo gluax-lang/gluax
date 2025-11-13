@@ -159,10 +159,7 @@ func (a *Analysis) handleBinaryExpr(scope *Scope, binE *ast.ExprBinary) Type {
 		}
 		return a.boolType()
 	case ast.BinaryOpBitwiseOr, ast.BinaryOpBitwiseXor, ast.BinaryOpBitwiseAnd,
-		ast.BinaryOpBitwiseLeftShift, ast.BinaryOpBitwiseRightShift,
-		ast.BinaryOpAdd, ast.BinaryOpSub,
-		ast.BinaryOpMul, ast.BinaryOpDiv,
-		ast.BinaryOpMod, ast.BinaryOpExponent:
+		ast.BinaryOpBitwiseLeftShift, ast.BinaryOpBitwiseRightShift:
 		if !lty.IsNumber() {
 			a.Errorf(binE.Left.Span(), "attempted to perform arithmetic on non-number value, got: %s", lty.String())
 		}
@@ -178,6 +175,24 @@ func (a *Analysis) handleBinaryExpr(scope *Scope, binE *ast.ExprBinary) Type {
 			a.Errorf(binE.Right.Span(), "attempted to concatenate non-string value, got: %s", rty.String())
 		}
 		return a.stringType()
+	default:
+		if methodName, ok := ast.ArithmeticMetaMethodsOps[binE.Op]; ok {
+			if !lty.IsClass() {
+				a.Errorf(binE.Left.Span(), "`%s` does not define `%s`", lty.String(), methodName)
+				return a.nilType()
+			}
+
+			clss := lty.Class()
+			method := a.FindClassMethod(clss, methodName)
+			if method == nil {
+				a.Errorf(binE.Left.Span(), "`%s` does not define `%s`", clss.String(), methodName)
+				return a.nilType()
+			}
+
+			a.Matches(method.Params[1], rty, binE.Right.Span())
+
+			return method.FirstReturnType()
+		}
 	}
 
 	return a.anyType()

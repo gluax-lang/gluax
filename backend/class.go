@@ -76,6 +76,12 @@ func (cg *Codegen) generateClass(st *ast.SemClass) {
 			superName := cg.decorateClassName(st.Super)
 			cg.ln("setmetatable(%s, %s);", name, superName)
 		}
+		allMethods := cg.Analysis.GetClassMethodsRecursively(st)
+		for methodName := range ast.MetaMethods {
+			if _, ok := allMethods[methodName]; ok && !st.Attributes().Has("global") {
+				cg.ln("%s.%s = %s.%s;", name, methodName, name, methodName)
+			}
+		}
 	}
 }
 
@@ -84,8 +90,10 @@ func (cg *Codegen) genClassFuncs(clss *ast.SemClass, funcs map[string]*sema.SemF
 		if method.Def.Body == nil {
 			continue
 		}
-		if !cg.isMarkedUsed(cg.classFuncUsedName(clss, name)) {
-			continue
+		if _, ok := ast.MetaMethods[name]; !ok {
+			if !cg.isMarkedUsed(cg.classFuncUsedName(clss, name)) {
+				continue
+			}
 		}
 		// we need to handle it with body, to make sure body calls are generated correctly
 		hMethod := cg.Analysis.HandleClassMethod(clss, method, true)

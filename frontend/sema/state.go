@@ -62,16 +62,14 @@ func (a *Analysis) FindClassMethod(st *ast.SemClass, name string) *SemFunction {
 	return nil
 }
 
-func (a *Analysis) GetClassMethodsRecursively(st *ast.SemClass) []*SemFunction {
-	var result []*SemFunction
-
+func (a *Analysis) GetClassMethodsRecursively(st *ast.SemClass) map[string]*SemFunction {
+	result := make(map[string]*SemFunction)
 	for cls := st; cls != nil; cls = cls.Super {
 		methodsByName := a.State.MethodsByClass[cls.Def]
-		for _, method := range methodsByName {
-			result = append(result, a.HandleClassMethod(st, method, false))
+		for name, method := range methodsByName {
+			result[name] = a.HandleClassMethod(st, method, false)
 		}
 	}
-
 	return result
 }
 

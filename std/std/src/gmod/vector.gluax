@@ -12,6 +12,18 @@ pub class Vector {
 impl Vector {
     #[global = "Vector"]
     pub func new(x: ?number, y: ?number, z: ?number) -> Vector;
+
+    #[global]
+    func __add(self, other: Vector) -> Vector;
+
+    #[global]
+    func __sub(self, other: Vector) -> Vector;
+
+    #[global]
+    func __mul(self, other: Vector | number) -> Vector;
+
+    #[global]
+    func __div(self, other: Vector | number) -> Vector;
 }
 
 impl Vector {

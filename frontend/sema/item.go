@@ -4,6 +4,30 @@ import (
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
+var arithmeticCheck = func(a *Analysis, st *ast.SemClass, methodName string) {
+	fun := a.FindClassMethod(st, methodName)
+
+	if fun.IsStatic() {
+		a.Errorf(fun.Span(), "method `%s` cannot be static", methodName)
+		return
+	}
+
+	if len(fun.Params) != 2 {
+		a.Errorf(fun.Def.Span(), "method `%s` must have 2 parameters", methodName)
+		return
+	}
+
+	if fun.HasVarargReturn() {
+		a.Errorf(fun.Return.Span(), "method `%s` cannot have vararg return", methodName)
+		return
+	}
+
+	if fun.ReturnCount() > 1 {
+		a.Errorf(fun.Return.Span(), "method `%s` cannot have more than 1 return value", methodName)
+		return
+	}
+}
+
 func checkPairsIterFunc(a *Analysis, fun *SemFunction) {
 	if fun.HasVarargReturn() {
 		a.Error(fun.Span(), "iterator function cannot have vararg return")
@@ -114,6 +138,41 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemClass, string){
 			return
 		}
 	},
+	"__tostring": func(a *Analysis, st *ast.SemClass, methodName string) {
+		fun := a.FindClassMethod(st, methodName)
+
+		if fun.IsStatic() {
+			a.Errorf(fun.Span(), "method `%s` cannot be static", methodName)
+			return
+		}
+
+		if len(fun.Params) != 1 {
+			a.Errorf(fun.Def.Span(), "method `%s` must have 1 parameter", methodName)
+			return
+		}
+
+		if fun.HasVarargReturn() {
+			a.Errorf(fun.Return.Span(), "method `%s` cannot have vararg return", methodName)
+			return
+		}
+
+		if fun.ReturnCount() > 1 {
+			a.Errorf(fun.Return.Span(), "method `%s` cannot have more than 1 return value", methodName)
+			return
+		}
+
+		firstReturn := fun.FirstReturnType()
+		if !firstReturn.IsString() {
+			a.Errorf(firstReturn.Span(), "return value must be a string type")
+			return
+		}
+	},
+}
+
+func init() {
+	for methodName := range ast.ArithmeticMetaMethods {
+		toCheckFuncs[methodName] = arithmeticCheck
+	}
 }
 
 func (a *Analysis) checkClassMethods(st *ast.SemClass, methodName string) {
