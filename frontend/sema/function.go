@@ -31,6 +31,8 @@ func (a *Analysis) handleFunctionImpl(scope *Scope, it *ast.Function, withBody b
 	returnType := a.nilType()
 	if it.ReturnType != nil {
 		returnType = a.resolveType(child, *it.ReturnType)
+	} else {
+		returnType.SetSpan(it.Span())
 	}
 
 	funcType := &ast.SemFunction{
