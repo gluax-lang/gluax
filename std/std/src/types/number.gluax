@@ -3,6 +3,29 @@ import "../debug";
 import "../base";
 
 impl number {
+	#[global]
+	func __add(self, other: number) -> number;
+
+	#[global]
+	func __sub(self, other: number) -> number;
+
+	#[global]
+	func __mul(self, other: number) -> number;
+
+	#[global]
+	func __div(self, other: number) -> number;
+
+	#[global]
+	func __mod(self, other: number) -> number;
+
+	#[global]
+	func __pow(self, other: number) -> number;
+
+    #[global]
+    func __unm(self) -> number;
+}
+
+impl number {
     #[global = "tostring"]
     pub func to_string(self) -> string;
 

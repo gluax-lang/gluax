@@ -208,10 +208,19 @@ func (a *Analysis) handleUnaryExpr(scope *Scope, unE *ast.ExprUnary) Type {
 		}
 		return a.boolType()
 	case ast.UnaryOpNegate:
-		if !ty.IsNumber() {
-			a.panic(unE.Span(), "unary negate operator requires a number value")
+		if !ty.IsClass() {
+			a.Errorf(unE.Value.Span(), "`%s` does not define `__unm`", ty.String())
+			return a.nilType()
 		}
-		return a.numberType()
+
+		clss := ty.Class()
+		method := a.FindClassMethod(clss, "__unm")
+		if method == nil {
+			a.Errorf(unE.Value.Span(), "`%s` does not define `__unm`", clss.String())
+			return a.nilType()
+		}
+
+		return method.FirstReturnType()
 	case ast.UnaryOpBitwiseNot:
 		if !ty.IsNumber() {
 			a.panic(unE.Span(), "unary bitwise not operator requires an integer value")

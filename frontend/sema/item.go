@@ -167,6 +167,55 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemClass, string){
 			return
 		}
 	},
+	"__unm": func(a *Analysis, st *ast.SemClass, methodName string) {
+		fun := a.FindClassMethod(st, methodName)
+
+		if fun.IsStatic() {
+			a.Errorf(fun.Span(), "method `%s` cannot be static", methodName)
+			return
+		}
+
+		if len(fun.Params) != 1 {
+			a.Errorf(fun.Def.Span(), "method `%s` must have 1 parameter", methodName)
+			return
+		}
+
+		if fun.HasVarargReturn() {
+			a.Errorf(fun.Return.Span(), "method `%s` cannot have vararg return", methodName)
+			return
+		}
+
+		if fun.ReturnCount() > 1 {
+			a.Errorf(fun.Return.Span(), "method `%s` cannot have more than 1 return value", methodName)
+			return
+		}
+	},
+	"__eq": func(a *Analysis, st *ast.SemClass, methodName string) {
+		fun := a.FindClassMethod(st, methodName)
+
+		if fun.IsStatic() {
+			a.Errorf(fun.Span(), "method `%s` cannot be static", methodName)
+			return
+		}
+
+		if len(fun.Params) != 2 {
+			a.Errorf(fun.Def.Span(), "method `%s` must have 2 parameters", methodName)
+			return
+		}
+
+		if fun.HasVarargReturn() {
+			a.Errorf(fun.Return.Span(), "method `%s` cannot have vararg return", methodName)
+			return
+		}
+
+		if fun.ReturnCount() > 1 {
+			a.Errorf(fun.Return.Span(), "method `%s` cannot have more than 1 return value", methodName)
+			return
+		}
+
+		a.Matches(fun.Params[0], fun.Params[1], fun.Params[1].Span())
+		a.Matches(a.boolType(), fun.FirstReturnType(), fun.FirstReturnType().Span())
+	},
 }
 
 func init() {

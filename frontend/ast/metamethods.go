@@ -2,8 +2,12 @@ package ast
 
 import "maps"
 
+// Not doing __len because it won't work with tables in lua
+
 var MetaMethods = map[string]struct{}{
 	"__tostring": {},
+	"__unm":      {},
+	"__eq":       {},
 }
 
 var ArithmeticMetaMethods = map[string]struct{}{

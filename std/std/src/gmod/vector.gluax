@@ -24,6 +24,9 @@ impl Vector {
 
     #[global]
     func __div(self, other: Vector | number) -> Vector;
+
+    #[global]
+    func __unm(self) -> Vector;
 }
 
 impl Vector {
