@@ -31,6 +31,8 @@ func (p *parser) parseTypeX(flags Flags) ast.Type {
 	} else if flags.Has(FlagTypeVarArg) && p.Token.Is("...") {
 		p.advance()
 		ty = ast.NewVararg(p.parseType(), SpanFrom(spanStart, p.prevSpan()))
+	} else if lexer.IsIdent(p.Token) && p.Token.String() == "vec" {
+		ty = p.parseVec()
 	} else {
 		path := p.parsePath(nil)
 		ty = &path
@@ -96,4 +98,15 @@ func (p *parser) parseUnionType(first ast.Type, flags Flags, spanStart Span) ast
 
 	unionSpan := SpanFrom(spanStart, p.prevSpan())
 	return ast.NewUnion(types, unionSpan)
+}
+
+func (p *parser) parseVec() ast.Type {
+	spanStart := p.span()
+	p.advance() // skip `vec`
+
+	p.expect("<")
+	ty := p.parseType()
+	p.expect(">")
+
+	return ast.NewVec(ty, SpanFrom(spanStart, p.prevSpan()))
 }

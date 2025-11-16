@@ -45,9 +45,14 @@ func (p *parser) parsePrimaryExpr(ctx ExprCtx) ast.Expr {
 	switch v := p.Token.(type) {
 	case lexer.TokIdent:
 		// if its "nil", then return nil expr/value
-		if v.Raw == "nil" {
+		switch v.Raw {
+		case "nil":
 			p.advance() // consume "nil"
 			return ast.NewNilExpr(p.prevSpan())
+		case "vec":
+			return p.parseVecInitExpr()
+		case "map":
+			return p.parseMapInitExpr()
 		}
 		return p.parsePathExpr(ctx, nil)
 	case lexer.TokNumber:
@@ -271,4 +276,63 @@ func (p *parser) parseRunRawExpr() ast.Expr {
 	p.expect("@")
 
 	return ast.NewRunRawExpr(code, args, returnType, SpanFrom(spanStart, p.prevSpan()))
+}
+
+func (p *parser) parseVecInitExpr() ast.Expr {
+	spanStart := p.span()
+
+	p.advance() // consume "vec"
+
+	var innerType *ast.Type = nil
+	if p.tryConsume("<") {
+		ty := p.parseType()
+		innerType = &ty
+		p.expect(">")
+	}
+
+	p.expect("{")
+
+	var values []ast.Expr
+	p.parseCommaSeparatedDelimited("}", func(p *parser) {
+		values = append(values, p.parseExpr(ExprCtxNormal))
+	})
+
+	spanEnd := p.prevSpan()
+	span := SpanFrom(spanStart, spanEnd)
+
+	return ast.NewVecInitExpr(innerType, values, span)
+}
+
+func (p *parser) parseMapEntry() ast.ExprMapEntry {
+	key := p.parseExpr(ExprCtxNormal)
+	p.expect(":")
+	value := p.parseExpr(ExprCtxNormal)
+	return ast.ExprMapEntry{
+		Key:   key,
+		Value: value,
+	}
+}
+
+func (p *parser) parseMapInitExpr() ast.Expr {
+	spanStart := p.span()
+
+	p.advance() // consume "map"
+
+	var keyType, valueType *ast.Type
+	if p.tryConsume("<") {
+		ty := p.parseType()
+		keyType = &ty
+		if p.tryConsume(",") {
+			ty := p.parseType()
+			valueType = &ty
+		}
+		p.expect(">")
+	}
+
+	var entries []ast.ExprMapEntry
+	p.parseCommaSeparatedDelimited("}", func(p *parser) {
+		entries = append(entries, p.parseMapEntry())
+	})
+
+	return ast.NewMapInitExpr(keyType, valueType, entries, SpanFrom(spanStart, p.prevSpan()))
 }

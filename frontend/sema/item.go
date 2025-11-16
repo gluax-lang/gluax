@@ -5,7 +5,7 @@ import (
 )
 
 var arithmeticCheck = func(a *Analysis, st *ast.SemClass, methodName string) {
-	fun := a.FindClassMethod(st, methodName)
+	fun := st.GetMethod(methodName, true)
 
 	if fun.IsStatic() {
 		a.Errorf(fun.Span(), "method `%s` cannot be static", methodName)
@@ -44,7 +44,7 @@ func checkPairsIterFunc(a *Analysis, fun *SemFunction) {
 
 var toCheckFuncs = map[string]func(*Analysis, *ast.SemClass, string){
 	"__x_iter_pairs": func(a *Analysis, st *ast.SemClass, methodName string) {
-		fun := a.FindClassMethod(st, methodName)
+		fun := st.GetMethod(methodName, true)
 		if len(fun.Params) != 1 {
 			a.Errorf(fun.Def.Span(), "method `%s` must have one parameter", methodName)
 			return
@@ -74,13 +74,13 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemClass, string){
 		checkPairsIterFunc(a, firstReturn.Function())
 	},
 	"__x_iter_range": func(a *Analysis, st *ast.SemClass, methodName string) {
-		fun := a.FindClassMethod(st, methodName)
+		fun := st.GetMethod(methodName, true)
 		if len(fun.Params) != 2 {
 			a.Errorf(fun.Def.Name.Span(), "method `%s` must have two parameters", methodName)
 			return
 		}
 
-		if method := a.FindClassMethod(st, "__x_iter_range_bound"); method == nil {
+		if method := st.GetMethod("__x_iter_range_bound", true); method == nil {
 			a.Errorf(fun.Def.Name.Span(), "class `%s` must implement method `__x_iter_range_bound` to use `%s`", st.Def.Name.Raw, methodName)
 			return
 		}
@@ -106,13 +106,13 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemClass, string){
 		}
 	},
 	"__x_iter_range_bound": func(a *Analysis, st *ast.SemClass, methodName string) {
-		fun := a.FindClassMethod(st, methodName)
+		fun := st.GetMethod(methodName, true)
 		if len(fun.Params) != 1 {
 			a.Errorf(fun.Def.Name.Span(), "method `%s` must have one parameter", methodName)
 			return
 		}
 
-		if method := a.FindClassMethod(st, "__x_iter_range"); method == nil {
+		if method := st.GetMethod("__x_iter_range", true); method == nil {
 			a.Errorf(fun.Def.Name.Span(), "class `%s` must implement method `__x_iter_range` to use `%s`", st.Def.Name.Raw, methodName)
 			return
 		}
@@ -139,7 +139,7 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemClass, string){
 		}
 	},
 	"__tostring": func(a *Analysis, st *ast.SemClass, methodName string) {
-		fun := a.FindClassMethod(st, methodName)
+		fun := st.GetMethod(methodName, true)
 
 		if fun.IsStatic() {
 			a.Errorf(fun.Span(), "method `%s` cannot be static", methodName)
@@ -168,7 +168,7 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemClass, string){
 		}
 	},
 	"__unm": func(a *Analysis, st *ast.SemClass, methodName string) {
-		fun := a.FindClassMethod(st, methodName)
+		fun := st.GetMethod(methodName, true)
 
 		if fun.IsStatic() {
 			a.Errorf(fun.Span(), "method `%s` cannot be static", methodName)
@@ -191,7 +191,7 @@ var toCheckFuncs = map[string]func(*Analysis, *ast.SemClass, string){
 		}
 	},
 	"__eq": func(a *Analysis, st *ast.SemClass, methodName string) {
-		fun := a.FindClassMethod(st, methodName)
+		fun := st.GetMethod(methodName, true)
 
 		if fun.IsStatic() {
 			a.Errorf(fun.Span(), "method `%s` cannot be static", methodName)

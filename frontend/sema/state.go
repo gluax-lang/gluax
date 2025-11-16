@@ -16,7 +16,8 @@ type State struct {
 	RootScope *Scope               // which root scope we attach to in this pass
 	Files     map[string]*Analysis // where we store the resulting analyses
 
-	MethodsByClass map[*ast.Class]map[string]*SemFunction
+	CreatedClasses []*ast.SemClass
+	CreatedVecs    []*ast.SemVec
 
 	DeclRefs []DeclWithRef
 
@@ -25,63 +26,11 @@ type State struct {
 
 func NewState(label string) *State {
 	return &State{
-		Label:          label,
-		Macros:         make(map[string]string),
-		RootScope:      NewScope(nil),
-		Files:          make(map[string]*Analysis),
-		MethodsByClass: make(map[*ast.Class]map[string]*SemFunction),
+		Label:     label,
+		Macros:    make(map[string]string),
+		RootScope: NewScope(nil),
+		Files:     make(map[string]*Analysis),
 	}
-}
-
-func (a *Analysis) RegisterClassMethod(st *SemClass, method *SemFunction) {
-	if _, ok := a.State.MethodsByClass[st.Def]; !ok {
-		a.State.MethodsByClass[st.Def] = make(map[string]*SemFunction)
-	}
-	byName := a.State.MethodsByClass[st.Def]
-	name := method.Def.Name.Raw
-	// check for duplicates
-	if _, exists := byName[name]; exists {
-		a.Errorf(method.Def.Name.Span(),
-			"duplicate method impl `%s` for class `%s`",
-			name, st.Def.Name.Raw)
-		return
-	}
-	byName[name] = method
-}
-
-func (a *Analysis) FindClassMethod(st *ast.SemClass, name string) *SemFunction {
-	if bucket, exists := a.State.MethodsByClass[st.Def]; exists {
-		if method, exists := bucket[name]; exists {
-			inst := a.HandleClassMethod(st, method, false)
-			return inst
-		}
-	}
-	if st.Super != nil {
-		return a.FindClassMethod(st.Super, name)
-	}
-	return nil
-}
-
-func (a *Analysis) GetClassMethodsRecursively(st *ast.SemClass) map[string]*SemFunction {
-	result := make(map[string]*SemFunction)
-	for cls := st; cls != nil; cls = cls.Super {
-		methodsByName := a.State.MethodsByClass[cls.Def]
-		for name, method := range methodsByName {
-			result[name] = a.HandleClassMethod(st, method, false)
-		}
-	}
-	return result
-}
-
-func (a *Analysis) GetClassMethods(cls *ast.SemClass) map[string]*SemFunction {
-	result := make(map[string]*SemFunction)
-
-	methodsByName := a.State.MethodsByClass[cls.Def]
-	for name, method := range methodsByName {
-		result[name] = a.HandleClassMethod(cls, method, false)
-	}
-
-	return result
 }
 
 func (a *Analysis) AddDecl(declaration LSPSymbol) *DeclWithRef {

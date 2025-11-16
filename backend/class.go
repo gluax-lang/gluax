@@ -42,7 +42,7 @@ func (cg *Codegen) generateClass(st *ast.SemClass) {
 		// don't generate phantom types
 		return
 	}
-	methods := cg.Analysis.GetClassMethods(st)
+	methods := st.Methods
 	if st.IsGlobal() {
 		// global classes are just phantom, they exist in lua world!
 		// NEW: UNLESS WE ADDED FUNCTIONS TO THEM HAHA
@@ -76,7 +76,7 @@ func (cg *Codegen) generateClass(st *ast.SemClass) {
 			superName := cg.decorateClassName(st.Super)
 			cg.ln("setmetatable(%s, %s);", name, superName)
 		}
-		allMethods := cg.Analysis.GetClassMethodsRecursively(st)
+		allMethods := st.GetMethods(true)
 		for methodName := range ast.MetaMethods {
 			if _, ok := allMethods[methodName]; ok && !st.Attributes().Has("global") {
 				cg.ln("%s.%s = %s.%s;", name, methodName, name, methodName)
@@ -96,11 +96,10 @@ func (cg *Codegen) genClassFuncs(clss *ast.SemClass, funcs map[string]*sema.SemF
 			}
 		}
 		// we need to handle it with body, to make sure body calls are generated correctly
-		hMethod := cg.Analysis.HandleClassMethod(clss, method, true)
 		if rename := method.Attributes().GetString("rename_to"); rename != nil {
 			name = *rename
 		}
-		cg.ln("%s = %s,", name, cg.genFunction(hMethod))
+		cg.ln("%s = %s,", name, cg.genFunction(method))
 	}
 }
 

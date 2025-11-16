@@ -120,7 +120,7 @@ func (p *parser) parseImpl() ast.Item {
 
 	p.expect("{")
 
-	var methods []ast.Function
+	var methods []*ast.Function
 
 	for !p.Token.Is("}") {
 		var attributes []ast.Attribute
@@ -131,7 +131,7 @@ func (p *parser) parseImpl() ast.Item {
 		method := p.parseClassMethod(true)
 		method.Public = pub
 		method.Attributes = attributes
-		methods = append(methods, method)
+		methods = append(methods, &method)
 	}
 
 	p.expect("}")

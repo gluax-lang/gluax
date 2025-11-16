@@ -82,18 +82,18 @@ func decode(s: string, pos: ?number) -> (number, number) {
     }
     let s0, s1, s2, s3 = s.bytes(pos, pos + 3);
     let s0 = s0?;
-    let x = FIRST.get(s0 + 1)?;
+    let x = FIRST[s0 + 1]?;
     if x >= AS {
         let mask = x << 31 >> 31;
         return (s0 & ~mask) | (RUNE_ERROR & mask), 1;
     }
     let sz = x & 7;
-    let accept = ACCEPTED_RANGES.get((x >> 4) + 1)?;
+    let accept = ACCEPTED_RANGES[(x >> 4) + 1]?;
     if n - pos + 1 < sz {
         return RUNE_ERROR, 1;
     }
     let s1 = s1?;
-    if s1 < accept.get(1)? || accept.get(2)? < s1 {
+    if s1 < accept[1]? || accept[2]? < s1 {
         return RUNE_ERROR, 1;
     }
     if sz <= 2 {
@@ -120,13 +120,13 @@ func width(s: string, pos: number) -> number {
     if n - pos + 1 < 1 { return 0; }
     let s0, s1, s2, s3 = s.bytes(pos, pos + 3);
     let s0 = s0?;
-    let x = FIRST.get(s0 + 1)?;
+    let x = FIRST[s0 + 1]?;
     if x >= AS { return 1; }
     let sz = x & 7;
-    let accept = ACCEPTED_RANGES.get((x >> 4) + 1)?;
+    let accept = ACCEPTED_RANGES[(x >> 4) + 1]?;
     if n - pos + 1 < sz { return 1; }
     let s1 = s1?;
-    if s1 < accept.get(1)? || accept.get(2)? < s1 { return 1; }
+    if s1 < accept[1]? || accept[2]? < s1 { return 1; }
     if sz <= 2 { return 2; }
     let s2 = s2?;
     if s2 < LOCB || HICB < s2 { return 1; }

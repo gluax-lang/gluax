@@ -32,6 +32,8 @@ const (
 	ExprKindTuple
 	ExprKindUnsafeCast
 	ExprKindRunRaw
+	ExprKindVecInit
+	ExprKindMapInit
 )
 
 func (k ExprKind) String() string {
@@ -78,6 +80,10 @@ func (k ExprKind) String() string {
 		return "unsafe cast"
 	case ExprKindRunRaw:
 		return "run lua"
+	case ExprKindVecInit:
+		return "vec init"
+	case ExprKindMapInit:
+		return "map init"
 	default:
 		panic("unreachable")
 	}
@@ -617,3 +623,57 @@ var runRawReturnRegex = regexp.MustCompile(`\{@RETURN\s+(.+?)@\}`)
 func (r *ExprRunRaw) GetArgRegex() *regexp.Regexp    { return runRawArgRegex }
 func (r *ExprRunRaw) GetTempRegex() *regexp.Regexp   { return runRawTempRegex }
 func (r *ExprRunRaw) GetReturnRegex() *regexp.Regexp { return runRawReturnRegex }
+
+/* Vec Init */
+type ExprVecInit struct {
+	InnerType *Type
+	Values    []Expr
+	span      common.Span
+}
+
+func NewVecInitExpr(innerType *Type, values []Expr, span common.Span) Expr {
+	return NewExpr(&ExprVecInit{InnerType: innerType, Values: values, span: span})
+}
+
+func (e *Expr) VecInit() *ExprVecInit {
+	if e.Kind() != ExprKindVecInit {
+		panic("not a vec init expression")
+	}
+	return e.data.(*ExprVecInit)
+}
+
+func (v *ExprVecInit) ExprKind() ExprKind { return ExprKindVecInit }
+func (v *ExprVecInit) Span() common.Span {
+	return v.span
+}
+
+/* Map Init */
+
+type ExprMapEntry struct {
+	Key   Expr
+	Value Expr
+}
+
+type ExprMapInit struct {
+	KeyType   *Type
+	ValueType *Type
+	Entries   []ExprMapEntry
+	span      common.Span
+}
+
+func NewMapInitExpr(keyType, valueType *Type, entries []ExprMapEntry, span common.Span) Expr {
+	return NewExpr(&ExprMapInit{KeyType: keyType, ValueType: valueType, Entries: entries, span: span})
+}
+
+func (e *Expr) MapInit() *ExprMapInit {
+	if e.Kind() != ExprKindMapInit {
+		panic("not a map init expression")
+	}
+	return e.data.(*ExprMapInit)
+}
+
+func (m *ExprMapInit) ExprKind() ExprKind { return ExprKindMapInit }
+
+func (m *ExprMapInit) Span() common.Span {
+	return m.span
+}

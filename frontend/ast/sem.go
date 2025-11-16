@@ -12,6 +12,8 @@ type SemTypeKind uint8
 
 func (k SemTypeKind) String() string {
 	switch k {
+	case SemInvalid:
+		return "invalid"
 	case SemClassKind:
 		return "class"
 	case SemFunctionKind:
@@ -26,19 +28,22 @@ func (k SemTypeKind) String() string {
 		return "error"
 	case SemUnionKind:
 		return "union"
+	case SemVecKind:
+		return "vec"
 	default:
 		panic("unreachable")
 	}
 }
 
 const (
-	_ SemTypeKind = iota
+	SemInvalid SemTypeKind = iota
 	SemClassKind
 	SemFunctionKind
 	SemTupleKind
 	SemVarargKind
 	SemUnreachableKind
 	SemUnionKind
+	SemVecKind
 	SemErrorKind
 )
 
@@ -105,6 +110,9 @@ func (t SemType) NilableInnerType() SemType {
 		if !ty.IsNil() {
 			innerType = append(innerType, ty)
 		}
+	}
+	if len(innerType) == 1 {
+		return innerType[0]
 	}
 	ty := &SemUnion{Types: innerType, Span_: union.Span()}
 	return NewSemType(ty, t.Span())
@@ -232,17 +240,19 @@ func (f SemaClassField) Span() common.Span {
 }
 
 type SemClass struct {
-	Def    *Class
-	Super  *SemClass
-	Fields map[string]SemaClassField
-	Scope  any
+	Def     *Class
+	Super   *SemClass
+	Fields  map[string]SemaClassField
+	Scope   any
+	Methods map[string]*SemFunction
 }
 
 func NewSemClass(def *Class) *SemClass {
 	fields := map[string]SemaClassField{}
 	return &SemClass{
-		Def:    def,
-		Fields: fields,
+		Def:     def,
+		Fields:  fields,
+		Methods: map[string]*SemFunction{},
 	}
 }
 
@@ -250,6 +260,37 @@ func (t *SemClass) TypeKind() SemTypeKind { return SemClassKind }
 
 func (t *SemClass) Ref() *SemClass {
 	return t
+}
+
+func (t SemClass) GetMethod(name string, recursive bool) *SemFunction {
+	if method, ok := t.Methods[name]; ok {
+		return method
+	}
+	if recursive && t.Super != nil {
+		return t.Super.GetMethod(name, recursive)
+	}
+	return nil
+}
+
+func (t SemClass) GetMethods(recursive bool) map[string]*SemFunction {
+	// Start with this class's methods
+	methods := make(map[string]*SemFunction, len(t.Methods))
+	maps.Copy(methods, t.Methods)
+
+	if !recursive {
+		return methods
+	}
+
+	// Walk up the super chain, adding only methods that aren't overridden
+	for c := t.Super; c != nil; c = c.Super {
+		for name, fn := range c.Methods {
+			if _, exists := methods[name]; !exists {
+				methods[name] = fn
+			}
+		}
+	}
+
+	return methods
 }
 
 func (s SemClass) String() string {
@@ -338,7 +379,7 @@ type SemFunction struct {
 	Params []SemType
 	Return SemType
 
-	Class *SemClass
+	Ty    *SemType
 	Scope any // Scope for this function, used for generics resolution and other shit
 }
 
@@ -474,7 +515,7 @@ func (f SemFunction) Attributes() Attributes {
 }
 
 func (f SemFunction) IsClassMethod() bool {
-	if f.Class == nil {
+	if f.Ty == nil {
 		return false
 	}
 

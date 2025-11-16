@@ -92,6 +92,8 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) ExprResult {
 		retTy = a.handleUnsafeCast(scope, expr.UnsafeCast())
 	case ast.ExprKindRunRaw:
 		retTy = a.handleRunRaw(scope, expr.RunRaw())
+	case ast.ExprKindVecInit:
+		retTy = a.handleVecInit(scope, expr.VecInit())
 	default:
 		panic("unreachable: unknown expression kind " + expr.Kind().String())
 	}
@@ -183,7 +185,7 @@ func (a *Analysis) handleBinaryExpr(scope *Scope, binE *ast.ExprBinary) Type {
 			}
 
 			clss := lty.Class()
-			method := a.FindClassMethod(clss, methodName)
+			method := clss.GetMethod(methodName, true)
 			if method == nil {
 				a.Errorf(binE.Left.Span(), "`%s` does not define `%s`", clss.String(), methodName)
 				return a.nilType()
@@ -214,7 +216,7 @@ func (a *Analysis) handleUnaryExpr(scope *Scope, unE *ast.ExprUnary) Type {
 		}
 
 		clss := ty.Class()
-		method := a.FindClassMethod(clss, "__unm")
+		method := clss.GetMethod("__unm", true)
 		if method == nil {
 			a.Errorf(unE.Value.Span(), "`%s` does not define `__unm`", clss.String())
 			return a.nilType()
@@ -227,8 +229,10 @@ func (a *Analysis) handleUnaryExpr(scope *Scope, unE *ast.ExprUnary) Type {
 		}
 		return a.numberType()
 	case ast.UnaryOpLength:
-		if !ty.IsString() {
-			a.panic(unE.Span(), "unary length operator requires a string value")
+		switch {
+		case ty.IsString(), ty.IsVec():
+		default:
+			a.panic(unE.Span(), "unary length operator requires a string or vec value")
 		}
 		return a.numberType()
 	default:
@@ -409,7 +413,7 @@ func (a *Analysis) handleForInExpr(scope *Scope, forIn *ast.ExprForIn) {
 
 	if inExprTy.IsClass() {
 		clss := inExprTy.Class()
-		if method := a.FindClassMethod(clss, "__x_iter_pairs"); method != nil {
+		if method := clss.GetMethod("__x_iter_pairs", true); method != nil {
 			firstReturn := method.FirstReturnType()
 			iterFunc := firstReturn.Function()
 			iterReturnCount = iterFunc.ReturnCount()
@@ -421,12 +425,12 @@ func (a *Analysis) handleForInExpr(scope *Scope, forIn *ast.ExprForIn) {
 				nonNilableTypes[i] = retType.NilableInnerType()
 			}
 			iterReturn = a.tupleType(inExpr.Span(), nonNilableTypes...)
-		} else if method := a.FindClassMethod(clss, "__x_iter_range"); method != nil {
+		} else if method := clss.GetMethod("__x_iter_range", true); method != nil {
 			iterReturn = a.tupleType(inExpr.Span(), a.numberType(), method.FirstReturnType())
 			iterReturnCount = 2
 			forIn.State = ast.ForInClassRange
 			forIn.RangeMethod = method
-			forIn.BoundMethod = a.FindClassMethod(clss, "__x_iter_range_bound")
+			forIn.BoundMethod = clss.GetMethod("__x_iter_range_bound", true)
 		} else {
 			a.panic(inExpr.Span(), "cannot iterate over class without __x_iter_pairs method")
 		}
@@ -506,6 +510,8 @@ func (a *Analysis) handlePostfixExpr(scope *Scope, e *ast.ExprPostfix) Type {
 		ty = a.handleElse(scope, op, expr)
 	case *ast.UnwrapNilable:
 		ty = a.handleUnwrapNilable(scope, op, expr)
+	case *ast.Index:
+		ty = a.handleIndex(scope, op, expr)
 	}
 
 	return ty
@@ -691,7 +697,7 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 	}
 
 	if !a.CanAccessClassMethod(method) {
-		a.Errorf(call.Method.Span(), "method `%s` of class `%s` is private", method.Def.Name.Raw, method.Class.Def.Name.Raw)
+		a.Errorf(call.Method.Span(), "method `%s` is private", method.Def.Name.Raw)
 	}
 
 	call.SemaFunc = method
@@ -786,4 +792,47 @@ func (a *Analysis) handleRunRaw(scope *Scope, runRaw *ast.ExprRunRaw) Type {
 		returnType = a.resolveType(scope, *runRaw.ReturnType)
 	}
 	return returnType
+}
+
+func (a *Analysis) handleVecInit(scope *Scope, vecInit *ast.ExprVecInit) Type {
+	var ty Type
+	if vecInit.InnerType != nil {
+		ty = a.resolveType(scope, *vecInit.InnerType)
+	}
+	for i := range vecInit.Values {
+		val := &vecInit.Values[i]
+		a.handleExpr(scope, val)
+		if !ty.IsValid() {
+			ty = val.Type()
+		} else {
+			a.Matches(ty, val.Type(), val.Span())
+		}
+	}
+	if !ty.IsValid() {
+		a.panic(vecInit.Span(), "cannot infer type of empty vector")
+	}
+	return a.vecType(ty, vecInit.Span())
+}
+
+func (a *Analysis) handleIndex(scope *Scope, index *ast.Index, toIndex *ast.Expr) Type {
+	toIndexTy := toIndex.Type()
+	switch {
+	case toIndexTy.IsVec():
+		a.handleExpr(scope, &index.Expr)
+		idxTy := index.Expr.Type()
+		if !idxTy.IsNumber() {
+			a.Errorf(index.Expr.Span(), "vector index must be a number, got: `%s`", idxTy.String())
+		}
+		toIndexInnerTy := toIndexTy.Vec().Ty
+		if toIndexInnerTy.IsAny() || toIndexInnerTy.IsNilable() {
+			return toIndexInnerTy
+		}
+		return a.nilableType(toIndexInnerTy, index.Span())
+	case toIndexTy.IsTable():
+		a.handleExpr(scope, &index.Expr)
+		return a.anyType()
+	default:
+		a.Errorf(index.Span(), "cannot index into type `%s`", toIndexTy.String())
+		return a.nilType()
+	}
 }

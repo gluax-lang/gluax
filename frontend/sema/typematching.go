@@ -33,6 +33,8 @@ func (a *Analysis) matchTypes(t Type, other Type) bool {
 		return a.matchVarargType(t.Vararg(), other)
 	case ast.SemUnionKind:
 		return a.matchUnionType(t.Union(), other)
+	case ast.SemVecKind:
+		return a.matchVecType(t.Vec(), other)
 	case ast.SemUnreachableKind:
 		return other.IsUnreachable()
 	case ast.SemErrorKind:
@@ -57,6 +59,8 @@ func (a *Analysis) MatchTypesStrict(t Type, other Type) bool {
 		return a.matchVarargTypeStrict(t.Vararg(), other)
 	case ast.SemUnionKind:
 		return a.matchUnionTypeStrict(t.Union(), other)
+	case ast.SemVecKind:
+		return a.matchVecTypeStrict(t.Vec(), other)
 	case ast.SemUnreachableKind:
 		return other.IsUnreachable()
 	case ast.SemErrorKind:
@@ -233,4 +237,20 @@ func (a *Analysis) matchUnionTypeStrict(u *SemUnion, other Type) bool {
 		}
 	}
 	return false
+}
+
+/* Vec */
+
+func (a *Analysis) matchVecType(v *SemVec, other Type) bool {
+	if !other.IsVec() {
+		return false
+	}
+	return a.matchTypes(v.Ty, other.Vec().Ty)
+}
+
+func (a *Analysis) matchVecTypeStrict(v *SemVec, other Type) bool {
+	if !other.IsVec() {
+		return false
+	}
+	return a.MatchTypesStrict(v.Ty, other.Vec().Ty)
 }

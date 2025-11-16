@@ -94,3 +94,20 @@ func (u *UnwrapNilable) isPostfixOp() {}
 func (u *UnwrapNilable) Span() common.Span {
 	return u.span
 }
+
+/* Index */
+
+type Index struct {
+	Expr Expr
+	span common.Span
+}
+
+func NewIndex(expr Expr, span common.Span) *Index {
+	return &Index{Expr: expr, span: span}
+}
+
+func (i *Index) isPostfixOp() {}
+
+func (i *Index) Span() common.Span {
+	return i.span
+}

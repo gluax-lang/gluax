@@ -7,7 +7,6 @@ import (
 
 	"github.com/gluax-lang/gluax/common"
 	"github.com/gluax-lang/gluax/frontend/ast"
-	"github.com/gluax-lang/gluax/frontend/lexer"
 	protocol "github.com/gluax-lang/lsp"
 )
 
@@ -305,36 +304,47 @@ func (a *Analysis) resolveImplementations() {
 	for _, impl := range a.Ast.ImplClasses {
 		impl.Scope = a.Scope
 		stTy := a.resolveType(a.Scope, impl.Class)
-		selfScope := a.Scope.Child(false)
+		if stTy.IsVec() {
+			for _, method := range impl.Methods {
+				if method.IsStatic() {
+					a.Errorf(method.Span(), "static methods are not allowed in vec implementations")
+					continue
+				}
+
+				method.Params[0].Type = impl.Class
+				funcTy := a.handleFunctionSignature(a.Scope, method)
+				funcTy.Ty = &stTy
+
+				stTy.Vec().Methods = append(stTy.Vec().Methods, funcTy)
+			}
+			continue
+		}
 		if !stTy.IsClass() {
 			a.panicf(impl.Class.Span(), "expected class type, got: %s", stTy.String())
 		}
 		st := stTy.Class()
-		{
-			selfVar := ast.NewSingleVariable(lexer.NewTokIdent("self", impl.Class.Span()), stTy)
-			err := selfScope.AddValue("self", ast.NewValue(selfVar), impl.Class.Span())
-			if err != nil {
-				a.panicf(impl.Class.Span(), "cannot add `self` to scope: %s", err.Error())
-			}
-		}
 		if !a.Project.StartsWithWorkspace(st.Def.Span().Source) {
 			a.panicf(impl.Span(), "cannot add methods to types defined outside this package")
 		}
 		if st.Def.Attributes.Has("no_impl") {
 			a.panicf(impl.Span(), "class `%s` cannot implement methods", st.Def.Name.Raw)
 		}
+		impl.ClassSema = st
 		for _, method := range impl.Methods {
 			var funcTy *ast.SemFunction
 			if method.IsStatic() {
-				funcTy = a.handleFunctionSignature(a.Scope, &method)
-				funcTy.Scope = a.Scope
+				funcTy = a.handleFunctionSignature(a.Scope, method)
 			} else {
 				method.Params[0].Type = impl.Class
-				funcTy = a.handleFunctionSignature(selfScope, &method)
-				funcTy.Scope = selfScope
+				funcTy = a.handleFunctionSignature(a.Scope, method)
 			}
+			funcTy.Ty = &stTy
 			methodName := method.Name.Raw
-			a.RegisterClassMethod(st, funcTy)
+			if _, ok := st.Methods[methodName]; ok {
+				a.Errorf(method.Span(), "duplicate method impl `%s` for class `%s`", methodName, st.Def.Name.Raw)
+				continue
+			}
+			st.Methods[methodName] = funcTy
 			impl.Checks = append(impl.Checks, func() {
 				// this hack is needed, so something like `__x_iter_range` can check if `__x_iter_range_bound` exists or not
 				a.checkClassMethods(st, methodName)
@@ -343,7 +353,7 @@ func (a *Analysis) resolveImplementations() {
 					return
 				}
 
-				superMethod := a.FindClassMethod(st.Super, methodName)
+				superMethod := st.Super.GetMethod(methodName, true)
 				if superMethod == nil || superMethod.IsStatic() {
 					return
 				}
@@ -353,7 +363,7 @@ func (a *Analysis) resolveImplementations() {
 						funcTy.Span(),
 						"method `%s` does not match superclass `%s` signature",
 						methodName,
-						superMethod.Class.Def.Name.Raw,
+						superMethod.Ty.String(),
 					)
 					return
 				}
@@ -368,14 +378,11 @@ func (a *Analysis) resolveImplementations() {
 						funcTy.Span(),
 						"method `%s` does not match superclass `%s` signature",
 						methodName,
-						superMethod.Class.Def.Name.Raw,
+						superMethod.Ty.String(),
 					)
 				}
 			})
 		}
-		impl.ClassSema = st
-		impl.SelfScope = selfScope
-		impl.StaticScope = a.Scope
 	}
 }
 
@@ -401,33 +408,42 @@ func (a *Analysis) analyzeImplementations() {
 		for _, check := range impl.Checks {
 			check()
 		}
-		if impl.ClassSema == nil {
-			println("WARNING: class implementation without semantic information, this is likely a bug in the analyzer")
+		if impl.Scope == nil {
 			continue
 		}
 		for _, method := range impl.Methods {
 			if method.Body == nil {
-				if !method.IsGlobal() && !impl.ClassSema.IsGlobal() {
+				// "must have a body" if the method is non-global and the class is
+				// either non-global or unknown (ClassSema == nil)
+				if !method.IsGlobal() && (impl.ClassSema == nil || !impl.ClassSema.IsGlobal()) {
 					a.Error(method.Span(), "must have a body")
 				}
 			} else {
 				if method.IsGlobal() {
 					a.Error(method.Span(), "cannot have a body")
 				}
-				if impl.ClassSema.IsGlobal() {
+
+				// Only do class-global checks when ClassSema is available
+				if impl.ClassSema != nil && impl.ClassSema.IsGlobal() {
 					if !method.IsStatic() && !method.Attributes.Has("local_method") {
-						a.Error(method.Span(), "cannot have a body, because class is global (use `local_method` attribute to allow this)")
+						a.Error(
+							method.Span(),
+							"cannot have a body, because class is global (use `local_method` attribute to allow this)",
+						)
 					}
 				}
 			}
+
 			if method.IsStatic() {
-				_ = a.handleFunction(impl.StaticScope.(*Scope), &method)
+				_ = a.handleFunction(impl.Scope.(*Scope), method)
 			} else {
 				method.Params[0].Type = impl.Class
-				_ = a.handleFunction(impl.SelfScope.(*Scope), &method)
+				_ = a.handleFunction(impl.Scope.(*Scope), method)
 			}
 		}
 	}
+
+	a.checkVecMethodsConflicts()
 
 	if a.Project.Main == a.Src && !a.Project.Config.Lib {
 		// check that `main` function exists in the main file

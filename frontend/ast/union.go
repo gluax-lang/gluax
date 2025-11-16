@@ -35,6 +35,17 @@ func (u *SemUnion) TypeKind() SemTypeKind {
 }
 
 func (u *SemUnion) String() string {
+	// Special case: nullable type `?T` when the union is exactly {Nil, T}
+	if len(u.Types) == 2 {
+		t0 := u.Types[0]
+		t1 := u.Types[1]
+		switch {
+		case t0.IsNil() && !t1.IsNil():
+			return "?" + t1.String()
+		case t1.IsNil() && !t0.IsNil():
+			return "?" + t0.String()
+		}
+	}
 	parts := make([]string, len(u.Types))
 	for i, t := range u.Types {
 		parts[i] = t.String()

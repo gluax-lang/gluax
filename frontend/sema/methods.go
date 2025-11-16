@@ -11,9 +11,15 @@ func (a *Analysis) FindMethodsOnType(scope *Scope, ty Type, methodName string) [
 	switch {
 	case ty.IsClass():
 		if methodName == "" {
-			return slices.Collect(maps.Values(a.GetClassMethodsRecursively(ty.Class())))
+			return slices.Collect(maps.Values(ty.Class().GetMethods(true)))
 		}
-		method := a.FindClassMethod(ty.Class(), methodName)
+		method := ty.Class().GetMethod(methodName, true)
+		if method != nil {
+			return []*ast.SemFunction{method}
+		}
+		return nil
+	case ty.IsVec():
+		method := a.findVecMethod(ty, methodName)
 		if method != nil {
 			return []*ast.SemFunction{method}
 		}

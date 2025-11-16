@@ -48,26 +48,22 @@ type ClassField struct {
 	Public bool
 }
 
-type ClassesStack []*SemClass
-
 type Class struct {
-	Public         bool
-	Name           lexer.TokIdent
-	Super          *Type // the type this class extends, if any
-	Fields         []ClassField
-	Attributes     Attributes
-	Scope          any
-	CreatedClasses ClassesStack
-	span           common.Span
+	Public     bool
+	Name       lexer.TokIdent
+	Super      *Type // the type this class extends, if any
+	Fields     []ClassField
+	Attributes Attributes
+	Scope      any
+	span       common.Span
 }
 
 func NewClass(name lexer.TokIdent, super *Type, fields []ClassField, span common.Span) *Class {
 	return &Class{
-		Name:           name,
-		Super:          super,
-		Fields:         fields,
-		CreatedClasses: make(ClassesStack, 0, 4),
-		span:           span,
+		Name:   name,
+		Super:  super,
+		Fields: fields,
+		span:   span,
 	}
 }
 
@@ -75,16 +71,10 @@ func (si *Class) isItem() {}
 
 func (si *Class) SetPublic(b bool) { si.Public = b }
 
+func (si *Class) SetSpan(span common.Span) { si.span = span }
+
 func (si Class) Span() common.Span {
 	return si.span
-}
-
-func (s *Class) AddClass(st *SemClass) {
-	s.CreatedClasses = append(s.CreatedClasses, st)
-}
-
-func (s *Class) GetClassStack() ClassesStack {
-	return s.CreatedClasses
 }
 
 func (c *Class) IsGlobal() bool {
@@ -104,18 +94,16 @@ func (c *Class) GlobalName() string {
 /* Impl Class */
 
 type ImplClass struct {
-	Class       Type
-	Methods     []Function
-	Scope       any
-	SelfScope   any // "self" scope for methods
-	StaticScope any // "static" scope for static methods
-	span        common.Span
+	Class   Type
+	Methods []*Function
+	Scope   any
+	span    common.Span
 
 	ClassSema *SemClass // semantic information, if available
 	Checks    []func()  // these checks are ran in analyzeImplementations
 }
 
-func NewImplClass(st Type, methods []Function, span common.Span) *ImplClass {
+func NewImplClass(st Type, methods []*Function, span common.Span) *ImplClass {
 	return &ImplClass{Class: st, Methods: methods, span: span}
 }
 

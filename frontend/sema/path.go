@@ -83,7 +83,7 @@ func (a *Analysis) resolvePathType(scope *Scope, path *ast.Path) Type {
 
 		var ty *Type
 		if sym.IsType() && sym.Type().IsClass() {
-			cls := a.resolveClass(sym.Type().Class())
+			cls := a.instantiateClass(sym.Type().Class())
 			tyO := ast.NewSemType(cls, leaf.Span())
 			ty = &tyO
 		} else {
@@ -126,7 +126,7 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) *Value {
 			var resolvedTy Type
 
 			if baseTy.IsClass() {
-				st := a.resolveClass(baseTy.Class())
+				st := a.instantiateClass(baseTy.Class())
 				resolvedTy = ast.NewSemType(st, baseTy.Span())
 			} else {
 				resolvedTy = *baseTy
@@ -150,7 +150,7 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) *Value {
 			}
 
 			if !a.CanAccessClassMethod(method) {
-				a.Errorf(leaf.Span(), "function `%s` of class `%s` is private", method.Def.Name.Raw, method.Class.Def.Name.Raw)
+				a.Errorf(leaf.Span(), "function `%s` is private", method.Def.Name.Raw)
 			}
 
 			val := ast.NewValue(method)

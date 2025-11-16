@@ -1,6 +1,8 @@
 package sema
 
 import (
+	"fmt"
+
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
@@ -9,22 +11,9 @@ func (a *Analysis) setupClass(def *ast.Class) *SemClass {
 	st := ast.NewSemClass(def)
 	st.Scope = stScope
 	if a.GetClass(def) == nil {
-		def.AddClass(st)
+		a.State.CreatedClasses = append(a.State.CreatedClasses, st)
 	}
 	return st
-}
-
-func (a *Analysis) HandleClassMethod(st *ast.SemClass, method *ast.SemFunction, withBody bool) *ast.SemFunction {
-	classScope := (method.Scope.(*Scope)).Child(false)
-	var funcTy *ast.SemFunction
-	if withBody {
-		funcTy = a.handleFunction(classScope, &method.Def)
-	} else {
-		funcTy = a.handleFunctionSignature(classScope, &method.Def)
-	}
-	funcTy.Scope = method.Scope
-	funcTy.Class = st
-	return funcTy
 }
 
 func (a *Analysis) collectClassFields(st *SemClass) {
@@ -47,7 +36,8 @@ func (a *Analysis) collectClassFields(st *SemClass) {
 	}
 }
 
-func (a *Analysis) instantiateClass(def *ast.Class) *SemClass {
+func (a *Analysis) instantiateClass(clss *ast.SemClass) *SemClass {
+	def := clss.Def
 	if st := a.GetClass(def); st != nil {
 		return st
 	}
@@ -64,15 +54,11 @@ func (a *Analysis) instantiateClass(def *ast.Class) *SemClass {
 	return st
 }
 
-func (a *Analysis) resolveClass(st *ast.SemClass) *ast.SemClass {
-	st = a.instantiateClass(st.Def)
-	return st
-}
-
 func (a *Analysis) GetClass(def *ast.Class) *SemClass {
-	stack := def.GetClassStack()
-	for _, inst := range stack {
-		return inst.Ref() // reuse cached *ClassType
+	for _, semClss := range a.State.CreatedClasses {
+		if semClss.Def == def {
+			return semClss
+		}
 	}
 	return nil
 }
@@ -93,4 +79,51 @@ func (a *Analysis) CanAccessClassMethod(method *SemFunction) bool {
 	source := method.Def.Span().Source
 	// Private members are only accessible from the same source file
 	return a.Src == source
+}
+
+func (a *Analysis) handleClassInit(scope *Scope, si *ast.ExprClassInit) Type {
+	if a.SetClassSetupSpan(si.Span()) {
+		defer a.ClearClassSetupSpan()
+	}
+
+	baseTy := a.resolvePathType(scope, &si.Name)
+	if baseTy.Kind() != ast.SemClassKind {
+		a.panic(si.Name.Span(), fmt.Sprintf("expected class type for `%s`, found `%s`", si.Name.String(), baseTy.String()))
+	}
+	baseClass := baseTy.Class()
+
+	// ensure all required fields are present
+	providedFields := make(map[string]struct{}, len(si.Fields))
+	for _, f := range si.Fields {
+		providedFields[f.Name.Raw] = struct{}{}
+	}
+	for name, field := range baseClass.AllFields() {
+		// if _, ok := providedFields[name]; !ok && ty.Kind() != ast.SemOptionalKind {
+		if _, ok := providedFields[name]; !ok {
+			if !field.Ty.IsNilable() {
+				a.panicf(si.Span(), "missing required field `%s` in class `%s` initialization", name, baseClass.Def.Name.Raw)
+			}
+		}
+	}
+
+	// type-check each provided field
+	for i := range si.Fields {
+		f := &si.Fields[i]
+		field, ok := baseClass.GetField(f.Name.Raw)
+		if !ok {
+			a.panic(f.Name.Span(),
+				fmt.Sprintf("class `%s` has no field named `%s`",
+					baseClass.Def.Name.Raw, f.Name.Raw),
+			)
+		}
+		a.AddRef(field, f.Name.Span())
+		if !a.CanAccessClassField(baseClass, field.IsPublic()) {
+			a.Errorf(f.Name.Span(), "field `%s` of class `%s` is private", f.Name.Raw, baseClass.Def.Name.Raw)
+		}
+		a.handleExpr(scope, &f.Value)
+		exprTy := f.Value.Type()
+		a.Matches(field.Ty, exprTy, f.Value.Span())
+	}
+
+	return ast.NewSemType(baseClass, si.Span())
 }

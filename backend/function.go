@@ -22,15 +22,20 @@ func (cg *Codegen) decorateFuncName(f *ast.SemFunction) string {
 		return sb.String()
 	}
 	raw := f.Def.Name.Raw
-	if f.Class != nil {
-		stName := cg.decorateClassName(f.Class)
-		if !cg.markUsed(cg.classFuncUsedName(f.Class, raw)) {
-			cg.generateClass(f.Class)
+	if f.Ty != nil {
+		if f.Ty.IsClass() {
+			clss := f.Ty.Class()
+			stName := cg.decorateClassName(clss)
+			if !cg.markUsed(cg.classFuncUsedName(clss, raw)) {
+				cg.generateClass(clss)
+			}
+			if rename := f.Attributes().GetString("rename_to"); rename != nil {
+				raw = *rename
+			}
+			return stName + "." + raw
+		} else {
+			panic("function type is not a class")
 		}
-		if rename := f.Attributes().GetString("rename_to"); rename != nil {
-			raw = *rename
-		}
-		return stName + "." + raw
 	}
 	var sb strings.Builder
 	sb.WriteString(frontend.FUNC_PREFIX)

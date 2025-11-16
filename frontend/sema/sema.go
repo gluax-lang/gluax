@@ -25,5 +25,6 @@ type SemFunction = ast.SemFunction
 type SemTuple = ast.SemTuple
 type SemVararg = ast.SemVararg
 type SemUnion = ast.SemUnion
+type SemVec = ast.SemVec
 
 type LSPSymbol = ast.LSPSymbol

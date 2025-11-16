@@ -12,7 +12,7 @@ func (a *Analysis) resolveType(scope *Scope, ty ast.Type) Type {
 		found := a.resolvePathType(scope, t)
 		if found.IsClass() {
 			st := found.Class()
-			_ = a.resolveClass(st)
+			_ = a.instantiateClass(st)
 		}
 		found.SetSpan(t.Span())
 		return found
@@ -45,6 +45,9 @@ func (a *Analysis) resolveType(scope *Scope, ty ast.Type) Type {
 			types = append(types, ty)
 		}
 		return ast.NewSemType(ast.NewSemUnion(t, types), t.Span())
+	case *ast.Vec:
+		elemTy := a.resolveType(scope, t.Ty)
+		return a.vecType(elemTy, t.Span())
 	default:
 		panic(fmt.Sprintf("TODO TYPE: %T", t))
 	}

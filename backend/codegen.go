@@ -251,13 +251,11 @@ func (cg *Codegen) currentFuncScope() *funcScope {
 }
 
 func (cg *Codegen) generateClasses() {
-	for _, st := range cg.Ast.Classes {
-		for _, inst := range st.GetClassStack() {
-			if !cg.canGenerate(inst) {
-				continue
-			}
-			cg.generateClass(inst)
+	for _, clss := range cg.Analysis.State.CreatedClasses {
+		if !cg.canGenerate(clss) {
+			continue
 		}
+		cg.generateClass(clss)
 		cg.ln("")
 	}
 }

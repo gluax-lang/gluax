@@ -30,6 +30,21 @@ const BuiltinTypes = `
 	#[no_metatable]
 	#[sealed]
 	pub class table { _priv: nil }
+
+	#[no_metatable]
+	#[no_impl]
+	#[sealed]
+	pub class vec_T { _priv: nil }
+
+	#[no_metatable]
+	#[no_impl]
+	#[sealed]
+	pub class map_K { _priv: nil }
+
+	#[no_metatable]
+	#[no_impl]
+	#[sealed]
+	pub class map_V { _priv: nil }
 `
 
 var builtin = map[string]struct{}{
@@ -40,6 +55,9 @@ var builtin = map[string]struct{}{
 	"string":  {},
 	"anyfunc": {},
 	"table":   {},
+	"vec_T":   {},
+	"map_K":   {},
+	"map_V":   {},
 }
 
 func IsBuiltinType(name string) bool {
