@@ -322,7 +322,7 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool, customN
 		}
 	}
 
-	if pa.Config.Lib {
+	if !pa.Config.IsExecutable() {
 		mainPath = filepath.Join(pkgPath, "src", "lib.gluax")
 	}
 

@@ -446,7 +446,7 @@ func (a *Analysis) analyzeImplementations() {
 		}
 	}
 
-	if a.Project.Main == a.Src && !a.Project.Config.Lib {
+	if a.Project.Main == a.Src && a.Project.Config.IsExecutable() {
 		// check that `main` function exists in the main file
 		mainFuncValue := a.Scope.GetValue("main")
 		if mainFuncValue == nil {

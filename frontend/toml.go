@@ -25,3 +25,7 @@ func HandleGluaxToml(tomlContent string) (GluaxToml, error) {
 	}
 	return gt, nil
 }
+
+func (gt *GluaxToml) IsExecutable() bool {
+	return !gt.Lib && !gt.Std
+}
