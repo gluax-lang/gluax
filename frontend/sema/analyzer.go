@@ -7,6 +7,7 @@ import (
 
 	"github.com/gluax-lang/gluax/common"
 	"github.com/gluax-lang/gluax/frontend/ast"
+	"github.com/gluax-lang/gluax/frontend/lexer"
 	protocol "github.com/gluax-lang/lsp"
 )
 
@@ -31,16 +32,15 @@ func (pa *ProjectAnalysis) StripWorkspace(path string) string {
 }
 
 type Analysis struct {
-	Src                   string // source file name
-	Workspace             string // workspace root
-	Scope                 *Scope // root scope
-	Diags                 []Diagnostic
-	InlayHints            []InlayHint
-	Project               *ProjectAnalysis
-	Ast                   *ast.Ast
-	State                 *State // current state of the analysis
-	currentClassSetupSpan *Span  // used to track the span of the current class setup
-	Exprs                 []*ast.Expr
+	Src        string // source file name
+	Workspace  string // workspace root
+	Scope      *Scope // root scope
+	Diags      []Diagnostic
+	InlayHints []InlayHint
+	Project    *ProjectAnalysis
+	Ast        *ast.Ast
+	State      *State // current state of the analysis
+	Exprs      []*ast.Expr
 }
 
 func (a *Analysis) Copy() *Analysis {
@@ -55,25 +55,6 @@ func (a *Analysis) Copy() *Analysis {
 		State:      &State{},
 		Exprs:      []*ast.Expr{},
 	}
-}
-
-func (a *Analysis) SetClassSetupSpan(span Span) bool {
-	if a.currentClassSetupSpan == nil {
-		a.currentClassSetupSpan = &span
-		return true
-	}
-	return false
-}
-
-func (a *Analysis) ClearClassSetupSpan() {
-	a.currentClassSetupSpan = nil
-}
-
-func (a *Analysis) GetClassSetupSpan(def Span) Span {
-	if a.currentClassSetupSpan == nil {
-		return def
-	}
-	return *a.currentClassSetupSpan
 }
 
 func (a *Analysis) Error(span Span, msg string) {
@@ -197,6 +178,19 @@ func (a *Analysis) tupleType(span Span, other ...Type) Type {
 	return ast.NewSemType(ast.SemTuple{Elems: other}, span)
 }
 
+func (a *Analysis) functionType(name string, params []Type, returnType Type, span Span) Type {
+	ident := lexer.NewTokIdent(name, span)
+	funcT := &SemFunction{
+		Def: ast.Function{
+			Name:  &ident,
+			Span_: span,
+		},
+		Params: params,
+		Return: returnType,
+	}
+	return ast.NewSemType(funcT, span)
+}
+
 func (a *Analysis) Matches(ty, other Type, span Span) {
 	if !a.matchTypes(ty, other) {
 		a.Errorf(span, "mismatched types, expected `%s`, got `%s`", ty.String(), other.String())
@@ -304,21 +298,6 @@ func (a *Analysis) resolveImplementations() {
 	for _, impl := range a.Ast.ImplClasses {
 		impl.Scope = a.Scope
 		stTy := a.resolveType(a.Scope, impl.Class)
-		if stTy.IsVec() {
-			for _, method := range impl.Methods {
-				if method.IsStatic() {
-					a.Errorf(method.Span(), "static methods are not allowed in vec implementations")
-					continue
-				}
-
-				method.Params[0].Type = impl.Class
-				funcTy := a.handleFunctionSignature(a.Scope, method)
-				funcTy.Ty = &stTy
-
-				stTy.Vec().Methods = append(stTy.Vec().Methods, funcTy)
-			}
-			continue
-		}
 		if !stTy.IsClass() {
 			a.panicf(impl.Class.Span(), "expected class type, got: %s", stTy.String())
 		}
@@ -338,7 +317,7 @@ func (a *Analysis) resolveImplementations() {
 				method.Params[0].Type = impl.Class
 				funcTy = a.handleFunctionSignature(a.Scope, method)
 			}
-			funcTy.Ty = &stTy
+			funcTy.Class = st
 			methodName := method.Name.Raw
 			if _, ok := st.Methods[methodName]; ok {
 				a.Errorf(method.Span(), "duplicate method impl `%s` for class `%s`", methodName, st.Def.Name.Raw)
@@ -363,7 +342,7 @@ func (a *Analysis) resolveImplementations() {
 						funcTy.Span(),
 						"method `%s` does not match superclass `%s` signature",
 						methodName,
-						superMethod.Ty.String(),
+						superMethod.Class.String(),
 					)
 					return
 				}
@@ -378,7 +357,7 @@ func (a *Analysis) resolveImplementations() {
 						funcTy.Span(),
 						"method `%s` does not match superclass `%s` signature",
 						methodName,
-						superMethod.Ty.String(),
+						superMethod.Class.String(),
 					)
 				}
 			})
@@ -442,8 +421,6 @@ func (a *Analysis) analyzeImplementations() {
 			}
 		}
 	}
-
-	a.checkVecMethodsConflicts()
 
 	if a.Project.Main == a.Src && !a.Project.Config.Lib {
 		// check that `main` function exists in the main file

@@ -61,7 +61,6 @@ func (a *Analysis) handleFunctionImpl(scope *Scope, it *ast.Function, withBody b
 		a.panic(it.Span(), "cannot have vararg return type in erroable function")
 	}
 
-	it.SetSem(funcType)
 	funcType.Scope = scope
 
 	return funcType

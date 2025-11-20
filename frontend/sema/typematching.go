@@ -77,7 +77,7 @@ func (a *Analysis) matchClassType(s *SemClass, other Type) bool {
 		return true
 	}
 
-	if s.IsTable() && (other.IsTable()) {
+	if s.IsTable() && (other.IsTable() || other.IsVec()) {
 		return true
 	}
 

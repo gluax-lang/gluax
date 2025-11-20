@@ -82,10 +82,6 @@ func (a *Analysis) CanAccessClassMethod(method *SemFunction) bool {
 }
 
 func (a *Analysis) handleClassInit(scope *Scope, si *ast.ExprClassInit) Type {
-	if a.SetClassSetupSpan(si.Span()) {
-		defer a.ClearClassSetupSpan()
-	}
-
 	baseTy := a.resolvePathType(scope, &si.Name)
 	if baseTy.Kind() != ast.SemClassKind {
 		a.panic(si.Name.Span(), fmt.Sprintf("expected class type for `%s`, found `%s`", si.Name.String(), baseTy.String()))

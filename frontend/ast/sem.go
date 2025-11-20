@@ -379,8 +379,9 @@ type SemFunction struct {
 	Params []SemType
 	Return SemType
 
-	Ty    *SemType
-	Scope any // Scope for this function, used for generics resolution and other shit
+	Class            *SemClass // The class this function is a method of, if any
+	IsVecOrMapMethod bool      // Whether this function is a method on vec or map types
+	Scope            any       // Scope for this function, used for generics resolution and other shit
 }
 
 func (t *SemFunction) TypeKind() SemTypeKind { return SemFunctionKind }
@@ -515,7 +516,7 @@ func (f SemFunction) Attributes() Attributes {
 }
 
 func (f SemFunction) IsClassMethod() bool {
-	if f.Ty == nil {
+	if f.Class == nil {
 		return false
 	}
 

@@ -13,7 +13,7 @@ import (
 func (cg *Codegen) tempLoop(name *ast.Ident) loopLabel {
 	var label loopLabel
 	if name == nil {
-		idx := strconv.Itoa(cg.tempIdx)
+		idx := strconv.FormatUint(cg.tempIdx, 10)
 		label = loopLabel{
 			cont: frontend.CONTINUE_PREFIX + idx,
 			brk:  frontend.BREAK_PREFIX + idx,
@@ -142,6 +142,8 @@ func (cg *Codegen) genExprX(e ast.Expr) string {
 		return cg.genExprX(e.UnsafeCast().Expr)
 	case ast.ExprKindRunRaw:
 		return cg.genRunRaw(e.RunRaw())
+	case ast.ExprKindVecInit:
+		return cg.genVecInit(e.VecInit())
 	default:
 		panic("unreachable; unhandled expression type")
 	}
@@ -330,6 +332,8 @@ func (cg *Codegen) genPostfixExpr(p *ast.ExprPostfix) string {
 		cg.popIndent()
 		cg.ln("end")
 		return temp
+	case *ast.Index:
+		return cg.genIndex(op, value, primaryTy)
 	default:
 		panic("unreachable; unhandled postfix operator")
 	}
@@ -385,6 +389,11 @@ func (cg *Codegen) genRunRaw(run *ast.ExprRunRaw) string {
 	cg.ln("%s", code)
 
 	return returnExpr
+}
+
+func (cg *Codegen) genVecInit(v *ast.ExprVecInit) string {
+	elemExprs := cg.genExprsToStrings(v.Values)
+	return "{" + strings.Join(elemExprs, ", ") + "}"
 }
 
 /* Loops */
@@ -545,4 +554,9 @@ func (cg *Codegen) genForInExpr(e *ast.ExprForIn) string {
 	cg.ln("end")
 
 	return "nil"
+}
+
+func (cg *Codegen) genIndex(idx *ast.Index, value string, _ ast.SemType) string {
+	indexExpr := cg.genExprX(idx.Expr)
+	return fmt.Sprintf("%s[%s]", value, indexExpr)
 }

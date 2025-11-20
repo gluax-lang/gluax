@@ -20,7 +20,7 @@ type Function struct {
 	Body       *Block // nil if abstract
 	Attributes Attributes
 	sem        *SemFunction
-	span       common.Span
+	Span_      common.Span
 	IsItem     bool
 	isStatic   bool
 }
@@ -34,7 +34,7 @@ func NewFunction(name *lexer.TokIdent, sig FunctionSignature, body *Block, attri
 		ReturnType: sig.ReturnType,
 		Body:       body,
 		Attributes: attributes,
-		span:       span,
+		Span_:      span,
 	}
 }
 
@@ -43,7 +43,7 @@ func (f *Function) isItem()            {}
 func (f *Function) isType()            {}
 
 func (f *Function) Span() common.Span {
-	return f.span
+	return f.Span_
 }
 
 func (f *Function) SetSem(sem *SemFunction) {

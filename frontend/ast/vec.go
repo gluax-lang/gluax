@@ -20,9 +20,8 @@ func (t *Vec) Span() common.Span {
 }
 
 type SemVec struct {
-	Ty      SemType // element type
-	Span_   common.Span
-	Methods []*SemFunction
+	Ty    SemType // element type
+	Span_ common.Span
 }
 
 func NewSemVec(ty SemType, span common.Span) *SemVec {

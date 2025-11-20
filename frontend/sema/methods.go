@@ -19,8 +19,14 @@ func (a *Analysis) FindMethodsOnType(scope *Scope, ty Type, methodName string) [
 		}
 		return nil
 	case ty.IsVec():
-		method := a.findVecMethod(ty, methodName)
-		if method != nil {
+		switch methodName {
+		case "push":
+			method := a.functionType("push", []Type{ty, ty.Vec().Ty}, a.nilType(), ty.Span()).Data().(*ast.SemFunction)
+			method.IsVecOrMapMethod = true
+			return []*ast.SemFunction{method}
+		case "pop":
+			method := a.functionType("pop", []Type{ty}, ty.Vec().Ty, ty.Span()).Data().(*ast.SemFunction)
+			method.IsVecOrMapMethod = true
 			return []*ast.SemFunction{method}
 		}
 		return nil

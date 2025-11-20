@@ -540,13 +540,13 @@ func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span 
 	var fixedParams []Type
 	var varargParam Type
 	hasVararg := false
-	for i, param := range funcTy.Def.Params {
-		if ast.IsVararg(param.Type) {
+	for _, p := range funcTy.Params {
+		if p.IsVararg() {
 			hasVararg = true
-			varargParam = funcTy.Params[i]
+			varargParam = p
 			break
 		}
-		fixedParams = append(fixedParams, funcTy.Params[i])
+		fixedParams = append(fixedParams, p)
 	}
 
 	var (
@@ -705,8 +705,7 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 	a.AddRef(method, call.Method.Span())
 
 	methodCopy := *method
-	methodCopy.Params = method.Params[1:]
-	methodCopy.Def.Params = method.Def.Params[1:]
+	methodCopy.Params = method.Params[1:] // remove self parameter
 
 	methodTy := ast.NewSemType(&methodCopy, call.Span())
 	return a.handleCall(scope, call, methodTy, call.Span())

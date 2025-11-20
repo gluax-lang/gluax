@@ -27,4 +27,9 @@ impl table {
 
     #[global = "unpack"]
     pub func unpack(tbl: table, s: ?number, e: ?number) -> ...any;
+
+    #[inline]
+    pub func push(self, v: any) {
+        @raw("do local self = {@1@}; self[#self+1] = {@2@} end;", self, v)@;
+    }
 }

@@ -36,7 +36,7 @@ type Codegen struct {
 	Analysis        *Analysis
 	Ast             *ast.Ast
 
-	tempIdx int
+	tempIdx uint64
 	indent  int
 
 	// bufCtx
@@ -126,7 +126,7 @@ func (cg *Codegen) temp() string {
 }
 
 func (cg *Codegen) namedTemp(name string) string {
-	idx := strconv.Itoa(cg.tempIdx)
+	idx := strconv.FormatUint(cg.tempIdx, 10)
 	cg.tempIdx++
 	return name + idx
 }

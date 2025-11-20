@@ -22,20 +22,15 @@ func (cg *Codegen) decorateFuncName(f *ast.SemFunction) string {
 		return sb.String()
 	}
 	raw := f.Def.Name.Raw
-	if f.Ty != nil {
-		if f.Ty.IsClass() {
-			clss := f.Ty.Class()
-			stName := cg.decorateClassName(clss)
-			if !cg.markUsed(cg.classFuncUsedName(clss, raw)) {
-				cg.generateClass(clss)
-			}
-			if rename := f.Attributes().GetString("rename_to"); rename != nil {
-				raw = *rename
-			}
-			return stName + "." + raw
-		} else {
-			panic("function type is not a class")
+	if f.Class != nil {
+		stName := cg.decorateClassName(f.Class)
+		if !cg.markUsed(cg.classFuncUsedName(f.Class, raw)) {
+			cg.generateClass(f.Class)
 		}
+		if rename := f.Attributes().GetString("rename_to"); rename != nil {
+			raw = *rename
+		}
+		return stName + "." + raw
 	}
 	var sb strings.Builder
 	sb.WriteString(frontend.FUNC_PREFIX)
@@ -182,6 +177,24 @@ func (cg *Codegen) buildMethodCall(call *ast.Call, fun *ast.SemFunction, toCall 
 	switch {
 	case toCallTy.IsClass():
 		return cg.buildClassMethodCall(call, fun, toCall, toCallTy)
+	case toCallTy.IsVec():
+		switch fun.Def.Name.Raw {
+		case "push":
+			args := cg.genExprsLeftToRight(call.Args)
+			// @raw("do local self = {@1@}; self[#self+1] = {@2@} end;", self, v);
+			tempSelf := cg.temp()
+			cg.ln("do local %s = %s; %s[#%s + 1] = %s end;", tempSelf, toCall, tempSelf, tempSelf, args)
+			return "nil"
+		case "pop":
+			tempSelf := cg.temp()
+			tempRet := cg.getTempVar()
+			cg.ln("--[[%s]]", call.Span().String())
+			cg.ln("--[[%s]]", cg.Analysis.Src)
+			cg.ln("do local %s = %s; local len = #%s; if len == 0 then %s = nil else %s, %s[len] = %s[len], nil; end end;", tempSelf, toCall, tempSelf, tempRet, tempRet, tempSelf, tempSelf)
+			return tempRet
+		}
+
+		return "TODO_vec_method"
 	default:
 		args := cg.genExprsLeftToRight(call.Args)
 		return fmt.Sprintf("%s(%s)", toCall, args)
