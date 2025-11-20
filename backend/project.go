@@ -53,7 +53,11 @@ func checkUsed(pA *sema.ProjectAnalysis, state *sema.State) map[any]struct{} {
 	cg.checkingUsed = true
 	main := state.Files[cg.ProjectAnalysis.Main]
 	cg.setAnalysis(main)
-	cg.decorateFuncName(state.MainFunc)
+	if pA.Config.Lib {
+		// TODO
+	} else {
+		cg.decorateFuncName(state.MainFunc)
+	}
 	return cg.usedPublics
 }
 
