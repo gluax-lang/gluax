@@ -518,10 +518,16 @@ func (a *Analysis) handlePostfixExpr(scope *Scope, e *ast.ExprPostfix) Type {
 }
 
 func (a *Analysis) handleCall(scope *Scope, call *ast.Call, toCallTy Type, span Span) Type {
-	if toCallTy.Kind() != ast.SemFunctionKind {
-		a.panicf(span, "expected function type, got: %s", toCallTy.String())
+	var funcTy *ast.SemFunction
+	if toCallTy.IsAnyFunc() {
+		varargAny := a.varArgsType(a.anyType(), toCallTy.Span())
+		funcTy = a.functionType("__call", []Type{varargAny}, varargAny, toCallTy.Span()).Data().(*ast.SemFunction)
+	} else {
+		if toCallTy.Kind() != ast.SemFunctionKind {
+			a.panicf(span, "expected function type, got: %s", toCallTy.String())
+		}
+		funcTy = toCallTy.Function()
 	}
-	funcTy := toCallTy.Function()
 
 	if call.Catch != nil && !funcTy.Def.Errorable {
 		a.panic(call.Span(), "cannot catch on non-erroable function")
@@ -678,7 +684,7 @@ func (a *Analysis) handleMethodCall(scope *Scope, call *ast.Call, toCall *ast.Ex
 	toCallTy := toCall.Type()
 	toCallName := toCallTy.String()
 
-	methods := a.FindMethodsOnType(scope, toCallTy, name)
+	methods := a.FindMethodsOnType(scope, toCallTy, name, call.Method.SpanPtr())
 
 	if len(methods) == 0 {
 		a.Errorf(call.Method.Span(), "no method named `%s` in `%s`", name, toCallName)
@@ -803,8 +809,18 @@ func (a *Analysis) handleVecInit(scope *Scope, vecInit *ast.ExprVecInit) Type {
 		a.handleExpr(scope, val)
 		if !ty.IsValid() {
 			ty = val.Type()
+			if ty.IsVararg() {
+				if i != len(vecInit.Values)-1 {
+					a.Errorf(val.Span(), "vararg value is only permitted as the last expression in vec initializer")
+				}
+				ty = ty.Vararg().Type
+			}
 		} else {
-			a.Matches(ty, val.Type(), val.Span())
+			valTy := val.Type()
+			if val.Type().IsVararg() {
+				valTy = valTy.Vararg().Type
+			}
+			a.Matches(ty, valTy, val.Span())
 		}
 	}
 	if !ty.IsValid() {
@@ -822,11 +838,7 @@ func (a *Analysis) handleIndex(scope *Scope, index *ast.Index, toIndex *ast.Expr
 		if !idxTy.IsNumber() {
 			a.Errorf(index.Expr.Span(), "vector index must be a number, got: `%s`", idxTy.String())
 		}
-		toIndexInnerTy := toIndexTy.Vec().Ty
-		if toIndexInnerTy.IsAny() || toIndexInnerTy.IsNilable() {
-			return toIndexInnerTy
-		}
-		return a.nilableType(toIndexInnerTy, index.Span())
+		return a.nilableType(toIndexTy.Vec().Ty, index.Span())
 	case toIndexTy.IsTable():
 		a.handleExpr(scope, &index.Expr)
 		return a.anyType()

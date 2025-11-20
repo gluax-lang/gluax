@@ -86,7 +86,7 @@ func (h *Handler) Complete(p *lsp.CompletionParams) (*lsp.CompletionList, error)
 				}
 			}
 		}
-		methods := sA.FindMethodsOnType(scope, toIndexTy, "")
+		methods := sA.FindMethodsOnType(scope, toIndexTy, "", nil)
 
 		added := make(map[string]struct{})
 		for _, method := range methods {

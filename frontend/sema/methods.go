@@ -7,7 +7,7 @@ import (
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
-func (a *Analysis) FindMethodsOnType(scope *Scope, ty Type, methodName string) []*ast.SemFunction {
+func (a *Analysis) FindMethodsOnType(scope *Scope, ty Type, methodName string, span *Span) []*ast.SemFunction {
 	switch {
 	case ty.IsClass():
 		if methodName == "" {
@@ -19,13 +19,21 @@ func (a *Analysis) FindMethodsOnType(scope *Scope, ty Type, methodName string) [
 		}
 		return nil
 	case ty.IsVec():
+		newSpan := ty.Span()
+		if span != nil {
+			newSpan = *span
+		}
 		switch methodName {
 		case "push":
-			method := a.functionType("push", []Type{ty, ty.Vec().Ty}, a.nilType(), ty.Span()).Data().(*ast.SemFunction)
+			method := a.functionType("push", []Type{ty, ty.Vec().Ty}, a.nilType(), newSpan).Data().(*ast.SemFunction)
 			method.IsVecOrMapMethod = true
 			return []*ast.SemFunction{method}
 		case "pop":
-			method := a.functionType("pop", []Type{ty}, ty.Vec().Ty, ty.Span()).Data().(*ast.SemFunction)
+			method := a.functionType("pop", []Type{ty}, ty.Vec().Ty, newSpan).Data().(*ast.SemFunction)
+			method.IsVecOrMapMethod = true
+			return []*ast.SemFunction{method}
+		case "unpack":
+			method := a.functionType("unpack", []Type{ty}, a.varArgsType(ty.Vec().Ty, ty.Span()), newSpan).Data().(*ast.SemFunction)
 			method.IsVecOrMapMethod = true
 			return []*ast.SemFunction{method}
 		}

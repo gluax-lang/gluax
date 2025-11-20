@@ -132,7 +132,7 @@ func (a *Analysis) resolvePathValue(scope *Scope, path *ast.Path) *Value {
 				resolvedTy = *baseTy
 			}
 
-			methods := a.FindMethodsOnType(scope, resolvedTy, raw)
+			methods := a.FindMethodsOnType(scope, resolvedTy, raw, leaf.Ident.SpanPtr())
 			if len(methods) == 0 {
 				return nil // Not found
 			}

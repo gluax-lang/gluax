@@ -59,6 +59,9 @@ func checkUsed(pA *sema.ProjectAnalysis, state *sema.State) map[any]struct{} {
 			for _, class := range state.CreatedClasses {
 				if class.Def.Span().Source == pA.Main {
 					cg.decorateClassName(class)
+					for _, method := range class.Methods {
+						cg.decorateFuncName(method)
+					}
 				}
 			}
 

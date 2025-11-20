@@ -190,6 +190,8 @@ func (cg *Codegen) buildMethodCall(call *ast.Call, fun *ast.SemFunction, toCall 
 			tempRet := cg.getTempVar()
 			cg.ln("do local %s = %s; local len = #%s; if len == 0 then %s = nil else %s, %s[len] = %s[len], nil; end end;", tempSelf, toCall, tempSelf, tempRet, tempRet, tempSelf, tempSelf)
 			return tempRet
+		case "unpack":
+			return fmt.Sprintf("unpack(%s)", toCall)
 		}
 
 		return "TODO_vec_method"

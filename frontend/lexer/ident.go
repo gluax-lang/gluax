@@ -19,6 +19,10 @@ func (t TokIdent) Span() common.Span {
 	return t.span
 }
 
+func (t TokIdent) SpanPtr() *common.Span {
+	return &t.span
+}
+
 func (t TokIdent) String() string {
 	return t.Raw
 }

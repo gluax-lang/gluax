@@ -183,6 +183,11 @@ func (a *Analysis) anyType() Type {
 	return a.getBuiltinType("any")
 }
 
+func (a *Analysis) varArgsType(elem Type, span Span) Type {
+	varArgsT := SemVararg{Type: elem}
+	return ast.NewSemType(varArgsT, span)
+}
+
 func (a *Analysis) unionType(span Span, types ...Type) Type {
 	if len(types) == 0 {
 		panic("unionType called with no types")
@@ -192,6 +197,10 @@ func (a *Analysis) unionType(span Span, types ...Type) Type {
 }
 
 func (a *Analysis) nilableType(base Type, span Span) Type {
+	// if type is any or already nilable, return as is
+	if base.IsAny() || base.IsNilable() {
+		return base
+	}
 	return a.unionType(span, a.nilType(), base)
 }
 
