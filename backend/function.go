@@ -188,8 +188,6 @@ func (cg *Codegen) buildMethodCall(call *ast.Call, fun *ast.SemFunction, toCall 
 		case "pop":
 			tempSelf := cg.temp()
 			tempRet := cg.getTempVar()
-			cg.ln("--[[%s]]", call.Span().String())
-			cg.ln("--[[%s]]", cg.Analysis.Src)
 			cg.ln("do local %s = %s; local len = #%s; if len == 0 then %s = nil else %s, %s[len] = %s[len], nil; end end;", tempSelf, toCall, tempSelf, tempRet, tempRet, tempSelf, tempSelf)
 			return tempRet
 		}
