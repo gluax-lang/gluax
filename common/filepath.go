@@ -9,7 +9,8 @@ import (
 // FilePathClean is a combination of filepath.Clean and filepath.ToSlash
 //
 // Example:
-//   C:\H\ -> C:/H
+//
+//	C:\H\ -> C:/H
 func FilePathClean(p string) string {
 	// First do the normal OS-based cleanup
 	cleaned := filepath.Clean(p)
@@ -18,13 +19,12 @@ func FilePathClean(p string) string {
 }
 
 func FilePathToURI(path string) string {
-	uri := path
-	if runtime.GOOS == "windows" {
-		// Windows file URIs need three slashes: file:///C:/path
-		uri = "file:///" + url.PathEscape(uri)
-	} else {
-		// Unix-like systems: file:///path
-		uri = "file://" + url.PathEscape(uri)
+	u := &url.URL{
+		Scheme: "file",
+		Path:   path,
 	}
-	return uri
+	if runtime.GOOS == "windows" {
+		u.Path = "/" + path // Windows needs extra leading slash
+	}
+	return u.String()
 }

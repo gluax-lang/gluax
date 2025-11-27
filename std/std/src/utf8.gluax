@@ -71,7 +71,7 @@ const ACCEPTED_RANGES: vec<vec<number>> = vec{
 	vec{LOCB, 0x8F},
 };
 
-func decode(s: string, pos: ?number) -> (number, number) {
+pub func decode(s: string, pos: ?number) -> (number, number) {
     let pos = pos else 1;
     let n = #s;
     if pos < 1 || pos > n {
@@ -114,7 +114,7 @@ func decode(s: string, pos: ?number) -> (number, number) {
 }
 
 // quick version of decode that only returns the width of the UTF-8 character
-func width(s: string, pos: number) -> number {
+pub func width(s: string, pos: number) -> number {
     let n = #s;
     if pos < 1 || pos > n { return 0; }
     if n - pos + 1 < 1 { return 0; }
