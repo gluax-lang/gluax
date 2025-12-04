@@ -94,6 +94,8 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) ExprResult {
 		retTy = a.handleRunRaw(scope, expr.RunRaw())
 	case ast.ExprKindVecInit:
 		retTy = a.handleVecInit(scope, expr.VecInit())
+	case ast.ExprKindMapInit:
+		retTy = a.handleMapInit(scope, expr.MapInit())
 	default:
 		panic("unreachable: unknown expression kind " + expr.Kind().String())
 	}
@@ -826,7 +828,56 @@ func (a *Analysis) handleVecInit(scope *Scope, vecInit *ast.ExprVecInit) Type {
 	if !ty.IsValid() {
 		a.panic(vecInit.Span(), "cannot infer type of empty vector")
 	}
+	if ty.IsVararg() || ty.IsTuple() {
+		a.panic(vecInit.Span(), "vector inner type cannot be vararg or tuple")
+	}
 	return a.vecType(ty, vecInit.Span())
+}
+
+func (a *Analysis) handleMapInit(scope *Scope, mapInit *ast.ExprMapInit) Type {
+	var keyTy, valueTy Type
+	if mapInit.KeyType != nil {
+		keyTy = a.resolveType(scope, *mapInit.KeyType)
+	}
+	if mapInit.ValueType != nil {
+		valueTy = a.resolveType(scope, *mapInit.ValueType)
+	}
+	for i := range mapInit.Entries {
+		entry := &mapInit.Entries[i]
+		a.handleExpr(scope, &entry.Key)
+		a.handleExpr(scope, &entry.Value)
+
+		if !keyTy.IsValid() {
+			keyTy = entry.Key.Type()
+			if keyTy.IsVararg() {
+				a.panic(entry.Key.Span(), "map key cannot be vararg")
+			}
+		} else {
+			a.Matches(keyTy, entry.Key.Type(), entry.Key.Span())
+		}
+
+		if !valueTy.IsValid() {
+			valueTy = entry.Value.Type()
+			if valueTy.IsVararg() {
+				a.panic(entry.Value.Span(), "map value cannot be vararg")
+			}
+		} else {
+			a.Matches(valueTy, entry.Value.Type(), entry.Value.Span())
+		}
+	}
+	if !keyTy.IsValid() {
+		a.panic(mapInit.Span(), "cannot infer type of empty map")
+	}
+	if !valueTy.IsValid() {
+		a.panic(mapInit.Span(), "cannot infer type of empty map")
+	}
+	if keyTy.IsVararg() || keyTy.IsTuple() {
+		a.panic(mapInit.Span(), "map key cannot be vararg or tuple")
+	}
+	if valueTy.IsVararg() || valueTy.IsTuple() {
+		a.panic(mapInit.Span(), "map value cannot be vararg or tuple")
+	}
+	return a.mapType(keyTy, valueTy, mapInit.Span())
 }
 
 func (a *Analysis) handleIndex(scope *Scope, index *ast.Index, toIndex *ast.Expr) Type {
@@ -839,6 +890,14 @@ func (a *Analysis) handleIndex(scope *Scope, index *ast.Index, toIndex *ast.Expr
 			a.Errorf(index.Expr.Span(), "vector index must be a number, got: `%s`", idxTy.String())
 		}
 		return a.nilableType(toIndexTy.Vec().Ty, index.Span())
+	case toIndexTy.IsMap():
+		a.handleExpr(scope, &index.Expr)
+		idxTy := index.Expr.Type()
+		keyTy := toIndexTy.Map().Key
+		if !a.matchTypes(keyTy, idxTy) {
+			a.Errorf(index.Expr.Span(), "map key type mismatch: expected `%s`, got `%s`", keyTy.String(), idxTy.String())
+		}
+		return a.nilableType(toIndexTy.Map().Value, index.Span())
 	case toIndexTy.IsTable():
 		a.handleExpr(scope, &index.Expr)
 		return a.anyType()

@@ -33,6 +33,8 @@ func (p *parser) parseTypeX(flags Flags) ast.Type {
 		ty = ast.NewVararg(p.parseType(), SpanFrom(spanStart, p.prevSpan()))
 	} else if lexer.IsIdent(p.Token) && p.Token.String() == "vec" {
 		ty = p.parseVec()
+	} else if lexer.IsIdent(p.Token) && p.Token.String() == "map" {
+		ty = p.parseMap()
 	} else {
 		path := p.parsePath(nil)
 		ty = &path
@@ -109,4 +111,17 @@ func (p *parser) parseVec() ast.Type {
 	p.expect(">")
 
 	return ast.NewVec(ty, SpanFrom(spanStart, p.prevSpan()))
+}
+
+func (p *parser) parseMap() ast.Type {
+	spanStart := p.span()
+	p.advance() // skip `map`
+
+	p.expect("<")
+	keyType := p.parseType()
+	p.expect(",")
+	valueType := p.parseType()
+	p.expect(">")
+
+	return ast.NewMap(keyType, valueType, SpanFrom(spanStart, p.prevSpan()))
 }

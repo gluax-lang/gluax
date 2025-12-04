@@ -35,6 +35,8 @@ func (a *Analysis) matchTypes(t Type, other Type) bool {
 		return a.matchUnionType(t.Union(), other)
 	case ast.SemVecKind:
 		return a.matchVecType(t.Vec(), other)
+	case ast.SemMapKind:
+		return a.matchMapType(t.Map(), other)
 	case ast.SemUnreachableKind:
 		return other.IsUnreachable()
 	case ast.SemErrorKind:
@@ -61,6 +63,8 @@ func (a *Analysis) MatchTypesStrict(t Type, other Type) bool {
 		return a.matchUnionTypeStrict(t.Union(), other)
 	case ast.SemVecKind:
 		return a.matchVecTypeStrict(t.Vec(), other)
+	case ast.SemMapKind:
+		return a.matchMapTypeStrict(t.Map(), other)
 	case ast.SemUnreachableKind:
 		return other.IsUnreachable()
 	case ast.SemErrorKind:
@@ -77,7 +81,7 @@ func (a *Analysis) matchClassType(s *SemClass, other Type) bool {
 		return true
 	}
 
-	if s.IsTable() && (other.IsTable() || other.IsVec()) {
+	if s.IsTable() && (other.IsTable() || other.IsVec() || other.IsMap()) {
 		return true
 	}
 
@@ -253,4 +257,22 @@ func (a *Analysis) matchVecTypeStrict(v *SemVec, other Type) bool {
 		return false
 	}
 	return a.MatchTypesStrict(v.Ty, other.Vec().Ty)
+}
+
+/* Map */
+
+func (a *Analysis) matchMapType(m *SemMap, other Type) bool {
+	if !other.IsMap() {
+		return false
+	}
+	otherMap := other.Map()
+	return a.matchTypes(m.Key, otherMap.Key) && a.matchTypes(m.Value, otherMap.Value)
+}
+
+func (a *Analysis) matchMapTypeStrict(m *SemMap, other Type) bool {
+	if !other.IsMap() {
+		return false
+	}
+	otherMap := other.Map()
+	return a.MatchTypesStrict(m.Key, otherMap.Key) && a.MatchTypesStrict(m.Value, otherMap.Value)
 }

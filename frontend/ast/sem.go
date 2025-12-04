@@ -30,6 +30,8 @@ func (k SemTypeKind) String() string {
 		return "union"
 	case SemVecKind:
 		return "vec"
+	case SemMapKind:
+		return "map"
 	default:
 		panic("unreachable")
 	}
@@ -44,6 +46,7 @@ const (
 	SemUnreachableKind
 	SemUnionKind
 	SemVecKind
+	SemMapKind
 	SemErrorKind
 )
 

@@ -329,6 +329,8 @@ func (p *parser) parseMapInitExpr() ast.Expr {
 		p.expect(">")
 	}
 
+	p.expect("{")
+
 	var entries []ast.ExprMapEntry
 	p.parseCommaSeparatedDelimited("}", func(p *parser) {
 		entries = append(entries, p.parseMapEntry())

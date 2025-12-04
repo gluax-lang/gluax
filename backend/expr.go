@@ -144,6 +144,8 @@ func (cg *Codegen) genExprX(e ast.Expr) string {
 		return cg.genRunRaw(e.RunRaw())
 	case ast.ExprKindVecInit:
 		return cg.genVecInit(e.VecInit())
+	case ast.ExprKindMapInit:
+		return cg.genMapInit(e.MapInit())
 	default:
 		panic("unreachable; unhandled expression type")
 	}
@@ -394,6 +396,17 @@ func (cg *Codegen) genRunRaw(run *ast.ExprRunRaw) string {
 func (cg *Codegen) genVecInit(v *ast.ExprVecInit) string {
 	elemExprs := cg.genExprsToStrings(v.Values)
 	return "{" + strings.Join(elemExprs, ", ") + "}"
+}
+
+func (cg *Codegen) genMapInit(m *ast.ExprMapInit) string {
+	var entries []string
+	for i := range m.Entries {
+		entry := &m.Entries[i]
+		keyExpr := cg.genExprX(entry.Key)
+		valueExpr := cg.genExprX(entry.Value)
+		entries = append(entries, fmt.Sprintf("[%s] = %s", keyExpr, valueExpr))
+	}
+	return "{" + strings.Join(entries, ", ") + "}"
 }
 
 /* Loops */

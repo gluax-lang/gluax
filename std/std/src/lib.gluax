@@ -12,8 +12,3 @@ import "public";
 
 pub use gmod::fs;
 pub use gmod::timer;
-
-pub func test() {
-    let v = vec{1};
-    v.pop();
-}

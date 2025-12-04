@@ -18,6 +18,7 @@ type State struct {
 
 	CreatedClasses []*ast.SemClass
 	CreatedVecs    []*ast.SemVec
+	CreatedMaps    []*ast.SemMap
 
 	DeclRefs []DeclWithRef
 

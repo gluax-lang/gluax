@@ -48,6 +48,10 @@ func (a *Analysis) resolveType(scope *Scope, ty ast.Type) Type {
 	case *ast.Vec:
 		elemTy := a.resolveType(scope, t.Ty)
 		return a.vecType(elemTy, t.Span())
+	case *ast.Map:
+		keyTy := a.resolveType(scope, t.Key)
+		valueTy := a.resolveType(scope, t.Value)
+		return a.mapType(keyTy, valueTy, t.Span())
 	default:
 		panic(fmt.Sprintf("TODO TYPE: %T", t))
 	}
