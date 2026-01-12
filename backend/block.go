@@ -25,9 +25,16 @@ func (cg *Codegen) genBlockX(b *ast.Block, flags BlockFlag) string {
 
 	for i, stmt := range b.Stmts {
 		val, isValue := cg.genStmt(stmt)
-		if isValue {
+
+		// Only use the value if:
+		// 1. It's a value-producing statement (isValue == true)
+		// 2. It's the last statement OR we hit StopAt
+		isLast := (i == len(b.Stmts)-1) || (i == b.StopAt())
+
+		if isValue && isLast {
 			toReturn = val
 		}
+
 		if i == b.StopAt() {
 			break
 		}
