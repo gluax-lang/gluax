@@ -16,9 +16,8 @@ impl Entity {
         return ent;
     }
 
-    // TODO: make it use new vec when it's back
     #[global = "ents.GetAll"]
-    pub func all() -> table;
+    pub func all() -> vec<Entity>;
 }
 
 impl Entity {
