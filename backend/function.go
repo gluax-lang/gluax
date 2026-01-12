@@ -6,6 +6,7 @@ import (
 
 	"github.com/gluax-lang/gluax/frontend"
 	"github.com/gluax-lang/gluax/frontend/ast"
+	"github.com/gluax-lang/gluax/frontend/lexer"
 )
 
 func (cg *Codegen) decorateFuncName(f *ast.SemFunction) string {
@@ -182,13 +183,21 @@ func (cg *Codegen) buildMethodCall(call *ast.Call, fun *ast.SemFunction, toCall 
 		case "push":
 			args := cg.genExprsLeftToRight(call.Args)
 			// @raw("do local self = {@1@}; self[#self+1] = {@2@} end;", self, v);
-			tempSelf := cg.temp()
-			cg.ln("do local %s = %s; %s[#%s + 1] = %s end;", tempSelf, toCall, tempSelf, tempSelf, args)
+			if lexer.IsValidIdent(toCall) {
+				cg.ln("%s[#%s + 1] = %s;", toCall, toCall, args)
+			} else {
+				tempSelf := cg.temp()
+				cg.ln("do local %s = %s; %s[#%s + 1] = %s end;", tempSelf, toCall, tempSelf, tempSelf, args)
+			}
 			return "nil"
 		case "pop":
-			tempSelf := cg.temp()
 			tempRet := cg.getTempVar()
-			cg.ln("do local %s = %s; local len = #%s; if len == 0 then %s = nil else %s, %s[len] = %s[len], nil; end end;", tempSelf, toCall, tempSelf, tempRet, tempRet, tempSelf, tempSelf)
+			if lexer.IsValidIdent(toCall) {
+				cg.ln("do local len = #%s; if len == 0 then %s = nil else %s, %s[len] = %s[len], nil; end end;", toCall, tempRet, tempRet, toCall, toCall)
+			} else {
+				tempSelf := cg.temp()
+				cg.ln("do local %s = %s; local len = #%s; if len == 0 then %s = nil else %s, %s[len] = %s[len], nil; end end;", tempSelf, toCall, tempSelf, tempRet, tempRet, tempSelf, tempSelf)
+			}
 			return tempRet
 		case "unpack":
 			return fmt.Sprintf("unpack(%s)", toCall)
