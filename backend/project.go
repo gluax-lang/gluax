@@ -53,7 +53,40 @@ func checkUsed(pA *sema.ProjectAnalysis, state *sema.State) map[any]struct{} {
 	cg.checkingUsed = true
 	main := state.Files[cg.ProjectAnalysis.Main]
 	cg.setAnalysis(main)
-	cg.decorateFuncName(state.MainFunc)
+	if !pA.Config.IsExecutable() {
+		if pA.Config.Lib {
+			panic("TODO: check used for libraries")
+			// // mark any public from Classes, Functions, and Lets in the main file
+			// for _, class := range state.CreatedClasses {
+			// 	if class.Def.Span().Source == pA.Main {
+			// 		cg.decorateClassName(class)
+			// 		for _, method := range class.Methods {
+			// 			cg.decorateFuncName(method)
+			// 		}
+			// 	}
+			// }
+
+			// for _, funDef := range cg.Ast.Funcs {
+			// 	if funDef.IsGlobal() {
+			// 		continue
+			// 	}
+			// 	if funDef.Span().Source != pA.Main {
+			// 		continue
+			// 	}
+			// 	fun := funDef.Sem()
+			// 	cg.decorateFuncName(fun)
+			// }
+
+			// for _, letDef := range cg.Ast.Lets {
+			// 	if letDef.IsGlobal() {
+			// 		continue
+			// 	}
+			// 	cg.decorateLetName(letDef, 0)
+			// }
+		}
+	} else {
+		cg.decorateFuncName(state.MainFunc)
+	}
 	return cg.usedPublics
 }
 

@@ -54,6 +54,10 @@ func NewProjectAnalysis(options CompileOptions) *ProjectAnalysis {
 		files: make(map[string]*Analysis),
 	}
 
+	if pa.Options.VirtualFiles == nil {
+		pa.Options.VirtualFiles = make(map[string]string)
+	}
+
 	for p, c := range options.VirtualFiles {
 		if p != "" {
 			pa.VirtualFiles()[common.FilePathClean(p)] = c
@@ -279,7 +283,22 @@ func (pa *ProjectAnalysis) SetRoot(workspace string) (func(), error) {
 	}, nil
 }
 
-func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
+func (pa *ProjectAnalysis) processDependencies(workspace string) error {
+	for pkgName, pkgPath := range pa.Config.Dependencies {
+		resolvedPath := pkgPath
+		if !filepath.IsAbs(pkgPath) {
+			resolvedPath = filepath.Join(workspace, pkgPath)
+		}
+		resolvedPath = common.FilePathClean(resolvedPath)
+
+		if err := pa.processPackage(resolvedPath, true, pkgName); err != nil {
+			return fmt.Errorf("failed to process dependency '%s': %w", pkgName, err)
+		}
+	}
+	return nil
+}
+
+func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool, customName string) error {
 	oldWs, oldConfig, oldRootScope := pa.Workspace(), pa.Config, pa.currentState.RootScope
 	pa.SetWorkspace(pkgPath)
 
@@ -303,7 +322,7 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
 		}
 	}
 
-	if pa.Config.Lib {
+	if !pa.Config.IsExecutable() {
 		mainPath = filepath.Join(pkgPath, "src", "lib.gluax")
 	}
 
@@ -333,7 +352,10 @@ func (pa *ProjectAnalysis) processPackage(pkgPath string, realPath bool) error {
 	// 	state.Files[pa.PathRelativeToWorkspace(p)] = a
 	// }
 
-	packageName := pa.CurrentPackage()
+	packageName := customName
+	if packageName == "" {
+		packageName = pa.CurrentPackage()
+	}
 
 	pa.SetWorkspace(oldWs)
 	pa.Config, pa.currentState.RootScope = oldConfig, oldRootScope
@@ -359,7 +381,7 @@ func (pa *ProjectAnalysis) processState(state *State, workspace string) error {
 		// stdPath = common.FilePathClean(stdPath)
 		oldVirtualFiles := pa.VirtualFiles()
 		pa.SetVirtualFiles(std.Files)
-		if err := pa.processPackage(std.Workspace, false); err != nil {
+		if err := pa.processPackage(std.Workspace, false, ""); err != nil {
 			return err
 		}
 		pa.SetVirtualFiles(oldVirtualFiles)
@@ -375,7 +397,10 @@ func (pa *ProjectAnalysis) processState(state *State, workspace string) error {
 			pa.currentState.RootScope.Symbols[name] = nameSyms
 		}
 	}
-	if err := pa.processPackage(workspace, true); err != nil {
+	if err := pa.processDependencies(workspace); err != nil {
+		return err
+	}
+	if err := pa.processPackage(workspace, true, ""); err != nil {
 		return err
 	}
 	return nil
@@ -483,17 +508,17 @@ func mergeAnalysisResults(srvA, cliA *Analysis) *Analysis {
 	collect := func(hints []protocol.InlayHint, isSrv bool) {
 		for _, h := range hints {
 			k := key{h.Position.Line, h.Position.Character}
-			var lbl strings.Builder
+			lbl := ""
 			for _, p := range h.Label {
-				lbl.WriteString(p.Value)
+				lbl += p.Value
 			}
 			if pairs[k] == nil {
 				pairs[k] = &pair{}
 			}
 			if isSrv {
-				pairs[k].srv = strings.TrimSpace(lbl.String())
+				pairs[k].srv = strings.TrimSpace(lbl)
 			} else {
-				pairs[k].cli = strings.TrimSpace(lbl.String())
+				pairs[k].cli = strings.TrimSpace(lbl)
 			}
 		}
 	}

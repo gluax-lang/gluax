@@ -10,6 +10,7 @@ import (
 func (cg *Codegen) genStmt(stmt ast.Stmt) (string, bool) {
 	releaseTemps := cg.collectTemps()
 	defer releaseTemps()
+	cg.ln("%s", cg.Analysis.LocationFromSpan(stmt.Span()))
 	switch stmt := stmt.(type) {
 	case *ast.StmtExpr:
 		if stmt.HasSemicolon {

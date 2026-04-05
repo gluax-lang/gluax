@@ -6,10 +6,11 @@ import (
 )
 
 type GluaxToml struct {
-	Name    string `toml:"name" validate:"required"`
-	Version string `toml:"version" validate:"required"`
-	Lib     bool   `toml:"lib"`
-	Std     bool   `toml:"std"`
+	Name         string            `toml:"name" validate:"required"`
+	Version      string            `toml:"version" validate:"required"`
+	Lib          bool              `toml:"lib"`
+	Std          bool              `toml:"std"`
+	Dependencies map[string]string `toml:"dependencies"`
 }
 
 func HandleGluaxToml(tomlContent string) (GluaxToml, error) {
@@ -23,4 +24,8 @@ func HandleGluaxToml(tomlContent string) (GluaxToml, error) {
 		return gt, err
 	}
 	return gt, nil
+}
+
+func (gt *GluaxToml) IsExecutable() bool {
+	return !gt.Lib && !gt.Std
 }

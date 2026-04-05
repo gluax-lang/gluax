@@ -57,6 +57,31 @@ func (a *Analysis) ClearClassSetupSpan() {
 	a.currentClassSetupSpan = nil
 }
 
+func (a *Analysis) RemoveRootDirFromPath(path string) string {
+	ws := common.FilePathClean(a.Workspace)
+	path = common.FilePathClean(path)
+
+	// last folder name of workspace
+	base := filepath.Base(ws)
+
+	// ensure trailing slash for prefix trim
+	wsSlash := ws + "/"
+
+	rel := strings.TrimPrefix(path, wsSlash)
+
+	// join with /
+	if rel == "" {
+		return base
+	}
+	return base + "/" + rel
+}
+
+func (a *Analysis) LocationFromSpan(span Span) string {
+	relPath := a.RemoveRootDirFromPath(span.Source)
+	return fmt.Sprintf("--[[%s:%d:%d]]", relPath, span.LineStart+1, span.ColumnStart+1)
+}
+
+
 func (a *Analysis) GetClassSetupSpan(def Span) Span {
 	if a.currentClassSetupSpan == nil {
 		return def
@@ -598,7 +623,7 @@ func (a *Analysis) analyzeImplementations() {
 	a.CheckConflictingMethodImplementations()
 	a.CheckConflictingTraitImplementations()
 
-	if a.Project.Main == a.Src && !a.Project.Config.Lib {
+	if a.Project.Main == a.Src && a.Project.Config.IsExecutable() {
 		// check that `main` function exists in the main file
 		mainFuncValue := a.Scope.GetValue("main")
 		if mainFuncValue == nil {
