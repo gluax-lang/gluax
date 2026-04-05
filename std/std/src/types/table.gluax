@@ -1,4 +1,5 @@
 impl table {
+    #[inline]
     pub func new() -> table {
         @raw("{@RETURN {} @}") -> table@
     }

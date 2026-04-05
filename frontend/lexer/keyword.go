@@ -30,6 +30,7 @@ const (
 	KwCatch
 	KwImpl
 	KwTrait
+	KwDyn
 	KwUnreachable
 	KwUnderscore
 	KwConst
@@ -71,6 +72,7 @@ var keywordTable = map[string]Keyword{
 	"catch":          KwCatch,
 	"impl":           KwImpl,
 	"trait":          KwTrait,
+	"dyn":            KwDyn,
 	"unreachable":    KwUnreachable,
 	"_":              KwUnderscore,
 	"const":          KwConst,

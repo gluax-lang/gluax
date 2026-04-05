@@ -5,10 +5,10 @@ import "debug";
 /* Constants */
 
 #[global = "math.huge"]
-pub let HUGE: number = 0;
+pub const HUGE: number = 0;
 
 #[global = "math.pi"]
-pub let PI: number = 0;
+pub const PI: number = 0;
 
 /* Functions */
 
@@ -61,10 +61,10 @@ pub func log(n: number, base: ?number) -> number;
 pub func log10(n: number) -> number;
 
 #[global = "math.max"]
-pub func max(n: number, o: number, ...number) -> number;
+pub func max(...number) -> number;
 
 #[global = "math.min"]
-pub func min(n: number, o: number, ...number) -> number;
+pub func min(...number) -> number;
 
 #[global = "math.modf"]
 pub func modf(n: number) -> (number, number);
@@ -101,11 +101,5 @@ pub func tanh(n: number) -> number;
 #[inline]
 pub func clamp(n: number, mi: number, ma: number) -> number {
     debug::assert(mi <= ma, "math.clamp: min (%s) must be less than or equal to max (%s)", mi, ma);
-    if n < mi {
-        mi
-    } else if n > ma {
-        ma
-    } else {
-        n
-    }
+    n.min(ma).max(mi)
 }

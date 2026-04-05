@@ -23,6 +23,9 @@ impl Color {
 
     #[global = "HWBToColor"]
     pub func from_hwb(h: number, w: number, b: number) -> Color;
+
+    #[global = "HexToColor"]
+    pub func from_hex(hex: string) -> Color;
 }
 
 impl Color {
@@ -43,4 +46,7 @@ impl Color {
 
     #[rename_to = "AddBrightness"]
     pub func add_brightness(self, amount: number);
+    
+    #[rename_to = "ToHex"]
+    pub func to_hex(self, omit_alpha: ?bool) -> string;
 }

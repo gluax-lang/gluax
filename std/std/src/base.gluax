@@ -1,5 +1,5 @@
 #[global]
-pub let _VERSION: string = "";
+pub const _VERSION: string = "";
 
 #[global]
 pub func print(...any);
@@ -17,7 +17,7 @@ pub func rawset(t: table, k: any, v: any);
 #[global]
 pub func getmetatable(t: any) -> any;
 #[global]
-pub func setmetatable(t: any, m: any);
+pub func setmetatable(t: any, m: ?table);
 
 #[global]
 pub func tonumber(v: any, b: ?number) -> ?number;

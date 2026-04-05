@@ -69,10 +69,10 @@ impl number {
     pub func log10(self) -> number;
 
     #[global = "math.max"]
-    pub func max(self, mi: number, ma: number, ...number) -> number;
+    pub func max(self, ...number) -> number;
 
     #[global = "math.min"]
-    pub func min(self, mi: number, ma: number, ...number) -> number;
+    pub func min(self, ...number) -> number;
 
     #[global = "math.modf"]
     pub func modf(self) -> (number, number);

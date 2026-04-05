@@ -2,7 +2,7 @@
 pub class Entity {}
 
 #[global]
-pub let NULL: Entity = get_entity(0);
+pub const NULL: Entity = get_entity(0);
 
 #[global = "Entity"]
 func get_entity(i: number) -> Entity;
