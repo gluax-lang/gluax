@@ -483,17 +483,17 @@ func mergeAnalysisResults(srvA, cliA *Analysis) *Analysis {
 	collect := func(hints []protocol.InlayHint, isSrv bool) {
 		for _, h := range hints {
 			k := key{h.Position.Line, h.Position.Character}
-			lbl := ""
+			var lbl strings.Builder
 			for _, p := range h.Label {
-				lbl += p.Value
+				lbl.WriteString(p.Value)
 			}
 			if pairs[k] == nil {
 				pairs[k] = &pair{}
 			}
 			if isSrv {
-				pairs[k].srv = strings.TrimSpace(lbl)
+				pairs[k].srv = strings.TrimSpace(lbl.String())
 			} else {
-				pairs[k].cli = strings.TrimSpace(lbl)
+				pairs[k].cli = strings.TrimSpace(lbl.String())
 			}
 		}
 	}
