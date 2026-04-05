@@ -20,11 +20,6 @@ func RunLSP() error {
 	return NewHandler().Serve(context.Background())
 }
 
-type FileAnalysis struct {
-	server *sema.Analysis // Analysis for server files
-	client *sema.Analysis // Analysis for client files
-}
-
 type Handler struct {
 	*lsp.Server
 	fileCache        map[string]string
