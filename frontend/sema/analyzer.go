@@ -46,15 +46,17 @@ type Analysis struct {
 
 func (a *Analysis) addValueDep(target Span) {
 	for _, decl := range a.TrackingDecls {
-		if decl == target {
+		if decl.ID == target.ID {
 			continue
 		}
-		m := a.State.ValueDeps[decl]
+		a.State.ValueDepSpan[decl.ID] = decl
+		a.State.ValueDepSpan[target.ID] = target
+		m := a.State.ValueDeps[decl.ID]
 		if m == nil {
-			m = make(map[Span]struct{})
-			a.State.ValueDeps[decl] = m
+			m = make(map[uint64]struct{})
+			a.State.ValueDeps[decl.ID] = m
 		}
-		m[target] = struct{}{}
+		m[target.ID] = struct{}{}
 	}
 }
 

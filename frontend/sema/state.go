@@ -24,16 +24,18 @@ type State struct {
 
 	MainFunc *ast.SemFunction // The main function of the program, if any
 
-	ValueDeps map[Span]map[Span]struct{}
+	ValueDeps    map[uint64]map[uint64]struct{} // ID -> set of dependency IDs
+	ValueDepSpan map[uint64]Span                // ID -> span (for error reporting)
 }
 
 func NewState(label string) *State {
 	return &State{
-		Label:     label,
-		Macros:    make(map[string]string),
-		RootScope: NewScope(nil),
-		Files:     make(map[string]*Analysis),
-		ValueDeps: make(map[Span]map[Span]struct{}),
+		Label:        label,
+		Macros:       make(map[string]string),
+		RootScope:    NewScope(nil),
+		Files:        make(map[string]*Analysis),
+		ValueDeps:    make(map[uint64]map[uint64]struct{}),
+		ValueDepSpan: make(map[uint64]Span),
 	}
 }
 
@@ -125,12 +127,12 @@ func (a *Analysis) GetSymbolAtPosition(pos lsp.Position, fPath string) *LSPSymbo
 
 func (s *State) DetectCycles() [][]Span {
 	var cycles [][]Span
-	visited := make(map[Span]int)
-	var stack []Span
-	inCycle := make(map[Span]bool)
+	visited := make(map[uint64]int)
+	var stack []uint64
+	inCycle := make(map[uint64]bool)
 
-	var dfs func(Span)
-	dfs = func(id Span) {
+	var dfs func(uint64)
+	dfs = func(id uint64) {
 		visited[id] = 1
 		stack = append(stack, id)
 		for dep := range s.ValueDeps[id] {
@@ -139,10 +141,12 @@ func (s *State) DetectCycles() [][]Span {
 				if !inCycle[dep] {
 					for i, v := range stack {
 						if v == dep {
-							cycle := make([]Span, len(stack[i:]))
-							copy(cycle, stack[i:])
-							for _, c := range cycle {
-								inCycle[c] = true
+							cycleIDs := make([]uint64, len(stack[i:]))
+							copy(cycleIDs, stack[i:])
+							cycle := make([]Span, len(cycleIDs))
+							for j, cid := range cycleIDs {
+								inCycle[cid] = true
+								cycle[j] = s.ValueDepSpan[cid]
 							}
 							cycles = append(cycles, cycle)
 							break
