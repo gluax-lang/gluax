@@ -61,6 +61,9 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) ExprResult {
 		value := a.resolvePathValue(scope, expr.Path())
 		res.PathValue = value
 		retTy = value.Type()
+		if len(a.TrackingDecls) > 0 {
+			a.addValueDep(value.Span())
+		}
 	case ast.ExprKindTuple:
 		values := expr.Tuple().Values
 		elems := make([]Type, len(values))

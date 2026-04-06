@@ -23,6 +23,8 @@ type State struct {
 	DeclRefs []DeclWithRef
 
 	MainFunc *ast.SemFunction // The main function of the program, if any
+
+	ValueDeps map[Span]map[Span]struct{}
 }
 
 func NewState(label string) *State {
@@ -31,6 +33,7 @@ func NewState(label string) *State {
 		Macros:    make(map[string]string),
 		RootScope: NewScope(nil),
 		Files:     make(map[string]*Analysis),
+		ValueDeps: make(map[Span]map[Span]struct{}),
 	}
 }
 
@@ -118,4 +121,46 @@ func (a *Analysis) GetSymbolAtPosition(pos lsp.Position, fPath string) *LSPSymbo
 		}
 	}
 	return nil
+}
+
+func (s *State) DetectCycles() [][]Span {
+	var cycles [][]Span
+	visited := make(map[Span]int)
+	var stack []Span
+	inCycle := make(map[Span]bool)
+
+	var dfs func(Span)
+	dfs = func(id Span) {
+		visited[id] = 1
+		stack = append(stack, id)
+		for dep := range s.ValueDeps[id] {
+			switch visited[dep] {
+			case 1:
+				if !inCycle[dep] {
+					for i, v := range stack {
+						if v == dep {
+							cycle := make([]Span, len(stack[i:]))
+							copy(cycle, stack[i:])
+							for _, c := range cycle {
+								inCycle[c] = true
+							}
+							cycles = append(cycles, cycle)
+							break
+						}
+					}
+				}
+			case 0:
+				dfs(dep)
+			}
+		}
+		stack = stack[:len(stack)-1]
+		visited[id] = 2
+	}
+
+	for id := range s.ValueDeps {
+		if visited[id] == 0 {
+			dfs(id)
+		}
+	}
+	return cycles
 }
