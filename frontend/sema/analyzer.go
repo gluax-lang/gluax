@@ -32,32 +32,15 @@ func (pa *ProjectAnalysis) StripWorkspace(path string) string {
 }
 
 type Analysis struct {
-	Src           string // source file name
-	Workspace     string // workspace root
-	Scope         *Scope // root scope
-	Diags         []Diagnostic
-	InlayHints    []InlayHint
-	Project       *ProjectAnalysis
-	Ast           *ast.Ast
-	State         *State // current state of the analysis
-	Exprs         []*ast.Expr
-	TrackingDecls []Span
-}
-
-func (a *Analysis) addValueDep(target Span) {
-	for _, decl := range a.TrackingDecls {
-		if decl.ID == target.ID {
-			continue
-		}
-		a.State.ValueDepSpan[decl.ID] = decl
-		a.State.ValueDepSpan[target.ID] = target
-		m := a.State.ValueDeps[decl.ID]
-		if m == nil {
-			m = make(map[uint64]struct{})
-			a.State.ValueDeps[decl.ID] = m
-		}
-		m[target.ID] = struct{}{}
-	}
+	Src        string // source file name
+	Workspace  string // workspace root
+	Scope      *Scope // root scope
+	Diags      []Diagnostic
+	InlayHints []InlayHint
+	Project    *ProjectAnalysis
+	Ast        *ast.Ast
+	State      *State // current state of the analysis
+	Exprs      []*ast.Expr
 }
 
 func (a *Analysis) Copy() *Analysis {
@@ -417,13 +400,7 @@ func (a *Analysis) resolveImplementations() {
 
 func (a *Analysis) analyzeImplementations() {
 	for _, let := range a.Ast.Lets {
-		spans := make([]Span, len(let.Names))
-		for i, n := range let.Names {
-			spans[i] = n.Span()
-		}
-		a.TrackingDecls = spans
 		a.handleLet(a.Scope, let)
-		a.TrackingDecls = nil
 	}
 
 	for _, f := range a.Ast.Funcs {
@@ -436,9 +413,7 @@ func (a *Analysis) analyzeImplementations() {
 				a.Error(f.Span(), "function cannot have a body")
 			}
 		}
-		a.TrackingDecls = []Span{f.Name.Span()}
 		a.handleFunction(a.Scope, f)
-		a.TrackingDecls = nil
 	}
 
 	for _, impl := range a.Ast.ImplClasses {
@@ -471,14 +446,12 @@ func (a *Analysis) analyzeImplementations() {
 				}
 			}
 
-			a.TrackingDecls = []Span{method.Name.Span()}
 			if method.IsStatic() {
 				_ = a.handleFunction(impl.Scope.(*Scope), method)
 			} else {
 				method.Params[0].Type = impl.Class
 				_ = a.handleFunction(impl.Scope.(*Scope), method)
 			}
-			a.TrackingDecls = nil
 		}
 	}
 
@@ -502,11 +475,5 @@ func (a *Analysis) analyzeImplementations() {
 		}
 
 		a.State.MainFunc = mainFunc
-	}
-
-	for _, cycle := range a.State.DetectCycles() {
-		for _, span := range cycle {
-			a.Errorf(span, "cyclic dependency detected")
-		}
 	}
 }

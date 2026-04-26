@@ -23,19 +23,14 @@ type State struct {
 	DeclRefs []DeclWithRef
 
 	MainFunc *ast.SemFunction // The main function of the program, if any
-
-	ValueDeps    map[uint64]map[uint64]struct{} // ID -> set of dependency IDs
-	ValueDepSpan map[uint64]Span                // ID -> span (for error reporting)
 }
 
 func NewState(label string) *State {
 	return &State{
-		Label:        label,
-		Macros:       make(map[string]string),
-		RootScope:    NewScope(nil),
-		Files:        make(map[string]*Analysis),
-		ValueDeps:    make(map[uint64]map[uint64]struct{}),
-		ValueDepSpan: make(map[uint64]Span),
+		Label:     label,
+		Macros:    make(map[string]string),
+		RootScope: NewScope(nil),
+		Files:     make(map[string]*Analysis),
 	}
 }
 
@@ -70,7 +65,6 @@ func (a *Analysis) AddRef(decl LSPSymbol, span Span) {
 	}
 	declWithRefs := a.AddDecl(decl)
 	declWithRefs.Refs = append(declWithRefs.Refs, ref)
-
 }
 
 func (a *Analysis) GetRefsForDecl(declarationSpan Span) []LSPSymbol {
@@ -123,48 +117,4 @@ func (a *Analysis) GetSymbolAtPosition(pos lsp.Position, fPath string) *LSPSymbo
 		}
 	}
 	return nil
-}
-
-func (s *State) DetectCycles() [][]Span {
-	var cycles [][]Span
-	visited := make(map[uint64]int)
-	var stack []uint64
-	inCycle := make(map[uint64]bool)
-
-	var dfs func(uint64)
-	dfs = func(id uint64) {
-		visited[id] = 1
-		stack = append(stack, id)
-		for dep := range s.ValueDeps[id] {
-			switch visited[dep] {
-			case 1:
-				if !inCycle[dep] {
-					for i, v := range stack {
-						if v == dep {
-							cycleIDs := make([]uint64, len(stack[i:]))
-							copy(cycleIDs, stack[i:])
-							cycle := make([]Span, len(cycleIDs))
-							for j, cid := range cycleIDs {
-								inCycle[cid] = true
-								cycle[j] = s.ValueDepSpan[cid]
-							}
-							cycles = append(cycles, cycle)
-							break
-						}
-					}
-				}
-			case 0:
-				dfs(dep)
-			}
-		}
-		stack = stack[:len(stack)-1]
-		visited[id] = 2
-	}
-
-	for id := range s.ValueDeps {
-		if visited[id] == 0 {
-			dfs(id)
-		}
-	}
-	return cycles
 }

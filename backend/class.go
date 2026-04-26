@@ -65,27 +65,12 @@ func (cg *Codegen) generateClass(st *ast.SemClass) {
 		}
 		cg.generatedClasses[name] = struct{}{}
 	}
-	cg.ln("%s = {", name)
-	cg.pushIndent()
+	cg.ln("%s = {};", name)
 	cg.genClassFuncs(st, methods)
-	cg.popIndent()
-	cg.ln("};")
-	if !st.Attributes().Has("no__index", "no_metatable") && !st.IsGlobal() {
-		cg.ln("%s.__index = %s;", name, name)
-		if st.Super != nil {
-			superName := cg.decorateClassName(st.Super)
-			cg.ln("setmetatable(%s, %s);", name, superName)
-		}
-		allMethods := st.GetMethods(true)
-		for methodName := range ast.MetaMethods {
-			if _, ok := allMethods[methodName]; ok && !st.Attributes().Has("global") {
-				cg.ln("%s.%s = %s.%s;", name, methodName, name, methodName)
-			}
-		}
-	}
 }
 
 func (cg *Codegen) genClassFuncs(clss *ast.SemClass, funcs map[string]*sema.SemFunction) {
+	className := cg.decorateClassName(clss)
 	for name, method := range funcs {
 		if method.Def.Body == nil {
 			continue
@@ -99,7 +84,27 @@ func (cg *Codegen) genClassFuncs(clss *ast.SemClass, funcs map[string]*sema.SemF
 		if rename := method.Attributes().GetString("rename_to"); rename != nil {
 			name = *rename
 		}
-		cg.ln("%s = %s,", name, cg.genFunction(method))
+		methodName := name
+		methodRef := method
+		cg.ln("%s.%s = %s;", className, methodName, cg.genFunction(methodRef))
+	}
+
+	if !clss.Attributes().Has("no__index", "no_metatable") && !clss.IsGlobal() {
+		cg.ln("%s.__index = %s;", className, className)
+		if clss.Super != nil {
+			superName := cg.decorateClassName(clss.Super)
+			cg.ln("setmetatable(%s, %s);", className, superName)
+		}
+		allMethods := clss.GetMethods(true)
+		for methodName := range ast.MetaMethods {
+			if _, ok := allMethods[methodName]; ok && !clss.Attributes().Has("global") {
+				// skip if this class defines the method itself, it's already set above
+				if _, ownMethod := clss.Methods[methodName]; ownMethod {
+					continue
+				}
+				cg.ln("%s.%s = %s.%s;", className, methodName, className, methodName)
+			}
+		}
 	}
 }
 
