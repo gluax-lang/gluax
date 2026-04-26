@@ -7,7 +7,6 @@ import (
 
 	"github.com/gluax-lang/gluax/common"
 	"github.com/gluax-lang/gluax/frontend/ast"
-	"github.com/gluax-lang/gluax/frontend/lexer"
 	protocol "github.com/gluax-lang/lsp"
 )
 
@@ -151,93 +150,20 @@ func (a *Analysis) InlayHintType(label string, span Span) {
 	})
 }
 
-func (a *Analysis) getBuiltinType(name string) Type {
-	scope := a.Scope
-	ty := scope.GetType(name)
-	if ty == nil {
-		a.panicf(common.SpanDefault(), "unknown type: %s", name)
-	}
-	if ty.Kind() != ast.SemClassKind {
-		a.panicf(common.SpanDefault(), "expected class type, got: %s", ty.Kind())
-	}
-	return *ty
-}
-
-func (a *Analysis) nilType() Type {
-	return a.getBuiltinType("nil")
-}
-
-func (a *Analysis) boolType() Type {
-	return a.getBuiltinType("bool")
-}
-
-func (a *Analysis) numberType() Type {
-	return a.getBuiltinType("number")
-}
-
-func (a *Analysis) stringType() Type {
-	return a.getBuiltinType("string")
-}
-
-func (a *Analysis) anyType() Type {
-	return a.getBuiltinType("any")
-}
-
-func (a *Analysis) varArgsType(elem Type, span Span) Type {
-	varArgsT := SemVararg{Type: elem}
-	return ast.NewSemType(varArgsT, span)
-}
-
-func (a *Analysis) unionType(span Span, types ...Type) Type {
-	if len(types) == 0 {
-		panic("unionType called with no types")
-	}
-	unionT := &SemUnion{Types: types, Span_: span}
-	return ast.NewSemType(unionT, span)
-}
-
-func (a *Analysis) nilableType(base Type, span Span) Type {
-	// if type is any or already nilable, return as is
-	if base.IsAny() || base.IsNilable() {
-		return base
-	}
-	return a.unionType(span, a.nilType(), base)
-}
-
-func (a *Analysis) tupleType(span Span, other ...Type) Type {
-	if len(other) == 0 {
-		panic("tupleType called with no types")
-	}
-	return ast.NewSemType(ast.SemTuple{Elems: other}, span)
-}
-
-func (a *Analysis) functionType(name string, params []Type, returnType Type, span Span) Type {
-	ident := lexer.NewTokIdent(name, span)
-	funcT := &SemFunction{
-		Def: ast.Function{
-			Name:  &ident,
-			Span_: span,
-		},
-		Params: params,
-		Return: returnType,
-	}
-	return ast.NewSemType(funcT, span)
-}
-
 func (a *Analysis) Matches(ty, other Type, span Span) {
-	if !a.matchTypes(ty, other) {
+	if !a.typesMatch(ty, other, false) {
 		a.Errorf(span, "mismatched types, expected `%s`, got `%s`", ty.String(), other.String())
 	}
 }
 
 func (a *Analysis) StrictMatches(ty, other Type, span Span) {
-	if !a.MatchTypesStrict(ty, other) {
+	if !a.typesMatch(ty, other, true) {
 		a.Errorf(span, "mismatched types, expected `%s`, got `%s`", ty.String(), other.String())
 	}
 }
 
 func (a *Analysis) MatchesPanic(ty, other Type, span Span) {
-	if !a.matchTypes(ty, other) {
+	if !a.typesMatch(ty, other, false) {
 		a.panicf(span, "mismatched types, expected `%s`, got `%s`", ty.String(), other.String())
 	}
 }
@@ -470,7 +396,7 @@ func (a *Analysis) analyzeImplementations() {
 			a.panicf(mainFunc.Span(), "`main` function must not have parameters")
 		}
 		returnType := mainFunc.Return
-		if !a.MatchTypesStrict(a.nilType(), returnType) {
+		if !a.typesMatch(a.nilType(), returnType, true) {
 			a.panicf(mainFunc.Span(), "`main` function return type must be `nil`, got `%s`", returnType.String())
 		}
 

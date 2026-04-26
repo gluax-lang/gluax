@@ -28,7 +28,7 @@ func (a *Analysis) handleExprWithFlow(scope *Scope, expr *ast.Expr) ExprResult {
 	case ast.ExprKindString:
 		retTy = a.stringType()
 	case ast.ExprKindVararg:
-		fun := scope.Func
+		fun := scope.Ctx.Func
 		if fun == nil {
 			a.panic(expr.Span(), "vararg outside of function")
 		}
@@ -139,7 +139,7 @@ func (a *Analysis) handleBinaryExpr(scope *Scope, binE *ast.ExprBinary) Type {
 	case ast.BinaryOpEqual, ast.BinaryOpNotEqual:
 		// we need to compare from left and right
 		// Matches is built that if left side is not nilable and right side is nilable, it will not match, but works vice versa
-		if !a.matchTypes(lty, rty) && !a.matchTypes(rty, lty) {
+		if !a.typesMatch(lty, rty, false) && !a.typesMatch(rty, lty, false) {
 			a.Errorf(binE.Span(), "cannot `%s` with `%s`", lty.String(), rty.String())
 		}
 		return a.boolType()
@@ -356,7 +356,7 @@ func (a *Analysis) handleWhileExpr(scope *Scope, whileE *ast.ExprWhile) {
 	whileE.Cond.AsCond = condTy.IsNilable()
 
 	child := scope.Child(true)
-	child.InLoop = true
+	child.Ctx.InLoop = true
 
 	if whileE.Label != nil {
 		a.AddLabel(child, whileE.Label)
@@ -368,7 +368,7 @@ func (a *Analysis) handleWhileExpr(scope *Scope, whileE *ast.ExprWhile) {
 
 func (a *Analysis) handleLoopExpr(scope *Scope, loopE *ast.ExprLoop) {
 	child := scope.Child(true)
-	child.InLoop = true
+	child.Ctx.InLoop = true
 
 	if loopE.Label != nil {
 		a.AddLabel(child, loopE.Label)
@@ -391,7 +391,7 @@ func (a *Analysis) handleForNumExpr(scope *Scope, forE *ast.ExprForNum) {
 	}
 
 	child := scope.Child(true)
-	child.InLoop = true
+	child.Ctx.InLoop = true
 
 	idxVariable := ast.NewSingleVariable(forE.Var, a.numberType())
 	a.AddValue(child, forE.Var.Raw, ast.NewValue(idxVariable), forE.Var.Span())
@@ -469,7 +469,7 @@ func (a *Analysis) handleForInExpr(scope *Scope, forIn *ast.ExprForIn) {
 	}
 
 	child := scope.Child(true)
-	child.InLoop = true
+	child.Ctx.InLoop = true
 
 	for i, v := range forIn.Vars {
 		varName := v.Raw
@@ -894,7 +894,7 @@ func (a *Analysis) handleIndex(scope *Scope, index *ast.Index, toIndex *ast.Expr
 		a.handleExpr(scope, &index.Expr)
 		idxTy := index.Expr.Type()
 		keyTy := toIndexTy.Map().Key
-		if !a.matchTypes(keyTy, idxTy) {
+		if !a.typesMatch(keyTy, idxTy, false) {
 			a.Errorf(index.Expr.Span(), "map key type mismatch: expected `%s`, got `%s`", keyTy.String(), idxTy.String())
 		}
 		return a.nilableType(toIndexTy.Map().Value, index.Span())

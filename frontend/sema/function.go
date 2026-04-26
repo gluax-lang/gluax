@@ -40,7 +40,7 @@ func (a *Analysis) handleFunctionImpl(scope *Scope, it *ast.Function, withBody b
 		Params: params,
 		Return: returnType,
 	}
-	child.Func = funcType
+	child.Ctx.Func = funcType
 
 	if returnType.IsTuple() {
 		for _, elem := range returnType.Tuple().Elems {

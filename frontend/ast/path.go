@@ -9,16 +9,18 @@ import (
 // Path represents a path to a symbol/class function/type.
 // It is a sequence of identifiers separated by "::".
 type Path struct {
+	common.NodeIDHolder
 	Segments       []*PathSegment
 	ResolvedSymbol *Symbol // resolved symbol, if any
 }
 
 func NewPath(segments []*PathSegment) Path {
-	return Path{Segments: segments}
+	return Path{NodeIDHolder: common.NewNodeIDHolder(), Segments: segments}
 }
 
 func NewSimplePath(ident Ident) Path {
 	return Path{
+		NodeIDHolder: common.NewNodeIDHolder(),
 		Segments: []*PathSegment{
 			{Ident: ident, span: ident.Span()},
 		},

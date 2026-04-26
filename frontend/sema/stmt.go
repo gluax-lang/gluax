@@ -50,7 +50,7 @@ func (a *Analysis) handleStmt(scope *Scope, raw ast.Stmt) (Type, FlowStatus) {
 }
 
 func (a *Analysis) handleReturn(scope *Scope, stmt *ast.StmtReturn) {
-	if scope.Func == nil {
+	if scope.Ctx.Func == nil {
 		a.panic(stmt.Span(), "return statement outside of function")
 	}
 
@@ -74,7 +74,7 @@ func (a *Analysis) handleReturn(scope *Scope, stmt *ast.StmtReturn) {
 
 	returnType := getReturnTypes()
 
-	a.Matches(scope.Func.Return, returnType, stmt.Span())
+	a.Matches(scope.Ctx.Func.Return, returnType, stmt.Span())
 }
 
 func (a *Analysis) handleThrow(scope *Scope, stmt *ast.StmtThrow) {
@@ -87,7 +87,7 @@ func (a *Analysis) handleThrow(scope *Scope, stmt *ast.StmtThrow) {
 }
 
 func (a *Analysis) handleBreak(scope *Scope, stmt *ast.StmtBreak) {
-	if !scope.InLoop {
+	if !scope.Ctx.InLoop {
 		a.Error(stmt.Span(), "break is not allowed outside of a loop")
 	}
 	if stmt.Label != nil {
@@ -98,7 +98,7 @@ func (a *Analysis) handleBreak(scope *Scope, stmt *ast.StmtBreak) {
 }
 
 func (a *Analysis) handleContinue(scope *Scope, stmt *ast.StmtContinue) {
-	if !scope.InLoop {
+	if !scope.Ctx.InLoop {
 		a.Error(stmt.Span(), "continue is not allowed outside of a loop")
 	}
 	if stmt.Label != nil {

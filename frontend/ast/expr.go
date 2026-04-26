@@ -95,6 +95,7 @@ type exprData interface {
 }
 
 type Expr struct {
+	common.NodeIDHolder
 	data exprData
 	sem  SemType
 	// indicates whether this expression is used as a condition
@@ -106,7 +107,7 @@ type Expr struct {
 }
 
 func NewExpr[T exprData](data T) Expr {
-	return Expr{data: data}
+	return Expr{NodeIDHolder: common.NewNodeIDHolder(), data: data}
 }
 
 func (e Expr) Kind() ExprKind {

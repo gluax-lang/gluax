@@ -13,6 +13,7 @@ type Stmt interface {
 /* Let */
 
 type Let struct {
+	common.NodeIDHolder
 	Public bool
 
 	Attributes Attributes
@@ -33,12 +34,13 @@ func NewLet(
 	isItem bool,
 ) *Let {
 	return &Let{
-		Public: false,
-		Names:  names,
-		Types:  types,
-		Values: values,
-		IsItem: isItem,
-		span:   span,
+		NodeIDHolder: common.NewNodeIDHolder(),
+		Public:       false,
+		Names:        names,
+		Types:        types,
+		Values:       values,
+		IsItem:       isItem,
+		span:         span,
 	}
 }
 

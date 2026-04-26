@@ -2,127 +2,72 @@ package sema
 
 import "github.com/gluax-lang/gluax/frontend/ast"
 
-func (a *Analysis) matchTypes(t Type, other Type) bool {
+func (a *Analysis) typesMatch(t, other Type, strict bool) bool {
 	if t.IsError() || other.IsError() {
 		return false
 	}
-
 	if other.IsUnreachable() {
-		// Unreachable can match any type
 		return true
 	}
-
-	if t.IsAny() {
-		if other.IsTuple() {
-			return false
-		}
-		if other.IsVararg() {
-			return false
-		}
-		return true
+	if !strict && t.IsAny() {
+		return !other.IsTuple() && !other.IsVararg()
+	}
+	if strict && t.Kind() != other.Kind() {
+		return false
 	}
 
 	switch t.Kind() {
 	case ast.SemClassKind:
-		return a.matchClassType(t.Class(), other)
+		return a.classMatch(t.Class(), other, strict)
 	case ast.SemFunctionKind:
-		return a.matchFunctionType(t.Function(), other)
+		return a.funcMatch(t.Function(), other)
 	case ast.SemTupleKind:
-		return a.matchTupleType(t.Tuple(), other)
+		return a.tupleMatch(t.Tuple(), other, strict)
 	case ast.SemVarargKind:
-		return a.matchVarargType(t.Vararg(), other)
+		return a.varargMatch(t.Vararg(), other, strict)
 	case ast.SemUnionKind:
-		return a.matchUnionType(t.Union(), other)
+		return a.unionMatch(t.Union(), other, strict)
 	case ast.SemVecKind:
-		return a.matchVecType(t.Vec(), other)
+		return a.vecMatch(t.Vec(), other, strict)
 	case ast.SemMapKind:
-		return a.matchMapType(t.Map(), other)
+		return a.mapMatch(t.Map(), other, strict)
 	case ast.SemUnreachableKind:
 		return other.IsUnreachable()
-	case ast.SemErrorKind:
-		return false
 	default:
 		return false
 	}
 }
 
-func (a *Analysis) MatchTypesStrict(t Type, other Type) bool {
-	if t.Kind() != other.Kind() {
-		return false
+func (a *Analysis) classMatch(s *SemClass, other Type, strict bool) bool {
+	if !strict {
+		if s.IsAnyFunc() && (other.IsFunction() || other.IsAnyFunc()) {
+			return true
+		}
+		if s.IsTable() && (other.IsTable() || other.IsVec() || other.IsMap()) {
+			return true
+		}
 	}
-	switch t.Kind() {
-	case ast.SemClassKind:
-		return a.matchClassTypeStrict(t.Class(), other)
-	case ast.SemFunctionKind:
-		return a.matchFunctionType(t.Function(), other)
-	case ast.SemTupleKind:
-		return a.matchTupleTypeStrict(t.Tuple(), other)
-	case ast.SemVarargKind:
-		return a.matchVarargTypeStrict(t.Vararg(), other)
-	case ast.SemUnionKind:
-		return a.matchUnionTypeStrict(t.Union(), other)
-	case ast.SemVecKind:
-		return a.matchVecTypeStrict(t.Vec(), other)
-	case ast.SemMapKind:
-		return a.matchMapTypeStrict(t.Map(), other)
-	case ast.SemUnreachableKind:
-		return other.IsUnreachable()
-	case ast.SemErrorKind:
-		return false
-	default:
-		return false
-	}
-}
-
-/* Class */
-
-func (a *Analysis) matchClassType(s *SemClass, other Type) bool {
-	if s.IsAnyFunc() && (other.IsFunction() || other.IsAnyFunc()) {
-		return true
-	}
-
-	if s.IsTable() && (other.IsTable() || other.IsVec() || other.IsMap()) {
-		return true
-	}
-
 	if other.Kind() != ast.SemClassKind {
 		return false
 	}
-
 	oS := other.Class()
-
-	if oS.IsSubClassOf(s) {
+	if !strict && oS.IsSubClassOf(s) {
 		return true
 	}
-
+	if strict {
+		return s.Def.Span() == oS.Def.Span()
+	}
 	if ast.IsBuiltinType(s.Def.Name.Raw) && ast.IsBuiltinType(oS.Def.Name.Raw) {
-		if s.Def.Name.Raw != oS.Def.Name.Raw {
-			return false
-		}
-	} else if s.Def.Span() != oS.Def.Span() {
-		return false
+		return s.Def.Name.Raw == oS.Def.Name.Raw
 	}
-
-	return true
+	return s.Def.Span() == oS.Def.Span()
 }
 
-func (a *Analysis) matchClassTypeStrict(s *SemClass, other Type) bool {
-	if other.Kind() != ast.SemClassKind {
-		return false
-	}
-
-	oS := other.Class()
-
-	if s.Def.Span() != oS.Def.Span() {
-		return false
-	}
-
-	return true
+func (a *Analysis) funcMatch(f *SemFunction, other Type) bool {
+	return other.IsFunction() && a.matchFunction(f, other.Function())
 }
 
-/* Function */
-
-func (a *Analysis) matchFunction(f *SemFunction, other *SemFunction) bool {
+func (a *Analysis) matchFunction(f, other *SemFunction) bool {
 	if f.Def.Errorable != other.Def.Errorable {
 		return false
 	}
@@ -130,74 +75,46 @@ func (a *Analysis) matchFunction(f *SemFunction, other *SemFunction) bool {
 		return false
 	}
 	for i, p := range f.Params {
-		if !a.MatchTypesStrict(p, other.Params[i]) {
+		if !a.typesMatch(p, other.Params[i], true) {
 			return false
 		}
 	}
-	return a.MatchTypesStrict(f.Return, other.Return)
+	return a.typesMatch(f.Return, other.Return, true)
 }
 
-func (a *Analysis) matchFunctionType(f *SemFunction, other Type) bool {
-	return other.IsFunction() && a.matchFunction(f, other.Function())
-}
-
-/* Tuple */
-
-func (a *Analysis) matchTupleType(t SemTuple, other Type) bool {
+func (a *Analysis) tupleMatch(t SemTuple, other Type, strict bool) bool {
 	if !other.IsTuple() {
 		return false
 	}
-	if len(t.Elems) != len(other.Tuple().Elems) {
+	oElems := other.Tuple().Elems
+	if len(t.Elems) != len(oElems) {
 		return false
 	}
 	for i, elem := range t.Elems {
-		if !a.matchTypes(elem, other.Tuple().Elems[i]) {
+		if !a.typesMatch(elem, oElems[i], strict) {
 			return false
 		}
 	}
 	return true
 }
 
-func (a *Analysis) matchTupleTypeStrict(t SemTuple, other Type) bool {
-	if !other.IsTuple() {
-		return false
-	}
-	if len(t.Elems) != len(other.Tuple().Elems) {
-		return false
-	}
-	for i, elem := range t.Elems {
-		if !a.MatchTypesStrict(elem, other.Tuple().Elems[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-/* Vararg */
-
-func (a *Analysis) matchVarargType(v SemVararg, other Type) bool {
+func (a *Analysis) varargMatch(v SemVararg, other Type, strict bool) bool {
 	if other.IsVararg() {
-		return a.matchTypes(v.Type, other.Vararg().Type)
+		return a.typesMatch(v.Type, other.Vararg().Type, strict)
 	}
-	return a.matchTypes(v.Type, other)
-}
-
-func (a *Analysis) matchVarargTypeStrict(v SemVararg, other Type) bool {
-	if !other.IsVararg() {
+	if strict {
 		return false
 	}
-	return a.MatchTypesStrict(v.Type, other.Vararg().Type)
+	return a.typesMatch(v.Type, other, false)
 }
 
-/* Union */
-
-func (a *Analysis) matchUnionType(u *SemUnion, other Type) bool {
+func (a *Analysis) unionMatch(u *SemUnion, other Type, strict bool) bool {
 	if other.IsUnion() {
 		otherU := other.Union()
 		for _, oT := range otherU.Types {
 			found := false
 			for _, t := range u.Types {
-				if a.matchTypes(t, oT) {
+				if a.typesMatch(t, oT, strict) {
 					found = true
 					break
 				}
@@ -208,71 +125,25 @@ func (a *Analysis) matchUnionType(u *SemUnion, other Type) bool {
 		}
 		return true
 	}
-	// If other is not a union, match if any member matches
 	for _, t := range u.Types {
-		if a.matchTypes(t, other) {
+		if a.typesMatch(t, other, strict) {
 			return true
 		}
 	}
 	return false
 }
 
-func (a *Analysis) matchUnionTypeStrict(u *SemUnion, other Type) bool {
-	if other.IsUnion() {
-		otherU := other.Union()
-		for _, oT := range otherU.Types {
-			found := false
-			for _, t := range u.Types {
-				if a.MatchTypesStrict(t, oT) {
-					found = true
-					break
-				}
-			}
-			if !found {
-				return false
-			}
-		}
-		return true
-	}
-	// If other is not a union, match if any member matches
-	for _, t := range u.Types {
-		if a.MatchTypesStrict(t, other) {
-			return true
-		}
-	}
-	return false
-}
-
-/* Vec */
-
-func (a *Analysis) matchVecType(v *SemVec, other Type) bool {
+func (a *Analysis) vecMatch(v *SemVec, other Type, strict bool) bool {
 	if !other.IsVec() {
 		return false
 	}
-	return a.matchTypes(v.Ty, other.Vec().Ty)
+	return a.typesMatch(v.Ty, other.Vec().Ty, strict)
 }
 
-func (a *Analysis) matchVecTypeStrict(v *SemVec, other Type) bool {
-	if !other.IsVec() {
-		return false
-	}
-	return a.MatchTypesStrict(v.Ty, other.Vec().Ty)
-}
-
-/* Map */
-
-func (a *Analysis) matchMapType(m *SemMap, other Type) bool {
+func (a *Analysis) mapMatch(m *SemMap, other Type, strict bool) bool {
 	if !other.IsMap() {
 		return false
 	}
-	otherMap := other.Map()
-	return a.matchTypes(m.Key, otherMap.Key) && a.matchTypes(m.Value, otherMap.Value)
-}
-
-func (a *Analysis) matchMapTypeStrict(m *SemMap, other Type) bool {
-	if !other.IsMap() {
-		return false
-	}
-	otherMap := other.Map()
-	return a.MatchTypesStrict(m.Key, otherMap.Key) && a.MatchTypesStrict(m.Value, otherMap.Value)
+	o := other.Map()
+	return a.typesMatch(m.Key, o.Key, strict) && a.typesMatch(m.Value, o.Value, strict)
 }

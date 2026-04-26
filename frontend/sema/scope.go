@@ -7,71 +7,72 @@ import (
 	"github.com/gluax-lang/gluax/frontend/ast"
 )
 
+// ScopeContext holds state that gets inherited (copied) into child scopes.
+type ScopeContext struct {
+	Func   *ast.SemFunction
+	InLoop bool
+	Labels map[string]struct{}
+}
+
 type Scope struct {
 	Parent   *Scope
 	Children []*Scope
 	Symbols  map[string][]*Symbol
-	Func     *ast.SemFunction // the function that this scope is in, if any
-	InLoop   bool
-	Labels   map[string]struct{}
 	Span     *Span
+	Ctx      ScopeContext
 }
 
 func NewScope(parent *Scope) *Scope {
-	scope := &Scope{
+	return &Scope{
 		Parent:  parent,
 		Symbols: make(map[string][]*Symbol),
-		Labels:  make(map[string]struct{}),
+		Ctx:     ScopeContext{Labels: make(map[string]struct{})},
 	}
-	return scope
 }
 
 func (s *Scope) walkScopes(fn func(*Scope) bool) bool {
-	current := s
-	for current != nil {
+	for current := s; current != nil; current = current.Parent {
 		if fn(current) {
 			return true
 		}
-		current = current.Parent
 	}
 	return false
 }
 
-func (s *Scope) Child(copyState bool) *Scope {
+func (s *Scope) Child(inheritCtx bool) *Scope {
 	child := NewScope(s)
-	if copyState {
-		child.Func = s.Func
-		child.InLoop = s.InLoop
-		child.Labels = maps.Clone(s.Labels)
+	if inheritCtx {
+		child.Ctx = ScopeContext{
+			Func:   s.Ctx.Func,
+			InLoop: s.Ctx.InLoop,
+			Labels: maps.Clone(s.Ctx.Labels),
+		}
 	}
 	s.Children = append(s.Children, child)
 	return child
 }
 
-func (s *Scope) ChildWithScope(copyState bool, span Span) *Scope {
-	child := s.Child(copyState)
+func (s *Scope) ChildWithScope(inheritCtx bool, span Span) *Scope {
+	child := s.Child(inheritCtx)
 	child.Span = &span
 	return child
 }
 
 func (s *Scope) IsFuncErrorable() bool {
-	if s.Func != nil {
-		return s.Func.Def.Errorable
-	}
-	return false
+	return s.Ctx.Func != nil && s.Ctx.Func.Def.Errorable
 }
 
 func (s *Scope) AddLabel(name string) error {
 	if s.LabelExists(name) {
 		return fmt.Errorf("duplicate label definition of %s", name)
 	}
-	s.Labels[name] = struct{}{}
+	s.Ctx.Labels[name] = struct{}{}
 	return nil
 }
 
 func (s *Scope) LabelExists(name string) bool {
 	return s.walkScopes(func(scope *Scope) bool {
-		_, ok := scope.Labels[name]
+		_, ok := scope.Ctx.Labels[name]
 		return ok
 	})
 }
@@ -135,8 +136,7 @@ func (s *Scope) GetValue(name string) *Value {
 	if sym == nil || sym.Kind() != ast.SymValue {
 		return nil
 	}
-	val := sym.Value()
-	return val
+	return sym.Value()
 }
 
 func (s *Scope) AddType(name string, ty Type) error {
@@ -160,8 +160,7 @@ func (s *Scope) GetType(name string) *Type {
 	if sym == nil || sym.Kind() != ast.SymType {
 		return nil
 	}
-	ty := sym.Type()
-	return ty
+	return sym.Type()
 }
 
 func (s *Scope) AddImport(name string, imp ast.SemImport, span Span, public bool) error {
@@ -174,14 +173,10 @@ func (s *Scope) GetImport(name string) *ast.SemImport {
 	if sym == nil || sym.Kind() != ast.SymImport {
 		return nil
 	}
-	imp := sym.Import()
-	return imp
+	return sym.Import()
 }
 
 func (s *Scope) IsSymbolPublic(name string) bool {
 	sym := s.GetSymbol(name)
-	if sym == nil {
-		return false
-	}
-	return sym.IsPublic()
+	return sym != nil && sym.IsPublic()
 }

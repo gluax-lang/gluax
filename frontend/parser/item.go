@@ -105,9 +105,10 @@ func (p *parser) parseClassField() ast.ClassField {
 	p.expect(":")
 	ty := p.parseType()
 	return ast.ClassField{
-		Name:   name,
-		Type:   ty,
-		Public: public,
+		NodeIDHolder: common.NewNodeIDHolder(),
+		Name:         name,
+		Type:         ty,
+		Public:       public,
 	}
 }
 

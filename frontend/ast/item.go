@@ -43,12 +43,14 @@ func SetItemAttributes(item Item, attrs Attributes) bool {
 /* Class */
 
 type ClassField struct {
+	common.NodeIDHolder
 	Name   lexer.TokIdent
 	Type   Type
 	Public bool
 }
 
 type Class struct {
+	common.NodeIDHolder
 	Public     bool
 	Name       lexer.TokIdent
 	Super      *Type // the type this class extends, if any
@@ -60,10 +62,11 @@ type Class struct {
 
 func NewClass(name lexer.TokIdent, super *Type, fields []ClassField, span common.Span) *Class {
 	return &Class{
-		Name:   name,
-		Super:  super,
-		Fields: fields,
-		span:   span,
+		NodeIDHolder: common.NewNodeIDHolder(),
+		Name:         name,
+		Super:        super,
+		Fields:       fields,
+		span:         span,
 	}
 }
 
@@ -94,6 +97,7 @@ func (c *Class) GlobalName() string {
 /* Impl Class */
 
 type ImplClass struct {
+	common.NodeIDHolder
 	Class   Type
 	Methods []*Function
 	Scope   any
@@ -104,7 +108,7 @@ type ImplClass struct {
 }
 
 func NewImplClass(st Type, methods []*Function, span common.Span) *ImplClass {
-	return &ImplClass{Class: st, Methods: methods, span: span}
+	return &ImplClass{NodeIDHolder: common.NewNodeIDHolder(), Class: st, Methods: methods, span: span}
 }
 
 func (is *ImplClass) isItem() {}
@@ -116,6 +120,7 @@ func (is *ImplClass) Span() common.Span {
 /* Import */
 
 type Import struct {
+	common.NodeIDHolder
 	Public bool
 	Path   lexer.TokString
 	As     *lexer.TokIdent
@@ -123,7 +128,8 @@ type Import struct {
 }
 
 func NewImport(path lexer.TokString, as *lexer.TokIdent, span common.Span) *Import {
-	return &Import{Path: path, As: as, span: span}
+	return &Import{NodeIDHolder: common.NewNodeIDHolder(),
+		Path: path, As: as, span: span}
 }
 
 func (i *Import) isItem() {}
@@ -135,6 +141,7 @@ func (i *Import) Span() common.Span {
 /* Use */
 
 type Use struct {
+	common.NodeIDHolder
 	Public bool
 	Path   Path
 	As     *lexer.TokIdent
@@ -142,7 +149,8 @@ type Use struct {
 }
 
 func NewUse(path Path, as *lexer.TokIdent, span common.Span) Use {
-	return Use{Path: path, As: as, span: span}
+	return Use{NodeIDHolder: common.NewNodeIDHolder(),
+		Path: path, As: as, span: span}
 }
 
 func (u *Use) isItem() {}

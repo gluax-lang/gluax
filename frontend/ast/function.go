@@ -12,6 +12,7 @@ type FunctionSignature struct {
 }
 
 type Function struct {
+	common.NodeIDHolder
 	Public     bool
 	Name       *lexer.TokIdent // nil if anonymous
 	Params     []FunctionParam
@@ -27,14 +28,15 @@ type Function struct {
 
 func NewFunction(name *lexer.TokIdent, sig FunctionSignature, body *Block, attributes Attributes, span common.Span) *Function {
 	return &Function{
-		Public:     false,
-		Name:       name,
-		Params:     sig.Params,
-		Errorable:  sig.Errorable,
-		ReturnType: sig.ReturnType,
-		Body:       body,
-		Attributes: attributes,
-		Span_:      span,
+		NodeIDHolder: common.NewNodeIDHolder(),
+		Public:       false,
+		Name:         name,
+		Params:       sig.Params,
+		Errorable:    sig.Errorable,
+		ReturnType:   sig.ReturnType,
+		Body:         body,
+		Attributes:   attributes,
+		Span_:        span,
 	}
 }
 
@@ -77,13 +79,14 @@ func (f *Function) IsStatic() bool {
 }
 
 type FunctionParam struct {
+	common.NodeIDHolder
 	Name *lexer.TokIdent // nil if defining function as a type definition
 	Type Type            // nil if vararg
 	span common.Span
 }
 
 func NewFunctionParam(name *lexer.TokIdent, ty Type, span common.Span) FunctionParam {
-	return FunctionParam{Name: name, Type: ty, span: span}
+	return FunctionParam{NodeIDHolder: common.NewNodeIDHolder(), Name: name, Type: ty, span: span}
 }
 
 func (p FunctionParam) Span() common.Span {

@@ -3,6 +3,7 @@ package ast
 import "github.com/gluax-lang/gluax/common"
 
 type Block struct {
+	common.NodeIDHolder
 	Stmts  []Stmt
 	stopAt int // index of the unreachable statement to stop at
 	sem    SemType
@@ -10,7 +11,7 @@ type Block struct {
 }
 
 func NewBlock(stmts []Stmt, span common.Span) Block {
-	return Block{Stmts: stmts, span: span}
+	return Block{NodeIDHolder: common.NewNodeIDHolder(), Stmts: stmts, span: span}
 }
 
 func (b *Block) ExprKind() ExprKind { return ExprKindBlock }

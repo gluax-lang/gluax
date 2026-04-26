@@ -9,6 +9,7 @@ import (
 )
 
 type TokIdent struct {
+	common.NodeIDHolder
 	Raw  string
 	span common.Span
 }
@@ -36,7 +37,7 @@ func (t TokIdent) AsString() string {
 }
 
 func NewTokIdent(s string, span common.Span) TokIdent {
-	return TokIdent{Raw: s, span: span}
+	return TokIdent{NodeIDHolder: common.NewNodeIDHolder(), Raw: s, span: span}
 }
 
 func IsIdentStr(t Token, s string) bool {
